@@ -20,6 +20,9 @@ temp_folder = r'temp'
 metadata_filename = 'Overall_Running_Metadata_for_All_LCMSMS_Jobs.xlsx'
 metadata_job_tab = 'Job to Run'
 
+"""
+Create GNPS and MetaboAnalyst Metadata .tsv files
+"""
 # Import metadata table for job
 metadata = pd.read_excel(pjoin(input_folder, metadata_filename), sheet_name = metadata_job_tab)
 
@@ -31,9 +34,6 @@ ionization = metadata['Ionization'][0]
 exp_rep_num = metadata['EXP num replicates'][0]
 ctrl_rep_num = metadata['CTRL num replicates'][0]
 
-"""
-Create GNPS and MetaboAnalyst Metadata .tsv files
-"""
 # Format of metadata .tsv: two columns, Filename and Class. List the filenames from folder ctrl_folder_name in input_folder (Class "CTRL") then list the filenames from folder exp_folder_name in input_folder (Class "EXP")
 # Create metadata .tsv file in temp folder
 metadata_filename = job_name + '_metadata.tsv'
