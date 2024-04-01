@@ -673,7 +673,7 @@
         <parameter name="CSV export">SIMPLE</parameter>
         <parameter name="Submit to GNPS" selected="false">
             <parameter name="Meta data file" selected="true">
-                <current_file>C:\Users\lazab\Desktop\python_scripts\workspace\LCMSMS_analysis_pipeline\LCMSMS A. nidulans 2018 constructs\TJGIp11 pos\TJGIp11 pos_metadata.tsv</current_file>
+                <current_file>C:\Users\lazab\Documents\github\LCMSMS_data_analysis_workflow\temp\Anid_HE_TJGIp11_pos_2018_metadata.tsv</current_file>
                 <last_file>C:\Users\lazab\Desktop\python_scripts\workspace\LCMSMS_analysis_pipeline\LCMSMS A. nidulans 2018 constructs\TJGIp11 pos\TJGIp11 pos_metadata.tsv</last_file>
             </parameter>
             <parameter name="Export ion identity networks">true</parameter>

@@ -61,14 +61,23 @@ mzmine3_xml_filepath = pjoin(input_folder, mzmine3_xml_filename)
 mzmine3_xml = open(mzmine3_xml_filepath, 'w')
 
 # Edit .xml file
+
 # Update mzml filenames for MZmine3 to use
+
 # Update metadata file to use (MS mode under CorrelateGroupingModule)
+
 # Update GNPS export filename to be placed in temp folder
+mzmine3_gnps_export_filename_root = job_name + '_gnps'
+# example: Anid_HE_TJGIp11_pos_2018_gnps
+
 # Update SIRIUS export filename to be placed in temp folder
+mzmine3_sirius_export_filename = job_name + '_sirius.mgf'
 
 
 
 """
 Use the MZmine3 output for GNPS input to generate the MetaboAnalyst input
 """
+# Note, the GNPS export file has less rows than the corresponding MetaboAnalyst export file from MZmine3. For this work, I want to compare features directly between MetaboAnalyst, GNPS, etc., so having the same features input into those tools is helpful. I was unable to find a way to export the MetaboAnalyst import file from MZmine3 commandline. To get the MetaboAnalyst import file from the MZmine3 gui, you need to manually import the metadata info before being able to indicate the variable to sort groups by (ie: 'Class').
+
 
