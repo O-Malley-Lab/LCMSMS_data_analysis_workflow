@@ -50,4 +50,25 @@ metadata_df['Filename'] = ctrl_filenames + exp_filenames
 metadata_df['Class'] = ['CTRL']*len(ctrl_filenames) + ['EXP']*len(exp_filenames)
 metadata_df.to_csv(metadata_filepath, sep = '\t', index = False)
 
+"""
+Edit basic .xml parameters file
+"""
+# Import basic .xml parameters file
+# mzmine3_xml_filename = 'MZmine3_batch_params_LCMSMS_HE_for_Commandline_2024_8_test_for_Python_workflow.xml'
+mzmine3_xml_filename = 'MZmine3_batch_params_LCMSMS_HE_for_Commandline_2024_8.xml'
+# Import .xml file from input_folder
+mzmine3_xml_filepath = pjoin(input_folder, mzmine3_xml_filename)
+mzmine3_xml = open(mzmine3_xml_filepath, 'w')
+
+# Edit .xml file
+# Update mzml filenames for MZmine3 to use
+# Update metadata file to use (MS mode under CorrelateGroupingModule)
+# Update GNPS export filename to be placed in temp folder
+# Update SIRIUS export filename to be placed in temp folder
+
+
+
+"""
+Use the MZmine3 output for GNPS input to generate the MetaboAnalyst input
+"""
 
