@@ -1,31 +1,32 @@
-"""
+"""""""""""""""""""""""""""""""""""""""""""""
 LCMSMS Data Analysis Workflow, Script 1: Prepare Inputs for MZmine3
 
 @author: Lazarina Butkovich
 
 Features include:
     Create metadata .tsv file in temp folder
-"""
+"""""""""""""""""""""""""""""""""""""""""""""
 import pandas as pd
 import os
 from os.path import join as pjoin
 import xml.etree.ElementTree as ET
 
-"""
+"""""""""""""""""""""""""""""""""""""""""""""
 Values
-""" 
+""" """"""""""""""""""""""""""""""""""""""""""
 input_folder = r'input' 
 temp_overall_folder = r'temp'
 
 # Use "Overall_Running_Metadata_for_All_LCMSMS_Jobs.xlsx" from input_folder to get relevant parameters for job to run. Use the excel tab "Job to Run"
-metadata_filename = 'Overall_Running_Metadata_for_All_LCMSMS_Jobs.xlsx'
+metadata_overall_filename = 'Overall_Running_Metadata_for_All_LCMSMS_Jobs.xlsx'
 metadata_job_tab = 'Job to Run'
 
-"""
+
+"""""""""""""""""""""""""""""""""""""""""""""
 Create GNPS and MetaboAnalyst Metadata .tsv files
-"""
+"""""""""""""""""""""""""""""""""""""""""""""
 # Import metadata table for job
-metadata = pd.read_excel(pjoin(input_folder, metadata_filename), sheet_name = metadata_job_tab)
+metadata = pd.read_excel(pjoin(input_folder, metadata_overall_filename), sheet_name = metadata_job_tab)
 
 # Extract relevant information
 job_name = metadata['Job Name'][0]
@@ -45,8 +46,6 @@ metadata_filepath = pjoin(temp_folder, metadata_filename)
 # Use pandas to create metadata .tsv file
 metadata_df = pd.DataFrame(columns = ['Filename', 'Class'])
 
-
-
 # Get EXP and CTRL lists of filenames in job_name folder
 mzml_filenames = os.listdir(pjoin(input_folder, job_name))
 # If control filenames have 'Control' instead of "CTRL', edit filenames
@@ -65,8 +64,12 @@ metadata_df['Filename'] = ctrl_filenames + exp_filenames
 metadata_df['Class'] = ['CTRL']*len(ctrl_filenames) + ['EXP']*len(exp_filenames)
 metadata_df.to_csv(metadata_filepath, sep = '\t', index = False)
 
+
+"""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""
+* Edit basic .xml parameters file *
+"""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""
 """
-Edit basic .xml parameters file
+Edit basic .xml parameters file: input filenames
 """
 # Import basic .xml parameters file using ElementTree https://docs.python.org/3/library/xml.etree.elementtree.html
 
@@ -84,22 +87,119 @@ for child in xml_root:
 # Set xml_method_filenames_child to the child of xml_root with the following: batchstep method="io.github.mzmine.modules.io.import_rawdata_all.AllSpectralDataImportModule" parameter_version="1"
 xml_method_filenames_child_str = 'batchstep[@method="io.github.mzmine.modules.io.import_rawdata_all.AllSpectralDataImportModule"][@parameter_version="1"]'
 xml_method_filenames_child = xml_root.find(xml_method_filenames_child_str)
+# print nodes of xml_method_filenames_child
+# for node in xml_method_filenames_child:
+#     print(node.tag, node.attrib)
+# Go to the 'File names' parameter node of xml_method_filenames_child. Remove all these file names and add the filenames from the job_name folder
+# Print the nodes of the 'File names' parameter node in xml_method_filenames_child
+xml_method_filenames_child_filenames = xml_method_filenames_child.find('parameter[@name="File names"]')
+xml_mzml_input_str_start = 'C:\\Users\\lazab\\Documents\\github\\LCMSMS_data_analysis_workflow\\input\\'
+# Remove all the filenames (<file>) in xml_method_filenames_child_filenames
+for filename in xml_method_filenames_child_filenames.findall('file'):
+    xml_method_filenames_child_filenames.remove(filename)
+# Add filenames as nodes (<file>) of xml_method_filenames_child_filenames. Each filename will start with xml_mzml_filename_str_start, followed by the job_name, followed by \\, followed by the filename. Each node should be on a different line in the xml file
+for filename in mzml_filenames:
+    new_file = ET.Element('file')
+    new_file.text = xml_mzml_input_str_start + job_name + '\\' + filename
+    xml_method_filenames_child_filenames.append(new_file)
 
 
-# Update metadata file to use (MS mode under CorrelateGroupingModule)
+"""
+Edit basic .xml parameters file: metadata
+"""
+# Update metadata file to use (<batchstep method="io.github.mzmine.modules.visualization.projectmetadata.io.ProjectMetadataImportModule" parameter_version="1">). 
+xml_method_metadata_child_str = 'batchstep[@method="io.github.mzmine.modules.visualization.projectmetadata.io.ProjectMetadataImportModule"][@parameter_version="1"]'
+xml_method_metadata_child = xml_root.find(xml_method_metadata_child_str)
+# The node of the child to use is <parameter name="File names">
+xml_method_metadata_child_filenames = xml_method_metadata_child.find('parameter[@name="File names"]')
+xml_mzml_temp_str_start = 'C:\\Users\\lazab\\Documents\\github\\LCMSMS_data_analysis_workflow\\input\\'
 
-# Update GNPS export filename to be placed in temp folder
-mzmine3_gnps_export_filename_root = job_name + '_gnps'
-# example: Anid_HE_TJGIp11_pos_2018_gnps
+# Add current_file and last_file nodes to xml_method_metadata_child. For the path, use xml_mzml_temp_str_start + job_name + '\\' + metadata_filename
+current_file = ET.Element('current_file')
+current_file.text = xml_mzml_temp_str_start + job_name + '\\' + metadata_filename
+# Remove previous current_file
+for filename in xml_method_metadata_child_filenames.findall('current_file'):
+    xml_method_metadata_child_filenames.remove(filename)
+xml_method_metadata_child_filenames.append(current_file)
 
-# Update SIRIUS export filename to be placed in temp folder
+last_file = ET.Element('last_file')
+last_file.text = xml_mzml_temp_str_start + job_name + '\\' + metadata_filename
+# Remove previous last_file
+for filename in xml_method_metadata_child_filenames.findall('last_file'):
+    xml_method_metadata_child_filenames.remove(filename)
+xml_method_metadata_child_filenames.append(last_file)
+
+
+"""
+Edit basic .xml parameters file: MZmine3 export for GNPS input
+"""
+# Update export step for GNPS input (<batchstep method="io.github.mzmine.modules.io.export_features_gnps.fbmn.GnpsFbmnExportAndSubmitModule" parameter_version="2">). 
+xml_method_gnps_child_str = 'batchstep[@method="io.github.mzmine.modules.io.export_features_gnps.fbmn.GnpsFbmnExportAndSubmitModule"][@parameter_version="2"]'
+xml_method_gnps_child = xml_root.find(xml_method_gnps_child_str)
+# The node of the child to use is <parameter name="Filename">
+xml_method_gnps_child_filenames = xml_method_gnps_child.find('parameter[@name="Filename"]')
+xml_mzml_temp_str_start = 'C:\\Users\\lazab\\Documents\\github\\LCMSMS_data_analysis_workflow\\input\\'
+mzmine3_gnps_export_filename = job_name + '_gnps.mgf'
+
+# Add current_file and last_file nodes to xml_method_gnps_child. For the path, use xml_mzml_temp_str_start + job_name + '\\' + mzmine3_gnps_export_filename
+current_file = ET.Element('current_file')
+current_file.text = xml_mzml_temp_str_start + job_name + '\\' + mzmine3_gnps_export_filename
+# Remove previous current_file
+for filename in xml_method_gnps_child_filenames.findall('current_file'):
+    xml_method_gnps_child_filenames.remove(filename)
+xml_method_gnps_child_filenames.append(current_file)
+
+last_file = ET.Element('last_file')
+last_file.text = xml_mzml_temp_str_start + job_name + '\\' + mzmine3_gnps_export_filename
+# Remove previous last_file
+for filename in xml_method_gnps_child_filenames.findall('last_file'):
+    xml_method_gnps_child_filenames.remove(filename)
+xml_method_gnps_child_filenames.append(last_file)
+
+
+"""
+Edit GNPS auto-run parameters < to-do
+"""
+
+
+"""
+Edit basic .xml parameters file: MZmine3 export for SIRIUS input
+"""
+# Update export step for SIRIUS input (<batchstep method="io.github.mzmine.modules.io.export_features_sirius.SiriusExportModule" parameter_version="1">). 
+xml_method_sirius_child_str = 'batchstep[@method="io.github.mzmine.modules.io.export_features_sirius.SiriusExportModule"][@parameter_version="1"]'
+xml_method_sirius_child = xml_root.find(xml_method_sirius_child_str)
+# The node of the child to use is <parameter name="Filename">
+xml_method_sirius_child_filenames = xml_method_sirius_child.find('parameter[@name="Filename"]')
+xml_mzml_temp_str_start = 'C:\\Users\\lazab\\Documents\\github\\LCMSMS_data_analysis_workflow\\input\\'
 mzmine3_sirius_export_filename = job_name + '_sirius.mgf'
 
+# Add current_file and last_file nodes to xml_method_sirius_child. For the path, use xml_mzml_temp_str_start + job_name + '\\' + mzmine3_sirius_export_filename
+current_file = ET.Element('current_file')
+current_file.text = xml_mzml_temp_str_start + job_name + '\\' + mzmine3_sirius_export_filename
+# Remove previous current_file
+for filename in xml_method_sirius_child_filenames.findall('current_file'):
+    xml_method_sirius_child_filenames.remove(filename)
+xml_method_sirius_child_filenames.append(current_file)
+
+last_file = ET.Element('last_file')
+last_file.text = xml_mzml_temp_str_start + job_name + '\\' + mzmine3_sirius_export_filename
+# Remove previous last_file
+for filename in xml_method_sirius_child_filenames.findall('last_file'):
+    xml_method_sirius_child_filenames.remove(filename)
+xml_method_sirius_child_filenames.append(last_file)
 
 
 """
+Save new xml file
+"""
+# Save new xml file as a new file in temp folder
+mzmine3_xml_filename_new = job_name + '_mzmine3.xml'
+xml_tree.write(pjoin(temp_folder, mzmine3_xml_filename_new))
+
+
+"""""""""""""""""""""""""""""""""""""""""""""
 Use the MZmine3 output for GNPS input to generate the MetaboAnalyst input
-"""
+"""""""""""""""""""""""""""""""""""""""""""""
 # Note, the GNPS export file has less rows than the corresponding MetaboAnalyst export file from MZmine3. For this work, I want to compare features directly between MetaboAnalyst, GNPS, etc., so having the same features input into those tools is helpful. I was unable to find a way to export the MetaboAnalyst import file from MZmine3 commandline. To get the MetaboAnalyst import file from the MZmine3 gui, you need to manually import the metadata info before being able to indicate the variable to sort groups by (ie: 'Class').
 
 # Headers for MetaboAnalyst import file
