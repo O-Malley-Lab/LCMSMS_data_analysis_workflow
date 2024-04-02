@@ -160,6 +160,34 @@ xml_method_gnps_child_filenames.append(last_file)
 """
 Edit GNPS auto-run parameters < to-do
 """
+# Within the xml_method_gnps_child, the node <parameter name="Submit to GNPS" selected="false"> (to-do: change false to true when you want to auto-run GNPS), there are nodes to edit:
+# <parameter name="Meta data file" selected="true"> -- Change the value of the node to the path of the metadata file
+# <parameter name="Job title"> -- change the value of the node to the job name + '_MZmine3_autorun_GNPS'
+# If you are another user, you will want to change the Email, Username, and Password
+
+# Make edits
+xml_method_gnps_autorun_node = xml_method_gnps_child.find('parameter[@name="Submit to GNPS"]')
+# xml_method_gnps_autorun_node.set('selected', 'true')
+
+# Adjust metadata file for GNPS job auto-run
+xml_method_gnps_autorun_metadata_node = xml_method_gnps_autorun_node.find('parameter[@name="Meta data file"]')
+xml_method_gnps_autorun_metadata_node.text = xml_mzml_temp_str_start + job_name + '\\' + metadata_filename
+
+# Adjust job title for GNPS job auto-run
+xml_method_gnps_autorun_job_title_node = xml_method_gnps_autorun_node.find('parameter[@name="Job title"]')
+xml_method_gnps_autorun_job_title_node.text = job_name + '_MZmine3_autorun_GNPS'
+
+# Adjust email for GNPS job auto-run
+xml_method_gnps_autorun_email_node = xml_method_gnps_autorun_node.find('parameter[@name="Email"]')
+xml_method_gnps_autorun_email_node.text = 'lbutkovich@ucsb.edu'
+
+# Adjust username for GNPS job auto-run
+xml_method_gnps_autorun_username_node = xml_method_gnps_autorun_node.find('parameter[@name="Username"]')
+xml_method_gnps_autorun_username_node.text = 'lbutkovich'
+
+# Adjust password for GNPS job auto-run
+xml_method_gnps_autorun_password_node = xml_method_gnps_autorun_node.find('parameter[@name="Password"]')
+xml_method_gnps_autorun_password_node.text = 'password123'
 
 
 """
