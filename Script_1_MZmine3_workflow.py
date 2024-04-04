@@ -12,8 +12,66 @@ from os.path import join as pjoin
 import xml.etree.ElementTree as ET
 
 """""""""""""""""""""""""""""""""""""""""""""
+Functions
+"""""""""""""""""""""""""""""""""""""""""""""
+
+def change_node_parameters(root, node_str, param_str, tag_str, dir_param, param_pre_str='', param_post_str=''):
+    """
+    Change the parameters of a node in the XML file.
+    
+    Input
+    root : xml.etree.ElementTree.Element
+        Root of the XML file.
+    node_str : str
+        Name of the node to change.
+    param_str : str
+        Name of the parameter to change within the node.
+    tag_str : str
+        Tag to use for the parameter (see text in '<...>' in .XML file).
+    dir_param : list of str
+        List of new values for the parameter (can be a single value).
+    param_pre_str : str, optional
+        String to add before the parameter value (for example, for a directory string value in the .XML file).
+    param_post_str : str, optional
+        String to add after the parameter value (for example, for a directory string value in the .XML file).
+
+    Output
+    - None
+    XML root is modified without returning anything.
+    -------
+    
+    """
+    child = root.find(node_str)
+    child_param = child.find(param_str)
+    # Remove previous values of the parameter, using tag ('<...>' text)
+    for param in child_param.findall(tag_str):
+        child_param.remove(param)
+    # Add new values of the parameter
+    for param in dir_param:
+        new_param = ET.Element(tag_str)
+        new_param.text = param_pre_str + param + param_post_str
+        child_param.append(new_param)
+    return
+
+# def change_node_text():
+
+#     return
+
+def prettify(element, level=0):
+    indent = "    "  # 4 spaces
+    if len(element):
+        element.text = "\n" + indent * (level + 1)
+        element.tail = "\n" + indent * level
+        for child in element:
+            prettify(child, level + 1)
+        child.tail = "\n" + indent * level
+    else:
+        element.tail = "\n" + indent * level
+    return element
+
+"""""""""""""""""""""""""""""""""""""""""""""
 Values
-""" """"""""""""""""""""""""""""""""""""""""""
+"""""""""""""""""""""""""""""""""""""""""""""
 input_folder = r'input' 
 temp_overall_folder = r'temp'
 
@@ -83,25 +141,13 @@ xml_root = xml_tree.getroot()
 # for child in xml_root:
 #     print(child.attrib)
 
+# Set xml_mzml_input_str_start to the start of the path for the mzml files in the input folder, and also sete xml_mzml_temp_str_start to the start of the path for the temp folder
+xml_mzml_input_str_start = os.getcwd() + '\\input\\'
+xml_mzml_temp_str_start = os.getcwd() + '\\temp\\'
+
 # Update mzml filenames for MZmine3 to use
 # Set xml_method_filenames_child to the child of xml_root with the following: batchstep method="io.github.mzmine.modules.io.import_rawdata_all.AllSpectralDataImportModule" parameter_version="1"
-xml_method_filenames_child_str = 'batchstep[@method="io.github.mzmine.modules.io.import_rawdata_all.AllSpectralDataImportModule"][@parameter_version="1"]'
-xml_method_filenames_child = xml_root.find(xml_method_filenames_child_str)
-# print nodes of xml_method_filenames_child
-# for node in xml_method_filenames_child:
-#     print(node.tag, node.attrib)
-# Go to the 'File names' parameter node of xml_method_filenames_child. Remove all these file names and add the filenames from the job_name folder
-# Print the nodes of the 'File names' parameter node in xml_method_filenames_child
-xml_method_filenames_child_filenames = xml_method_filenames_child.find('parameter[@name="File names"]')
-xml_mzml_input_str_start = os.getcwd() + '\\input\\'
-# Remove all the filenames (<file>) in xml_method_filenames_child_filenames
-for filename in xml_method_filenames_child_filenames.findall('file'):
-    xml_method_filenames_child_filenames.remove(filename)
-# Add filenames as nodes (<file>) of xml_method_filenames_child_filenames. Each filename will start with xml_mzml_filename_str_start, followed by the job_name, followed by \\, followed by the filename. Each node should be on a different line in the xml file
-for filename in mzml_filenames:
-    new_file = ET.Element('file')
-    new_file.text = xml_mzml_input_str_start + job_name + '\\' + filename
-    xml_method_filenames_child_filenames.append(new_file)
+change_node_parameters(xml_root, 'batchstep[@method="io.github.mzmine.modules.io.import_rawdata_all.AllSpectralDataImportModule"][@parameter_version="1"]', 'parameter[@name="File names"]', 'file', mzml_filenames, xml_mzml_input_str_start + job_name + '\\', '')
 
 
 """
@@ -218,9 +264,15 @@ xml_method_sirius_child_filenames.append(last_file)
 """
 Save new xml file
 """
+# Use prettify function to make the xml file more readable
+xml_root_prettified = prettify(xml_root)
+xml_tree = ET.ElementTree(xml_root_prettified)
 # Save new xml file as a new file in temp folder
 mzmine3_xml_filename_new = job_name + '_mzmine3.xml'
 xml_tree.write(pjoin(temp_folder, mzmine3_xml_filename_new))
+
+
+
 
 
 """""""""""""""""""""""""""""""""""""""""""""
