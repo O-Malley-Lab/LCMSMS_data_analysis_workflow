@@ -79,9 +79,9 @@ xml_tree = ET.parse(pjoin(input_folder, mzmine3_xml_filename))
 
 # Get root (batch mzmine_version="3.6.0"
 xml_root = xml_tree.getroot()
-# Look at children of root (batchstep method="...") and print attrib text for all xml_children
-for child in xml_root:
-    print(child.attrib)
+# Can look at children of root (batchstep method="...") and print attrib text for all xml_children
+# for child in xml_root:
+#     print(child.attrib)
 
 # Update mzml filenames for MZmine3 to use
 # Set xml_method_filenames_child to the child of xml_root with the following: batchstep method="io.github.mzmine.modules.io.import_rawdata_all.AllSpectralDataImportModule" parameter_version="1"
@@ -93,7 +93,7 @@ xml_method_filenames_child = xml_root.find(xml_method_filenames_child_str)
 # Go to the 'File names' parameter node of xml_method_filenames_child. Remove all these file names and add the filenames from the job_name folder
 # Print the nodes of the 'File names' parameter node in xml_method_filenames_child
 xml_method_filenames_child_filenames = xml_method_filenames_child.find('parameter[@name="File names"]')
-xml_mzml_input_str_start = 'C:\\Users\\lazab\\Documents\\github\\LCMSMS_data_analysis_workflow\\input\\'
+xml_mzml_input_str_start = os.getcwd() + '\\input\\'
 # Remove all the filenames (<file>) in xml_method_filenames_child_filenames
 for filename in xml_method_filenames_child_filenames.findall('file'):
     xml_method_filenames_child_filenames.remove(filename)
@@ -112,7 +112,7 @@ xml_method_metadata_child_str = 'batchstep[@method="io.github.mzmine.modules.vis
 xml_method_metadata_child = xml_root.find(xml_method_metadata_child_str)
 # The node of the child to use is <parameter name="File names">
 xml_method_metadata_child_filenames = xml_method_metadata_child.find('parameter[@name="File names"]')
-xml_mzml_temp_str_start = 'C:\\Users\\lazab\\Documents\\github\\LCMSMS_data_analysis_workflow\\input\\'
+xml_mzml_temp_str_start = os.getcwd() + '\\temp\\'
 
 # Add current_file and last_file nodes to xml_method_metadata_child. For the path, use xml_mzml_temp_str_start + job_name + '\\' + metadata_filename
 current_file = ET.Element('current_file')
@@ -138,7 +138,6 @@ xml_method_gnps_child_str = 'batchstep[@method="io.github.mzmine.modules.io.expo
 xml_method_gnps_child = xml_root.find(xml_method_gnps_child_str)
 # The node of the child to use is <parameter name="Filename">
 xml_method_gnps_child_filenames = xml_method_gnps_child.find('parameter[@name="Filename"]')
-xml_mzml_temp_str_start = 'C:\\Users\\lazab\\Documents\\github\\LCMSMS_data_analysis_workflow\\input\\'
 mzmine3_gnps_export_filename = job_name + '_gnps.mgf'
 
 # Add current_file and last_file nodes to xml_method_gnps_child. For the path, use xml_mzml_temp_str_start + job_name + '\\' + mzmine3_gnps_export_filename
@@ -198,7 +197,6 @@ xml_method_sirius_child_str = 'batchstep[@method="io.github.mzmine.modules.io.ex
 xml_method_sirius_child = xml_root.find(xml_method_sirius_child_str)
 # The node of the child to use is <parameter name="Filename">
 xml_method_sirius_child_filenames = xml_method_sirius_child.find('parameter[@name="Filename"]')
-xml_mzml_temp_str_start = 'C:\\Users\\lazab\\Documents\\github\\LCMSMS_data_analysis_workflow\\input\\'
 mzmine3_sirius_export_filename = job_name + '_sirius.mgf'
 
 # Add current_file and last_file nodes to xml_method_sirius_child. For the path, use xml_mzml_temp_str_start + job_name + '\\' + mzmine3_sirius_export_filename
