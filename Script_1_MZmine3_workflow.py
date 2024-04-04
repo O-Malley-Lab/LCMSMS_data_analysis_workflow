@@ -15,7 +15,7 @@ import xml.etree.ElementTree as ET
 Functions
 """""""""""""""""""""""""""""""""""""""""""""
 
-def change_node_parameters(root, node_str, param_str, tag_str, dir_param, param_pre_str='', param_post_str=''):
+def change_node_parameters(root, node_str, param_str, tag_str, dir_param):
     """
     Change the parameters of a node in the XML file.
     
@@ -49,13 +49,9 @@ def change_node_parameters(root, node_str, param_str, tag_str, dir_param, param_
     # Add new values of the parameter
     for param in dir_param:
         new_param = ET.Element(tag_str)
-        new_param.text = param_pre_str + param + param_post_str
+        new_param.text = param
         child_param.append(new_param)
     return
-
-# def change_node_text():
-
-#     return
 
 def prettify(element, level=0):
     indent = "    "  # 4 spaces
@@ -142,123 +138,82 @@ xml_root = xml_tree.getroot()
 #     print(child.attrib)
 
 # Set xml_mzml_input_str_start to the start of the path for the mzml files in the input folder, and also sete xml_mzml_temp_str_start to the start of the path for the temp folder
-xml_mzml_input_str_start = os.getcwd() + '\\input\\'
-xml_mzml_temp_str_start = os.getcwd() + '\\temp\\'
+xml_input_dir_pre_str = os.getcwd() + '\\input\\'
+xml_temp_dir_pre_str = os.getcwd() + '\\temp\\'
 
 # Update mzml filenames for MZmine3 to use
 # Set xml_method_filenames_child to the child of xml_root with the following: batchstep method="io.github.mzmine.modules.io.import_rawdata_all.AllSpectralDataImportModule" parameter_version="1"
-change_node_parameters(xml_root, 'batchstep[@method="io.github.mzmine.modules.io.import_rawdata_all.AllSpectralDataImportModule"][@parameter_version="1"]', 'parameter[@name="File names"]', 'file', mzml_filenames, xml_mzml_input_str_start + job_name + '\\', '')
+change_node_parameters(xml_root, 'batchstep[@method="io.github.mzmine.modules.io.import_rawdata_all.AllSpectralDataImportModule"][@parameter_version="1"]', 'parameter[@name="File names"]', 'file', [xml_input_dir_pre_str + job_name + '\\' + filename for filename in mzml_filenames])
 
 
 """
 Edit basic .xml parameters file: metadata
 """
-# Update metadata file to use (<batchstep method="io.github.mzmine.modules.visualization.projectmetadata.io.ProjectMetadataImportModule" parameter_version="1">). 
-xml_method_metadata_child_str = 'batchstep[@method="io.github.mzmine.modules.visualization.projectmetadata.io.ProjectMetadataImportModule"][@parameter_version="1"]'
-xml_method_metadata_child = xml_root.find(xml_method_metadata_child_str)
-# The node of the child to use is <parameter name="File names">
-xml_method_metadata_child_filenames = xml_method_metadata_child.find('parameter[@name="File names"]')
-xml_mzml_temp_str_start = os.getcwd() + '\\temp\\'
-
-# Add current_file and last_file nodes to xml_method_metadata_child. For the path, use xml_mzml_temp_str_start + job_name + '\\' + metadata_filename
-current_file = ET.Element('current_file')
-current_file.text = xml_mzml_temp_str_start + job_name + '\\' + metadata_filename
-# Remove previous current_file
-for filename in xml_method_metadata_child_filenames.findall('current_file'):
-    xml_method_metadata_child_filenames.remove(filename)
-xml_method_metadata_child_filenames.append(current_file)
-
-last_file = ET.Element('last_file')
-last_file.text = xml_mzml_temp_str_start + job_name + '\\' + metadata_filename
-# Remove previous last_file
-for filename in xml_method_metadata_child_filenames.findall('last_file'):
-    xml_method_metadata_child_filenames.remove(filename)
-xml_method_metadata_child_filenames.append(last_file)
+# Update current_file for metadata section
+change_node_parameters(xml_root, 'batchstep[@method="io.github.mzmine.modules.visualization.projectmetadata.io.ProjectMetadataImportModule"][@parameter_version="1"]', 'parameter[@name="File names"]', 'current_file', [xml_temp_dir_pre_str + job_name + '\\' + metadata_filename])
+# Update last_file for metadata section
+change_node_parameters(xml_root, 'batchstep[@method="io.github.mzmine.modules.visualization.projectmetadata.io.ProjectMetadataImportModule"][@parameter_version="1"]', 'parameter[@name="File names"]', 'last_file', [xml_temp_dir_pre_str + job_name + '\\' + metadata_filename])
 
 
 """
 Edit basic .xml parameters file: MZmine3 export for GNPS input
 """
-# Update export step for GNPS input (<batchstep method="io.github.mzmine.modules.io.export_features_gnps.fbmn.GnpsFbmnExportAndSubmitModule" parameter_version="2">). 
-xml_method_gnps_child_str = 'batchstep[@method="io.github.mzmine.modules.io.export_features_gnps.fbmn.GnpsFbmnExportAndSubmitModule"][@parameter_version="2"]'
-xml_method_gnps_child = xml_root.find(xml_method_gnps_child_str)
-# The node of the child to use is <parameter name="Filename">
-xml_method_gnps_child_filenames = xml_method_gnps_child.find('parameter[@name="Filename"]')
-mzmine3_gnps_export_filename = job_name + '_gnps.mgf'
+# Update export step for GNPS input, current_file parameter
+change_node_parameters(xml_root, 'batchstep[@method="io.github.mzmine.modules.io.export_features_gnps.fbmn.GnpsFbmnExportAndSubmitModule"][@parameter_version="2"]', 'parameter[@name="Filename"]', 'current_file', [xml_temp_dir_pre_str + job_name + '\\' + job_name + '_gnps.mgf'])
 
-# Add current_file and last_file nodes to xml_method_gnps_child. For the path, use xml_mzml_temp_str_start + job_name + '\\' + mzmine3_gnps_export_filename
-current_file = ET.Element('current_file')
-current_file.text = xml_mzml_temp_str_start + job_name + '\\' + mzmine3_gnps_export_filename
-# Remove previous current_file
-for filename in xml_method_gnps_child_filenames.findall('current_file'):
-    xml_method_gnps_child_filenames.remove(filename)
-xml_method_gnps_child_filenames.append(current_file)
-
-last_file = ET.Element('last_file')
-last_file.text = xml_mzml_temp_str_start + job_name + '\\' + mzmine3_gnps_export_filename
-# Remove previous last_file
-for filename in xml_method_gnps_child_filenames.findall('last_file'):
-    xml_method_gnps_child_filenames.remove(filename)
-xml_method_gnps_child_filenames.append(last_file)
+# Update export step for GNPS input, last_file parameter
+change_node_parameters(xml_root, 'batchstep[@method="io.github.mzmine.modules.io.export_features_gnps.fbmn.GnpsFbmnExportAndSubmitModule"][@parameter_version="2"]', 'parameter[@name="Filename"]', 'last_file', [xml_temp_dir_pre_str + job_name + '\\' + job_name + '_gnps.mgf'])
 
 
 """
-Edit GNPS auto-run parameters < to-do
+Edit GNPS auto-run parameters
 """
-# Within the xml_method_gnps_child, the node <parameter name="Submit to GNPS" selected="false"> (to-do: change false to true when you want to auto-run GNPS), there are nodes to edit:
-# <parameter name="Meta data file" selected="true"> -- Change the value of the node to the path of the metadata file
-# <parameter name="Job title"> -- change the value of the node to the job name + '_MZmine3_autorun_GNPS'
+# Within the xml_method_gnps_child, the node <parameter name="Submit to GNPS" selected="false"> (to-do: change false to true when you want to auto-run GNPS), there are nodes to edit: Meta data file, Job title, Email, Username, Password
 # If you are another user, you will want to change the Email, Username, and Password
 
 # Make edits
-xml_method_gnps_autorun_node = xml_method_gnps_child.find('parameter[@name="Submit to GNPS"]')
+xml_gnps_child = xml_root.find('batchstep[@method="io.github.mzmine.modules.io.export_features_gnps.fbmn.GnpsFbmnExportAndSubmitModule"][@parameter_version="2"]')
+
+xml_gnps_autorun_node = xml_gnps_child.find('parameter[@name="Submit to GNPS"]')
 # xml_method_gnps_autorun_node.set('selected', 'true')
 
 # Adjust metadata file for GNPS job auto-run
-xml_method_gnps_autorun_metadata_node = xml_method_gnps_autorun_node.find('parameter[@name="Meta data file"]')
-xml_method_gnps_autorun_metadata_node.text = xml_mzml_temp_str_start + job_name + '\\' + metadata_filename
+xml_gnps_autorun_metadata_subnode = xml_gnps_autorun_node.find('parameter[@name="Meta data file"]')
+# Within this node, adjust current_file and last_file
+current_file = ET.Element('current_file')
+for filename in xml_gnps_autorun_metadata_subnode.findall('current_file'):
+    xml_gnps_autorun_metadata_subnode.remove(filename)
+current_file.text = xml_temp_dir_pre_str + job_name + '\\' + metadata_filename
+xml_gnps_autorun_metadata_subnode.append(current_file)
+
+last_file = ET.Element('last_file')
+for filename in xml_gnps_autorun_metadata_subnode.findall('last_file'):
+    xml_gnps_autorun_metadata_subnode.remove(filename)
+last_file.text = xml_temp_dir_pre_str + job_name + '\\' + metadata_filename
+xml_gnps_autorun_metadata_subnode.append(last_file)
 
 # Adjust job title for GNPS job auto-run
-xml_method_gnps_autorun_job_title_node = xml_method_gnps_autorun_node.find('parameter[@name="Job title"]')
+xml_method_gnps_autorun_job_title_node = xml_gnps_autorun_node.find('parameter[@name="Job title"]')
 xml_method_gnps_autorun_job_title_node.text = job_name + '_MZmine3_autorun_GNPS'
 
 # Adjust email for GNPS job auto-run
-xml_method_gnps_autorun_email_node = xml_method_gnps_autorun_node.find('parameter[@name="Email"]')
+xml_method_gnps_autorun_email_node = xml_gnps_autorun_node.find('parameter[@name="Email"]')
 xml_method_gnps_autorun_email_node.text = 'lbutkovich@ucsb.edu'
 
 # Adjust username for GNPS job auto-run
-xml_method_gnps_autorun_username_node = xml_method_gnps_autorun_node.find('parameter[@name="Username"]')
+xml_method_gnps_autorun_username_node = xml_gnps_autorun_node.find('parameter[@name="Username"]')
 xml_method_gnps_autorun_username_node.text = 'lbutkovich'
 
 # Adjust password for GNPS job auto-run
-xml_method_gnps_autorun_password_node = xml_method_gnps_autorun_node.find('parameter[@name="Password"]')
+xml_method_gnps_autorun_password_node = xml_gnps_autorun_node.find('parameter[@name="Password"]')
 xml_method_gnps_autorun_password_node.text = 'password123'
 
 
 """
 Edit basic .xml parameters file: MZmine3 export for SIRIUS input
 """
-# Update export step for SIRIUS input (<batchstep method="io.github.mzmine.modules.io.export_features_sirius.SiriusExportModule" parameter_version="1">). 
-xml_method_sirius_child_str = 'batchstep[@method="io.github.mzmine.modules.io.export_features_sirius.SiriusExportModule"][@parameter_version="1"]'
-xml_method_sirius_child = xml_root.find(xml_method_sirius_child_str)
-# The node of the child to use is <parameter name="Filename">
-xml_method_sirius_child_filenames = xml_method_sirius_child.find('parameter[@name="Filename"]')
-mzmine3_sirius_export_filename = job_name + '_sirius.mgf'
-
-# Add current_file and last_file nodes to xml_method_sirius_child. For the path, use xml_mzml_temp_str_start + job_name + '\\' + mzmine3_sirius_export_filename
-current_file = ET.Element('current_file')
-current_file.text = xml_mzml_temp_str_start + job_name + '\\' + mzmine3_sirius_export_filename
-# Remove previous current_file
-for filename in xml_method_sirius_child_filenames.findall('current_file'):
-    xml_method_sirius_child_filenames.remove(filename)
-xml_method_sirius_child_filenames.append(current_file)
-
-last_file = ET.Element('last_file')
-last_file.text = xml_mzml_temp_str_start + job_name + '\\' + mzmine3_sirius_export_filename
-# Remove previous last_file
-for filename in xml_method_sirius_child_filenames.findall('last_file'):
-    xml_method_sirius_child_filenames.remove(filename)
-xml_method_sirius_child_filenames.append(last_file)
+change_node_parameters(xml_root, 'batchstep[@method="io.github.mzmine.modules.io.export_features_sirius.SiriusExportModule"][@parameter_version="1"]', 'parameter[@name="Filename"]', 'current_file', [xml_temp_dir_pre_str + job_name + '\\' + job_name + '_sirius.mgf'])
+change_node_parameters(xml_root, 'batchstep[@method="io.github.mzmine.modules.io.export_features_sirius.SiriusExportModule"][@parameter_version="1"]', 'parameter[@name="Filename"]', 'last_file', [xml_temp_dir_pre_str + job_name + '\\' + job_name + '_sirius.mgf'])
 
 
 """
