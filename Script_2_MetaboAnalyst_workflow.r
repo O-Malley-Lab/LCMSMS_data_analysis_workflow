@@ -70,7 +70,7 @@
 # help(package="MetaboAnalystR")
 
 ##############
-# Values to Change
+# Values to Change <-- to-do: update this section to use metadata instead
 ##############
 metaboanalyst_folder = 'MetaboAnalystR'
 job_name = 'TJGIp11'

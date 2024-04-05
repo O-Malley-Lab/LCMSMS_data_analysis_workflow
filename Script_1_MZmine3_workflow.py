@@ -227,11 +227,14 @@ mzmine3_xml_filename_new = job_name + '_mzmine3.xml'
 xml_tree.write(pjoin(temp_folder, mzmine3_xml_filename_new))
 
 
-
+"""""""""""""""""""""""""""""""""""""""""""""
+Use XML file to run MZmine3 in Commandline <-- to-do
+"""""""""""""""""""""""""""""""""""""""""""""
+# Later, implement GNPS job auto-run <-- to-do
 
 
 """""""""""""""""""""""""""""""""""""""""""""
-Use the MZmine3 output for GNPS input to generate the MetaboAnalyst input
+Use the MZmine3 output for GNPS input to generate the MetaboAnalyst input <-- to-do
 """""""""""""""""""""""""""""""""""""""""""""
 # Note, the GNPS export file has less rows than the corresponding MetaboAnalyst export file from MZmine3. For this work, I want to compare features directly between MetaboAnalyst, GNPS, etc., so having the same features input into those tools is helpful. I was unable to find a way to export the MetaboAnalyst import file from MZmine3 commandline. To get the MetaboAnalyst import file from the MZmine3 gui, you need to manually import the metadata info before being able to indicate the variable to sort groups by (ie: 'Class').
 
