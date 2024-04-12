@@ -110,6 +110,9 @@ for filename in mzml_filenames:
 mzml_filenames = os.listdir(pjoin(input_folder, job_name))
 # Make list of filenames in ctrl_folder_name
 ctrl_filenames = [filename for filename in mzml_filenames if filename.endswith('.mzML') and 'CTRL' in filename]
+# Give an error message if there are no control files
+if len(ctrl_filenames) == 0:
+    raise ValueError('No control files found in folder ' + job_name + '; rename control files to contain CTRL in filename')
 # Make list of filenames in exp_folder_name
 exp_filenames = [filename for filename in mzml_filenames if filename.endswith('.mzML') and 'CTRL' not in filename]
 
