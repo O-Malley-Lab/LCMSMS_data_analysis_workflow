@@ -10,6 +10,7 @@ import pandas as pd
 import os
 from os.path import join as pjoin
 import xml.etree.ElementTree as ET
+import subprocess
 
 """""""""""""""""""""""""""""""""""""""""""""
 Functions
@@ -92,6 +93,10 @@ ctrl_rep_num = metadata['CTRL num replicates'][0]
 if not os.path.exists(pjoin(temp_overall_folder, job_name)):
     os.makedirs(pjoin(temp_overall_folder, job_name))
 temp_folder = pjoin(temp_overall_folder, job_name)
+
+# Empty the temp_folder of any files
+for filename in os.listdir(temp_folder):
+    os.remove(pjoin(temp_folder, filename))
 
 # Format of metadata .tsv: two columns, Filename and Class. List the filenames from folder Job Name, where filenames with 'CTRL' in them are in the 'CTRL' class and filenames without 'CTRL' in them are in the 'EXP' class.
 # Create metadata .tsv file in temp folder
@@ -235,6 +240,25 @@ Use XML file to run MZmine3 in Commandline <-- to-do
 """""""""""""""""""""""""""""""""""""""""""""
 # Later, implement GNPS job auto-run <-- to-do
 
+# command line arguments for MZmine3 in list format
+command_args = ['D:\MZmine\MZmine.exe', '-batch', pjoin(xml_temp_dir_pre_str, job_name, mzmine3_xml_filename_new), '-memory', 'all']
+
+# Run MZmine3 in commandline, suppress stdout and stderr
+# (If output is not suppressed, the buffer will fill up
+# and the process will hang.)
+process = subprocess.Popen(command_args, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+
+# Wait for the process to finish and get the exit code
+print(f"PID of the process: {process.pid}")
+exit_code = process.wait()
+print(f"Process finished with exit code {exit_code}")
+
+print("MZmine3 job started for " + job_name)
+# Make python script wait until MZmine3 job is done running. This is observable when the SIRIUS .mgf file is created in the temp folder's job folder, since the export for SIRIUS import is the last MZmine3 batch xml step.
+# while not os.path.exists(pjoin(temp_folder, job_name, job_name + '_sirius.mgf')):
+#     pass
+# print("MZmine3 job finished for " + job_name)
+
 
 """""""""""""""""""""""""""""""""""""""""""""
 Use the MZmine3 output for GNPS input to generate the MetaboAnalyst input <-- to-do
@@ -251,3 +275,10 @@ Use the MZmine3 output for GNPS input to generate the MetaboAnalyst input <-- to
 # row_mz is the 'row m/z' column value in the GNPS input file
 # row_rt is the 'row retention time' column value in the GNPS input file
 # Sort gnps file by row ID to get the order of rows in the MetaboAnalyst import file
+
+# Import GNPS input file
+# gnps_input_filename = job_name + '_gnps_quant.csv'
+# gnps_input_filepath = pjoin(temp_folder, job_name, gnps_input_filename)
+# gnps_input_df = pd.read_csv(gnps_input_filepath)
+
+
