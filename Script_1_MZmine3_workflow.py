@@ -40,7 +40,6 @@ def change_node_parameters(root, node_str, param_str, tag_str, dir_param):
     - None
     XML root is modified without returning anything.
     -------
-    
     """
     child = root.find(node_str)
     child_param = child.find(param_str)
@@ -55,6 +54,20 @@ def change_node_parameters(root, node_str, param_str, tag_str, dir_param):
     return
 
 def prettify(element, level=0):
+    """
+    Prettify the XML file for easier reading.
+    
+    Input
+    element : xml.etree.ElementTree.Element
+        Element to prettify.
+    level : int, optional
+        Level of indentation for the element.
+
+    Output
+    element : xml.etree.ElementTree.Element
+        Prettified element.
+    -------
+    """
     indent = "    "  # 4 spaces
     if len(element):
         element.text = "\n" + indent * (level + 1)
@@ -66,6 +79,37 @@ def prettify(element, level=0):
         element.tail = "\n" + indent * level
     return element
 
+def commandline_MZmine3(mzmine_exe_dir, xml_temp_dir_pre_str, job_name, mzmine3_xml_filename_new):
+    """
+    Run MZmine3 in commandline using the .xml file.
+
+    Input
+    mzmine_exe_dir : str
+        String directory location of your local MZmine3 executable.
+    xml_temp_dir_pre_str : str
+        Start of the path for the temp folder.
+    job_name : str
+        Name of the job.
+    mzmine3_xml_filename_new : str
+        Name of the new .xml file to run MZmine3.
+
+    Output
+    exit_code : int
+        Exit code of the MZmine3 process, to keep track of whether the process finished successfully.
+    -------
+    """
+    # Command line arguments for MZmine3 in list format. '-memory' and 'all' enable use of all available memory to decrease processing time.
+    command_args = [mzmine_exe_dir, '-batch', pjoin(xml_temp_dir_pre_str, job_name, mzmine3_xml_filename_new), '-memory', 'all']
+
+    # Run MZmine3 in commandline, suppress stdout and stderr. If output is not suppressed, the buffer will fill up and the process will hang.
+    process = subprocess.Popen(command_args, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+
+    # Wait for the process to finish and get the exit code
+    print(f"PID of the process: {process.pid}")
+    exit_code = process.wait()
+
+    return exit_code
+
 """""""""""""""""""""""""""""""""""""""""""""
 Values
 """""""""""""""""""""""""""""""""""""""""""""
@@ -75,6 +119,9 @@ temp_overall_folder = r'temp'
 # Use "Overall_Running_Metadata_for_All_LCMSMS_Jobs.xlsx" from input_folder to get relevant parameters for job to run. Use the excel tab "Job to Run"
 metadata_overall_filename = 'Overall_Running_Metadata_for_All_LCMSMS_Jobs.xlsx'
 metadata_job_tab = 'Job to Run'
+
+# String directory location of your local MZmine3 executable (need to install MZmine3 to enable commandline use)
+mzmine_exe_dir = 'D:\MZmine\MZmine.exe'
 
 
 """""""""""""""""""""""""""""""""""""""""""""
@@ -240,24 +287,10 @@ Use XML file to run MZmine3 in Commandline <-- to-do
 """""""""""""""""""""""""""""""""""""""""""""
 # Later, implement GNPS job auto-run <-- to-do
 
-# command line arguments for MZmine3 in list format
-command_args = ['D:\MZmine\MZmine.exe', '-batch', pjoin(xml_temp_dir_pre_str, job_name, mzmine3_xml_filename_new), '-memory', 'all']
-
-# Run MZmine3 in commandline, suppress stdout and stderr
-# (If output is not suppressed, the buffer will fill up
-# and the process will hang.)
-process = subprocess.Popen(command_args, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
-
-# Wait for the process to finish and get the exit code
-print(f"PID of the process: {process.pid}")
-exit_code = process.wait()
+# Run MZmine3 in commandline using the .xml file. Use the function commandline_MZmine3
+exit_code = commandline_MZmine3(mzmine_exe_dir, xml_temp_dir_pre_str, job_name, mzmine3_xml_filename_new)
 print(f"Process finished with exit code {exit_code}")
-
 print("MZmine3 job started for " + job_name)
-# Make python script wait until MZmine3 job is done running. This is observable when the SIRIUS .mgf file is created in the temp folder's job folder, since the export for SIRIUS import is the last MZmine3 batch xml step.
-# while not os.path.exists(pjoin(temp_folder, job_name, job_name + '_sirius.mgf')):
-#     pass
-# print("MZmine3 job finished for " + job_name)
 
 
 """""""""""""""""""""""""""""""""""""""""""""
