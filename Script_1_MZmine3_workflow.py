@@ -110,6 +110,30 @@ def commandline_MZmine3(mzmine_exe_dir, xml_temp_dir_pre_str, job_name, mzmine3_
 
     return exit_code
 
+def create_metaboanalyst_ids(gnps_input_df):
+    """
+    Create MetaboAnalyst IDs for the MetaboAnalyst input file from the GNPS input file.
+
+    Input
+    gnps_input_df : pandas.DataFrame
+        Dataframe of the GNPS input file.
+
+    Output
+    metaboanalyst_ids : list of str
+        List of MetaboAnalyst IDs for the MetaboAnalyst input file.
+    """
+
+    # Sort gnps_input_df by row ID
+    gnps_input_df = gnps_input_df.sort_values(by = 'row ID')
+    metaboanalyst_ids = []
+    # Example format of metaboanalyst_id: 1/239.0947mz/0.03min
+    for id in gnps_input_df['row ID']:
+        mz = round(gnps_input_df[gnps_input_df['row ID'] == id]['row m/z'].values[0], 4)
+        rt = round(gnps_input_df[gnps_input_df['row ID'] == id]['row retention time'].values[0], 2)
+        metaboanalyst_id = str(id) + '/' + str(mz) + 'mz/' + str(rt) + 'min'
+        metaboanalyst_ids.append(metaboanalyst_id)
+    return metaboanalyst_ids
+
 """""""""""""""""""""""""""""""""""""""""""""
 Values
 """""""""""""""""""""""""""""""""""""""""""""
@@ -310,8 +334,60 @@ Use the MZmine3 output for GNPS input to generate the MetaboAnalyst input <-- to
 # Sort gnps file by row ID to get the order of rows in the MetaboAnalyst import file
 
 # Import GNPS input file
-# gnps_input_filename = job_name + '_gnps_quant.csv'
-# gnps_input_filepath = pjoin(temp_folder, job_name, gnps_input_filename)
-# gnps_input_df = pd.read_csv(gnps_input_filepath)
+gnps_input_filename = job_name + '_gnps_quant.csv'
+gnps_input_filepath = pjoin(temp_folder, gnps_input_filename)
+gnps_input_df = pd.read_csv(gnps_input_filepath)
+# Sort by row ID
+gnps_input_df = gnps_input_df.sort_values(by = 'row ID')
 
+# Create a pandas dataframe for the metaboanalyst input file, no header
+metaboanalyst_input_df = pd.DataFrame()
 
+# First row is the 'Filename' row. Row 1 column 1 is 'Filename'. Row 1 column 2 is the first filename in the mzml_filenames list. Row 1 column 2 is the second filename in the mzml_filenames list. Continue until all filenames are listed.
+# Create row 1 as a list of strings
+filename_row = ['Filename'] + mzml_filenames
+# Make row 1 of metaboanalyst_input_df the filename_row
+metaboanalyst_input_df = pd.DataFrame(columns = filename_row)
+
+# The second row of metaboanalyt_input_df is the 'Class' row. The values in the subsequent columns of the second row are CTRL and EXP, corresponding to the class of the samples in the mzml_filenames list.
+# Create row 2 as a list of strings
+class_row = ['Class']
+for filename in mzml_filenames:
+    if 'CTRL' in filename:
+        class_row.append('CTRL')
+    else:
+        class_row.append('EXP')
+# Make row 2 of metaboanalyst_input_df the class_row
+metaboanalyst_input_df.loc[0] = class_row
+
+# Go through each row ID in gnps_input_df and add the feature identifier string and intensity values to metaboanalyst_input_df
+# example format: 1/239.0947mz/0.03min
+metaboanalyst_ids = create_metaboanalyst_ids(gnps_input_df)
+
+# Iterate through each id in metaboanalyst_ids and add the string as the value for the first column, starting at row 3 (recall, row 1 and row 2 are already filled with a different format)
+i=2
+for id in metaboanalyst_ids:
+    # Fill in only first column of row i
+    metaboanalyst_input_df.loc[i, 'Filename'] = id
+    i += 1
+
+# Now, add peak intensity values for each metaboanalyst_ids id and each filename in mzml_filenames.
+# Iterate through each id in metaboanalyst_ids
+for filename_gnps in mzml_filenames:
+    for id in metaboanalyst_ids:
+        # Get the row in gnps_input_df corresponding to the id
+        gnps_row = gnps_input_df[gnps_input_df['row ID'] == int(id.split('/')[0])]
+        # Get the peak intensity value for the id and the filename
+        peak_intensity = gnps_row[filename_gnps + ' Peak area'].values[0]
+        # Get the row number in metaboanalyst_input_df corresponding to the id
+        metaboanalyst_row = metaboanalyst_input_df[metaboanalyst_input_df['Filename'] == id]
+        # Fill in the peak intensity value for the filename
+        metaboanalyst_input_df.loc[metaboanalyst_row.index[0], filename_gnps] = peak_intensity
+        # If there is no peak intensity value for the filename, leave the cell blank
+        if pd.isnull(metaboanalyst_input_df.loc[metaboanalyst_row.index[0], filename_gnps]):
+            metaboanalyst_input_df.loc[metaboanalyst_row.index[0], filename_gnps] = ''
+
+# Export the MetaboAnalyst input file to temp folder
+metaboanalyst_input_filename = job_name + '_MetaboAnalyst_input.csv'
+metaboanalyst_input_filepath = pjoin(temp_folder, metaboanalyst_input_filename)
+metaboanalyst_input_df.to_csv(metaboanalyst_input_filepath, index = False)
