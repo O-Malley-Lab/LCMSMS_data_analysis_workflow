@@ -14,27 +14,30 @@
 # Multivariate analysis ->
 # Biological interpretation
 
-############################################
+#############################################
 # Setting up MetaboAnalystR (only need to do once)
-############################################
+#############################################
+# Clean global environment
+rm(list = ls())
+
 # Step 1. Install package dependencies
 
 # Specifying "always" fixed an error I was having, where ~4 packages would not update and would freeze the run
 options(install.packages.compile.from.source = "always")
 metanr_packages <- function(){metr_pkgs <- c("impute", "pcaMethods", "globaltest", "GlobalAncova", "Rgraphviz", "preprocessCore", "genefilter", "sva", "limma", "KEGGgraph", "siggenes","BiocParallel", "MSnbase", "multtest","RBGL","edgeR","fgsea","devtools","crmn","httr","qs")
-
+  
   list_installed <- installed.packages()
-
+  
   new_pkgs <- subset(metr_pkgs, !(metr_pkgs %in% list_installed[, "Package"]))
-
+  
   if(length(new_pkgs)!=0){
-
+    
     if (!requireNamespace("BiocManager", quietly = TRUE))
       install.packages("BiocManager")
     BiocManager::install(new_pkgs)
     print(c(new_pkgs, " packages added..."))
   }
-
+  
   if((length(new_pkgs)<1)){
     print("No new packages added...")
   }
@@ -49,10 +52,11 @@ metanr_packages()
 
 # Install devtools
 install.packages("devtools")
+library(devtools)
 
 # If above fails, try: Install MetaboAnalystR without documentation
 # note: installing with documentation resulted in error, due to incorrect latex interpretation
-#devtools::install_github("xia-lab/MetaboAnalystR", build = TRUE, build_vignettes = FALSE)
+devtools::install_github("xia-lab/MetaboAnalystR", build = TRUE, build_vignettes = FALSE)
 
 # To view vignettes online: (note, this does not seem to work)
 #browseVignettes("MetaboAnalystR")
@@ -72,40 +76,45 @@ install.packages("devtools")
 ##############
 # Values to Change
 ##############
-metaboanalyst_folder = 'MetaboAnalystR'
-job_name = 'TJGIp11'
-input_dir = "C:\\Users\\lazab\\Desktop\\R_scripts\\MetaboAnalystR"
-# MetaboAnalyst input .csv file from MZmine3
-input_table_filename = 'POS_TJGIp11_metaboanalyst.csv'
+# Get job_name (to-do)
+job_name = 'tutorial'
+input_table_filename = "human_cachexia.csv"
 
 ##############
 # Set working directory
 ##############
-# Set directory for output images and files
-# Set the working directory to the job_name folder
-setwd(input_dir)
-setwd(job_name)
-input_table_dir = paste(input_dir,'\\',job_name,'\\',input_table_filename,sep='')
+# Set the working directory to the job_name folder in the temp folder. This is also where output images will go
+wd = getwd()
+job_dir = paste(wd, "temp", job_name, sep = "\\")
+# If the folder doesn't exist yet in temp, print an error and end the script
+if (!dir.exists(job_dir)){
+  print("Error: job folder does not exist in temp folder. Please create the temp folder in the working directory (ie: run Script 1 to create job folder and MetaboAnalyst input data table).")
+  return()
+}
+setwd(job_dir)
 
-##############
-# Load Libraries
-##############
-library(MetaboAnalystR)
-library(devtools)
 
 #############################################
 # Univariate Methods
 #############################################
 ##############
-# Prepare Data Table
+# Load MetaboAnalystR and Data Table
 ############## 
-mSet<-InitDataObjects("pktable", "stat", FALSE);
+# Load MetaboAnalystR
+library(MetaboAnalystR)
 
-# # May want to address the warning message for font in Windows when previous section is run:
-# par(family="Arial")
+mSet<-InitDataObjects("conc", "stat", FALSE);
+# ***For my HE LC-MS/MS data, I may want to use the following:
+# mSet<-InitDataObjects("pktable", "stat", FALSE);
 
-# Download tutorial dataset
-mSet<-Read.TextData(mSet, input_table_dir, "colu", "disc");
+# May want to address the warning message for font in Windows when previous section is run:
+par(family="Arial")
+
+# Import the data table from MZmine3
+input_table_dir = paste(job_dir,input_table_filename,sep='\\')
+mSet<-Read.TextData(mSet, input_table_dir, "rowu", "disc");
+# ***For my HE LC-MS/MS data, I may want to use the following:
+# mSet<-Read.TextData(mSet, "*write out file path...*", "colu", "disc");
 mSet<-SanityCheckData(mSet);
 
 ##############
@@ -113,23 +122,29 @@ mSet<-SanityCheckData(mSet);
 ############## 
 # Use ReplaceMin to replace missing values in the metabolomics data with a small volume (default is half of the minimum positive value in the data)
 mSet<-ReplaceMin(mSet);
+# ***Use same for my HE LC-MS/MS data
 
 ##############
 # Normalize Data
 ############## 
 mSet<-PreparePrenormData(mSet);
 # Normalize using tutorial's defaults:
-mSet<-Normalization(mSet, "SumNorm", "NULL", "MeanCenter")
+mSet<-Normalization(mSet, "NULL", "LogNorm", "MeanCenter", "S10T0", ratio=FALSE, ratioNum=20)
+# ***For normalizing my HE LC-MS/MS data, I may want to use the following:
+# mSet<-Normalization(mSet, "SumNorm", "NULL", "MeanCenter")
 # function form: Normalization(mSetObj, rowNorm, transNorm, scaleNorm, ref=NULL, ratio=FALSE, ratioNum=20)
 # ^(Check:) Use SumNorm (for Normalization to constant sum) since I do not have a pooled sample or good reference sample
-# ^(Check:)  to not transform the normalized values (otherwise, could log-transform or cubic root-transform)
+# ^(Check:)  to not ttransform the normalized values (otherwise, could log-transform or cubic root-transform)
 # ^(Check:) set scaleNorm to NULL
+# remove ref because default is NULL and I do not have a reference sample
 
 # Two plot summary plot: Feature View of before and after normalization:
 mSet<-PlotNormSummary(mSet, "norm_0_", format ="png", dpi=72, width=NA);
+# ***Use same for my HE LC-MS/MS data
 
 # Two plot summary plot: Sample View of before and after normalization
 mSet<-PlotSampleNormSummary(mSet, "snorm_0_", format = "png", dpi=72, width=NA);
+# ***Use same for my HE LC-MS/MS data
 
 ##############
 # Fold-change Analysis
@@ -140,8 +155,8 @@ mSet<-FC.Anal(mSet, 2.0, 0, FALSE)
 # Plot fold-change analysis. "fc_0_" is the filename, so for custom script, set filename to a changeable variable, followed by "_log2FC_"
 mSet<-PlotFC(mSet, "fc_0_", "png", 72, width=NA)
 
-# # To view fold-change 
-# mSet$analSet$fc$fc.log
+# To view fold-change 
+mSet$analSet$fc$fc.log
 
 ##############
 # T-test
@@ -215,4 +230,3 @@ mSet<-PlotPCABiplot(mSet, "pca_biplot_0_", format = "png", dpi = 72, width=NA, 1
 # View the 3D interactive PLS-DA score plot
 mSet$imgSet$pca.3d
 # ^ I was not able to get this 3d viewer to work
-
