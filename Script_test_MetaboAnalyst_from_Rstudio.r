@@ -23,21 +23,21 @@
 options(install.packages.compile.from.source = "always")
 metanr_packages <- function(){metr_pkgs <- c("impute", "pcaMethods", "globaltest", "GlobalAncova", "Rgraphviz", "preprocessCore", "genefilter", "sva", "limma", "KEGGgraph", "siggenes","BiocParallel", "MSnbase", "multtest","RBGL","edgeR","fgsea","devtools","crmn","httr","qs")
 
-list_installed <- installed.packages()
+  list_installed <- installed.packages()
 
-new_pkgs <- subset(metr_pkgs, !(metr_pkgs %in% list_installed[, "Package"]))
+  new_pkgs <- subset(metr_pkgs, !(metr_pkgs %in% list_installed[, "Package"]))
 
-if(length(new_pkgs)!=0){
-  
-  if (!requireNamespace("BiocManager", quietly = TRUE))
-    install.packages("BiocManager")
-  BiocManager::install(new_pkgs)
-  print(c(new_pkgs, " packages added..."))
-}
+  if(length(new_pkgs)!=0){
 
-if((length(new_pkgs)<1)){
-  print("No new packages added...")
-}
+    if (!requireNamespace("BiocManager", quietly = TRUE))
+      install.packages("BiocManager")
+    BiocManager::install(new_pkgs)
+    print(c(new_pkgs, " packages added..."))
+  }
+
+  if((length(new_pkgs)<1)){
+    print("No new packages added...")
+  }
 }
 
 metanr_packages()
@@ -69,44 +69,23 @@ install.packages("devtools")
 # If you run into questions about MetaboAnalystR package, use the help link:
 # help(package="MetaboAnalystR")
 
-
-
-setwd('C:\\Users\\lazab\\Documents\\github\\LCMSMS_data_analysis_workflow')
-
-
-
 ##############
-# Values to Change <-- to-do: update this section to use metadata instead
+# Values to Change
 ##############
-# Use "Overall_Running_Metadata_for_All_LCMSMS_Jobs.xlsx" from input_folder to get relevant parameters for job to run. Use the excel tab "Job to Run"
-metadata_overall_filename = 'Overall_Running_Metadata_for_All_LCMSMS_Jobs.xlsx'
-metadata_job_sheet = 'Job to Run'
-metadata_job_column = 'Job Name'
-
-##############
-# Set working directory to input and get overall metadata table info
-##############
-current_dir = getwd()
-# set wd to input folder to get metadata table
-setwd('input')
-# Import metadata table excel. The excel is in the input folder
-metadata_overall = readxl::read_excel(metadata_overall_filename, sheet = metadata_job_sheet)
-# Get job_name from metadata_overall first value in metadata_job_column
-job_name = metadata_overall[[1,metadata_job_column]]
-
-# Return to original working directory
-setwd(current_dir)
-
-##############
-# Set working directory to temp and then job folder to get filenames for import data and job-specific metadata for MetaboAnalystR
-##############
-setwd('temp')
-setwd(job_name)
-# Job metadata file is job_name + '_metadata.tsv'
-metadata_filename = paste(job_name,'_metadata.tsv',sep='')
+metaboanalyst_folder = 'MetaboAnalystR'
+job_name = 'TJGIp11'
+input_dir = "C:\\Users\\lazab\\Desktop\\R_scripts\\MetaboAnalystR"
 # MetaboAnalyst input .csv file from MZmine3
-# import_data_filename = paste(job_name,'_MetaboAnalyst_input.csv',sep='')
-import_data_filename = 'POS_TJGIp11_metaboanalyst_previous_test.csv'
+input_table_filename = 'POS_TJGIp11_metaboanalyst.csv'
+
+##############
+# Set working directory
+##############
+# Set directory for output images and files
+# Set the working directory to the job_name folder
+setwd(input_dir)
+setwd(job_name)
+input_table_dir = paste(input_dir,'\\',job_name,'\\',input_table_filename,sep='')
 
 ##############
 # Load Libraries
@@ -114,19 +93,20 @@ import_data_filename = 'POS_TJGIp11_metaboanalyst_previous_test.csv'
 library(MetaboAnalystR)
 library(devtools)
 
-############################################
+#############################################
 # Univariate Methods
-############################################
+#############################################
 ##############
 # Prepare Data Table
 ############## 
 mSet<-InitDataObjects("pktable", "stat", FALSE);
-# test dataset:
-# mSet<-Read.TextData(mSet, "https://www.xialab.ca/api/download/metaboanalyst/human_cachexia.csv", "rowu", "disc");
-# Actual dataset:
+
+# # May want to address the warning message for font in Windows when previous section is run:
+# par(family="Arial")
+
+# Download tutorial dataset
 mSet<-Read.TextData(mSet, input_table_dir, "colu", "disc");
 mSet<-SanityCheckData(mSet);
-
 
 ##############
 # Replace Missing Values
@@ -140,7 +120,6 @@ mSet<-ReplaceMin(mSet);
 mSet<-PreparePrenormData(mSet);
 # Normalize using tutorial's defaults:
 mSet<-Normalization(mSet, "SumNorm", "NULL", "MeanCenter")
-# Note:
 # function form: Normalization(mSetObj, rowNorm, transNorm, scaleNorm, ref=NULL, ratio=FALSE, ratioNum=20)
 # ^(Check:) Use SumNorm (for Normalization to constant sum) since I do not have a pooled sample or good reference sample
 # ^(Check:)  to not transform the normalized values (otherwise, could log-transform or cubic root-transform)
@@ -209,9 +188,9 @@ mSet<-PlotVolcano(mSet, "volcano_0_", 1, 0, format ="png", dpi=72, width=NA)
 # mSet<-PlotCorr(mSet, "ptn_3_", format="png", dpi=72, width=NA)
 
 
-############################################
+##############
 # Principal Component Analysis (PCA)
-############################################
+############## 
 # Perform PCA analysis
 mSet<-PCA.Anal(mSet)
 
@@ -234,7 +213,6 @@ mSet<-PlotPCALoading(mSet, "pca_loading_0_", "png", 72, width=NA, 1,2);
 mSet<-PlotPCABiplot(mSet, "pca_biplot_0_", format = "png", dpi = 72, width=NA, 1, 2)
 
 # View the 3D interactive PLS-DA score plot
-# mSet$imgSet$pca.3d
+mSet$imgSet$pca.3d
 # ^ I was not able to get this 3d viewer to work
 
-setwd(current_dir)
