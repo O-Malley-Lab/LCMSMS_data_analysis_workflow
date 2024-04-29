@@ -9,25 +9,28 @@
 
 
 # Workflow:
-# Processed metabolomic data ->
-# Univariate analysis ->
-# Multivariate analysis ->
-# Biological interpretation
+# Processed metabolomic data -> Univariate analysis -> Multivariate analysis -> Biological interpretation
 
-############################################
-# Setting up MetaboAnalystR (only need to do once)
-############################################
+# # Clean global environment
+# rm(list = ls())
+
+#############################################
+# Un-comment steps 1 and 2 below for the first run to install MetaboAnalystR package and dependencies:
+#############################################
+
+# #############################################
+# # Setting up MetaboAnalystR (only need to do once)
+# #############################################
 # # Step 1. Install package dependencies
-
 # # Specifying "always" fixed an error I was having, where ~4 packages would not update and would freeze the run
 # options(install.packages.compile.from.source = "always")
 # metanr_packages <- function(){metr_pkgs <- c("impute", "pcaMethods", "globaltest", "GlobalAncova", "Rgraphviz", "preprocessCore", "genefilter", "sva", "limma", "KEGGgraph", "siggenes","BiocParallel", "MSnbase", "multtest","RBGL","edgeR","fgsea","devtools","crmn","httr","qs")
   
-# list_installed <- installed.packages()
+#   list_installed <- installed.packages()
   
-# new_pkgs <- subset(metr_pkgs, !(metr_pkgs %in% list_installed[, "Package"]))
+#   new_pkgs <- subset(metr_pkgs, !(metr_pkgs %in% list_installed[, "Package"]))
   
-# if(length(new_pkgs)!=0){
+#   if(length(new_pkgs)!=0){
     
 #     if (!requireNamespace("BiocManager", quietly = TRUE))
 #       install.packages("BiocManager")
@@ -35,7 +38,7 @@
 #     print(c(new_pkgs, " packages added..."))
 #   }
   
-# if((length(new_pkgs)<1)){
+#   if((length(new_pkgs)<1)){
 #     print("No new packages added...")
 #   }
 # }
@@ -44,110 +47,133 @@
 
 # # Also installed the following packages: ggplot2, ggrepel, iheatmapr, ellipse
 
-# ############################################
+# #############################################
 # # Step 2. Install the package
 
 # # Install devtools
 # install.packages("devtools")
+# library(devtools)
 
 # # If above fails, try: Install MetaboAnalystR without documentation
 # # note: installing with documentation resulted in error, due to incorrect latex interpretation
-# # devtools::install_github("xia-lab/MetaboAnalystR", build = TRUE, build_vignettes = FALSE)
+# devtools::install_github("xia-lab/MetaboAnalystR", build = TRUE, build_vignettes = FALSE)
 
 # # To view vignettes online: (note, this does not seem to work)
-# # browseVignettes("MetaboAnalystR")
+# #browseVignettes("MetaboAnalystR")
 
-# # Install package readxl
-# install.packages("readxl")
+# #############################################
 
-# # #############################################
+# #############################################
+# # Running MetaboAnalystR (only need to do once)
+# #############################################
+# # Statistical Analysis Module Overview: 
+# # https://www.metaboanalyst.ca/resources/vignettes/Statistical_Analysis_Module.html
 
+# # If you run into questions about MetaboAnalystR package, use the help link:
+# # help(package="MetaboAnalystR")
 
-############################################
-# Running MetaboAnalystR (only need to do once)
-############################################
-# Statistical Analysis Module Overview: 
-# https://www.metaboanalyst.ca/resources/vignettes/Statistical_Analysis_Module.html
-
-# If you run into questions about MetaboAnalystR package, use the help link:
-# help(package="MetaboAnalystR")
-
+# #############################################
+# Start of Script to Run for MetaboAnalystR
+# #############################################
 ##############
-# Values to Change <-- to-do: update this section to use metadata instead
+# Values to Change
 ##############
-# Use "Overall_Running_Metadata_for_All_LCMSMS_Jobs.xlsx" from input_folder to get relevant parameters for job to run. Use the excel tab "Job to Run"
 metadata_overall_filename = 'Overall_Running_Metadata_for_All_LCMSMS_Jobs.xlsx'
-metadata_job_sheet = 'Job to Run'
+metadata_job_tab = 'Job to Run'
 metadata_job_column = 'Job Name'
+input_table_post_str = "_MetaboAnalyst_input.csv"
 
 ##############
-# Set working directory to input and get overall metadata table info
+# Set working directory
 ##############
-current_dir = getwd()
-# set wd to input folder to get metadata table
-setwd('input')
+# Save the original starting directory as wd
+wd = getwd()
+
+# Get job_name from overall metadata
+input_dir = paste(wd, "input", sep = "\\")
+setwd(input_dir)
 # Import metadata table excel. The excel is in the input folder
-metadata_overall = readxl::read_excel(metadata_overall_filename, sheet = metadata_job_sheet)
+metadata_overall = readxl::read_excel(metadata_overall_filename, sheet = metadata_job_tab)
 # Get job_name from metadata_overall first value in metadata_job_column
 job_name = metadata_overall[[1,metadata_job_column]]
 
-# Return to original working directory
-setwd(current_dir)
+# Set the working directory to the job_name folder in the temp folder. This is also where output images will go
+job_dir = paste(wd, "temp", job_name, sep = "\\")
+# If the folder doesn't exist yet in temp, print an error and end the script
+if (!dir.exists(job_dir)){
+  print("Error: job folder does not exist in temp folder. Please create the temp folder in the working directory (ie: run Script 1 to create job folder and MetaboAnalyst input data table).")
+  return()
+}
+# Create a MetaboAnalystR Output folder in the job folder
+output_dir = paste(job_dir, "MetaboAnalystR_Output", sep = "\\")
+if (!dir.exists(output_dir)){
+  dir.create(output_dir)
+}
+setwd(output_dir)
 
-##############
-# Set working directory to temp and then job folder to get filenames for import data and job-specific metadata for MetaboAnalystR
-##############
-setwd('temp')
-setwd(job_name)
-# Job metadata file is job_name + '_metadata.tsv'
-metadata_filename = paste(job_name,'_metadata.tsv',sep='')
-# MetaboAnalyst input .csv file from MZmine3
-# import_data_filename = paste(job_name,'_MetaboAnalyst_input.csv',sep='')
-import_data_filename = 'POS_TJGIp11_metaboanalyst_previous_test.csv'
 
-##############
-# Load Libraries
-##############
-library(MetaboAnalystR)
-library(devtools)
-
-############################################
+#############################################
 # Univariate Methods
-############################################
+#############################################
 ##############
-# Prepare Data Table
+# Load MetaboAnalystR and Data Table
 ############## 
+# Load MetaboAnalystR
+library(MetaboAnalystR)
+
+# For the tutorial dataset, use the following:
+# conc = compound concentration data
+# pktable = peak intensity table
+# stat = statistics; anal.type indicates analysis type to be performed
+# paired = FALSE
+# mSet<-InitDataObjects("conc", "stat", FALSE);
+# ***For my HE LC-MS/MS data, I may want to use the following:
 mSet<-InitDataObjects("pktable", "stat", FALSE);
-# test dataset:
-# mSet<-Read.TextData(mSet, "https://www.xialab.ca/api/download/metaboanalyst/human_cachexia.csv", "rowu", "disc");
-# Actual dataset:
+
+# May want to address the warning message for font in Windows when previous section is run:
+par(family="Arial")
+
+# Import the data table from MZmine3
+input_table_dir = paste(job_dir, "\\", job_name, input_table_post_str, sep='')
+# Print and error message if there is not a file at the input_table_dir
+if (!file.exists(input_table_dir)){
+  print("Error: input table file does not exist in the job folder. Please create the input table file in the job folder.")
+  return()
+}
+# Format for MetaboAnalystR tutorial dataset (human_cachexia.csv):
+# mSet<-Read.TextData(mSet, input_table_dir, "rowu", "disc");
+# ***For my HE LC-MS/MS data, I may want to use the following:
 mSet<-Read.TextData(mSet, input_table_dir, "colu", "disc");
 mSet<-SanityCheckData(mSet);
-
 
 ##############
 # Replace Missing Values
 ############## 
 # Use ReplaceMin to replace missing values in the metabolomics data with a small volume (default is half of the minimum positive value in the data)
 mSet<-ReplaceMin(mSet);
+# ***Use same for my HE LC-MS/MS data
 
 ##############
 # Normalize Data
 ############## 
 mSet<-PreparePrenormData(mSet);
 # Normalize using tutorial's defaults:
-mSet<-Normalization(mSet, "SumNorm", "NULL", "MeanCenter")
-# Note:
+mSet<-Normalization(mSet, "NULL", "LogNorm", "MeanCenter", "S10T0", ratio=FALSE, ratioNum=20)
+# ***For normalizing my HE LC-MS/MS data, I may want to use the following:
+# mSet<-Normalization(mSet, "SumNorm", "NULL", "MeanCenter")
 # function form: Normalization(mSetObj, rowNorm, transNorm, scaleNorm, ref=NULL, ratio=FALSE, ratioNum=20)
 # ^(Check:) Use SumNorm (for Normalization to constant sum) since I do not have a pooled sample or good reference sample
-# ^(Check:)  to not transform the normalized values (otherwise, could log-transform or cubic root-transform)
+# ^(Check:)  to not ttransform the normalized values (otherwise, could log-transform or cubic root-transform)
 # ^(Check:) set scaleNorm to NULL
+# remove ref because default is NULL and I do not have a reference sample
 
 # Two plot summary plot: Feature View of before and after normalization:
 mSet<-PlotNormSummary(mSet, "norm_0_", format ="png", dpi=72, width=NA);
+# ***Use same for my HE LC-MS/MS data
 
 # Two plot summary plot: Sample View of before and after normalization
 mSet<-PlotSampleNormSummary(mSet, "snorm_0_", format = "png", dpi=72, width=NA);
+# ***Use same for my HE LC-MS/MS data
 
 ##############
 # Fold-change Analysis
@@ -158,8 +184,8 @@ mSet<-FC.Anal(mSet, 2.0, 0, FALSE)
 # Plot fold-change analysis. "fc_0_" is the filename, so for custom script, set filename to a changeable variable, followed by "_log2FC_"
 mSet<-PlotFC(mSet, "fc_0_", "png", 72, width=NA)
 
-# # To view fold-change 
-# mSet$analSet$fc$fc.log
+# To view fold-change 
+mSet$analSet$fc$fc.log
 
 ##############
 # T-test
@@ -206,9 +232,9 @@ mSet<-PlotVolcano(mSet, "volcano_0_", 1, 0, format ="png", dpi=72, width=NA)
 # mSet<-PlotCorr(mSet, "ptn_3_", format="png", dpi=72, width=NA)
 
 
-############################################
+##############
 # Principal Component Analysis (PCA)
-############################################
+############## 
 # Perform PCA analysis
 mSet<-PCA.Anal(mSet)
 
@@ -231,7 +257,8 @@ mSet<-PlotPCALoading(mSet, "pca_loading_0_", "png", 72, width=NA, 1,2);
 mSet<-PlotPCABiplot(mSet, "pca_biplot_0_", format = "png", dpi = 72, width=NA, 1, 2)
 
 # View the 3D interactive PLS-DA score plot
-# mSet$imgSet$pca.3d
+mSet$imgSet$pca.3d
 # ^ I was not able to get this 3d viewer to work
 
-setwd(current_dir)
+# Reset wd to starting wd
+setwd(wd)

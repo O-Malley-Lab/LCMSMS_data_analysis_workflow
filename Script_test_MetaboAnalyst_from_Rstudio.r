@@ -14,65 +14,70 @@
 # Multivariate analysis ->
 # Biological interpretation
 
-#############################################
-# Setting up MetaboAnalystR (only need to do once)
-#############################################
-# Clean global environment
-rm(list = ls())
+# # Clean global environment
+# rm(list = ls())
 
-# Step 1. Install package dependencies
+#############################################
+# Un-comment steps 1 and 2 below for the first run to install MetaboAnalystR package and dependencies:
+#############################################
 
-# Specifying "always" fixed an error I was having, where ~4 packages would not update and would freeze the run
-options(install.packages.compile.from.source = "always")
-metanr_packages <- function(){metr_pkgs <- c("impute", "pcaMethods", "globaltest", "GlobalAncova", "Rgraphviz", "preprocessCore", "genefilter", "sva", "limma", "KEGGgraph", "siggenes","BiocParallel", "MSnbase", "multtest","RBGL","edgeR","fgsea","devtools","crmn","httr","qs")
+# #############################################
+# # Setting up MetaboAnalystR (only need to do once)
+# #############################################
+# # Step 1. Install package dependencies
+# # Specifying "always" fixed an error I was having, where ~4 packages would not update and would freeze the run
+# options(install.packages.compile.from.source = "always")
+# metanr_packages <- function(){metr_pkgs <- c("impute", "pcaMethods", "globaltest", "GlobalAncova", "Rgraphviz", "preprocessCore", "genefilter", "sva", "limma", "KEGGgraph", "siggenes","BiocParallel", "MSnbase", "multtest","RBGL","edgeR","fgsea","devtools","crmn","httr","qs")
   
-  list_installed <- installed.packages()
+#   list_installed <- installed.packages()
   
-  new_pkgs <- subset(metr_pkgs, !(metr_pkgs %in% list_installed[, "Package"]))
+#   new_pkgs <- subset(metr_pkgs, !(metr_pkgs %in% list_installed[, "Package"]))
   
-  if(length(new_pkgs)!=0){
+#   if(length(new_pkgs)!=0){
     
-    if (!requireNamespace("BiocManager", quietly = TRUE))
-      install.packages("BiocManager")
-    BiocManager::install(new_pkgs)
-    print(c(new_pkgs, " packages added..."))
-  }
+#     if (!requireNamespace("BiocManager", quietly = TRUE))
+#       install.packages("BiocManager")
+#     BiocManager::install(new_pkgs)
+#     print(c(new_pkgs, " packages added..."))
+#   }
   
-  if((length(new_pkgs)<1)){
-    print("No new packages added...")
-  }
-}
+#   if((length(new_pkgs)<1)){
+#     print("No new packages added...")
+#   }
+# }
 
-metanr_packages()
+# metanr_packages()
 
-# Also installed the following packages: ggplot2, ggrepel, iheatmapr, ellipse
+# # Also installed the following packages: ggplot2, ggrepel, iheatmapr, ellipse
 
-#############################################
-# Step 2. Install the package
+# #############################################
+# # Step 2. Install the package
 
-# Install devtools
-install.packages("devtools")
-library(devtools)
+# # Install devtools
+# install.packages("devtools")
+# library(devtools)
 
-# If above fails, try: Install MetaboAnalystR without documentation
-# note: installing with documentation resulted in error, due to incorrect latex interpretation
-devtools::install_github("xia-lab/MetaboAnalystR", build = TRUE, build_vignettes = FALSE)
+# # If above fails, try: Install MetaboAnalystR without documentation
+# # note: installing with documentation resulted in error, due to incorrect latex interpretation
+# devtools::install_github("xia-lab/MetaboAnalystR", build = TRUE, build_vignettes = FALSE)
 
-# To view vignettes online: (note, this does not seem to work)
-#browseVignettes("MetaboAnalystR")
+# # To view vignettes online: (note, this does not seem to work)
+# #browseVignettes("MetaboAnalystR")
 
-#############################################
+# #############################################
 
+# #############################################
+# # Running MetaboAnalystR (only need to do once)
+# #############################################
+# # Statistical Analysis Module Overview: 
+# # https://www.metaboanalyst.ca/resources/vignettes/Statistical_Analysis_Module.html
 
-#############################################
-# Running MetaboAnalystR (only need to do once)
-#############################################
-# Statistical Analysis Module Overview: 
-# https://www.metaboanalyst.ca/resources/vignettes/Statistical_Analysis_Module.html
+# # If you run into questions about MetaboAnalystR package, use the help link:
+# # help(package="MetaboAnalystR")
 
-# If you run into questions about MetaboAnalystR package, use the help link:
-# help(package="MetaboAnalystR")
-
+# #############################################
+# Start of Script to Run for MetaboAnalystR
+# #############################################
 ##############
 # Values to Change
 ##############
