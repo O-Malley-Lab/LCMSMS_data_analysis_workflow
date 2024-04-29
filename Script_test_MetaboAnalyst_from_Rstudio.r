@@ -17,60 +17,63 @@
 ############################################
 # Setting up MetaboAnalystR (only need to do once)
 ############################################
-# # Step 1. Install package dependencies
+# Step 1. Install package dependencies
 
-# # Specifying "always" fixed an error I was having, where ~4 packages would not update and would freeze the run
-# options(install.packages.compile.from.source = "always")
-# metanr_packages <- function(){metr_pkgs <- c("impute", "pcaMethods", "globaltest", "GlobalAncova", "Rgraphviz", "preprocessCore", "genefilter", "sva", "limma", "KEGGgraph", "siggenes","BiocParallel", "MSnbase", "multtest","RBGL","edgeR","fgsea","devtools","crmn","httr","qs")
+# Specifying "always" fixed an error I was having, where ~4 packages would not update and would freeze the run
+options(install.packages.compile.from.source = "always")
+metanr_packages <- function(){metr_pkgs <- c("impute", "pcaMethods", "globaltest", "GlobalAncova", "Rgraphviz", "preprocessCore", "genefilter", "sva", "limma", "KEGGgraph", "siggenes","BiocParallel", "MSnbase", "multtest","RBGL","edgeR","fgsea","devtools","crmn","httr","qs")
+
+list_installed <- installed.packages()
+
+new_pkgs <- subset(metr_pkgs, !(metr_pkgs %in% list_installed[, "Package"]))
+
+if(length(new_pkgs)!=0){
   
-# list_installed <- installed.packages()
-  
-# new_pkgs <- subset(metr_pkgs, !(metr_pkgs %in% list_installed[, "Package"]))
-  
-# if(length(new_pkgs)!=0){
-    
-#     if (!requireNamespace("BiocManager", quietly = TRUE))
-#       install.packages("BiocManager")
-#     BiocManager::install(new_pkgs)
-#     print(c(new_pkgs, " packages added..."))
-#   }
-  
-# if((length(new_pkgs)<1)){
-#     print("No new packages added...")
-#   }
-# }
+  if (!requireNamespace("BiocManager", quietly = TRUE))
+    install.packages("BiocManager")
+  BiocManager::install(new_pkgs)
+  print(c(new_pkgs, " packages added..."))
+}
 
-# metanr_packages()
+if((length(new_pkgs)<1)){
+  print("No new packages added...")
+}
+}
 
-# # Also installed the following packages: ggplot2, ggrepel, iheatmapr, ellipse
+metanr_packages()
 
-# ############################################
-# # Step 2. Install the package
+# Also installed the following packages: ggplot2, ggrepel, iheatmapr, ellipse
 
-# # Install devtools
-# install.packages("devtools")
+#############################################
+# Step 2. Install the package
 
-# # If above fails, try: Install MetaboAnalystR without documentation
-# # note: installing with documentation resulted in error, due to incorrect latex interpretation
-# # devtools::install_github("xia-lab/MetaboAnalystR", build = TRUE, build_vignettes = FALSE)
+# Install devtools
+install.packages("devtools")
 
-# # To view vignettes online: (note, this does not seem to work)
-# # browseVignettes("MetaboAnalystR")
+# If above fails, try: Install MetaboAnalystR without documentation
+# note: installing with documentation resulted in error, due to incorrect latex interpretation
+#devtools::install_github("xia-lab/MetaboAnalystR", build = TRUE, build_vignettes = FALSE)
 
-# # Install package readxl
-# install.packages("readxl")
+# To view vignettes online: (note, this does not seem to work)
+#browseVignettes("MetaboAnalystR")
 
-# # #############################################
+#############################################
 
 
-############################################
+#############################################
 # Running MetaboAnalystR (only need to do once)
-############################################
+#############################################
 # Statistical Analysis Module Overview: 
 # https://www.metaboanalyst.ca/resources/vignettes/Statistical_Analysis_Module.html
 
 # If you run into questions about MetaboAnalystR package, use the help link:
 # help(package="MetaboAnalystR")
+
+
+
+setwd('C:\\Users\\lazab\\Documents\\github\\LCMSMS_data_analysis_workflow')
+
+
 
 ##############
 # Values to Change <-- to-do: update this section to use metadata instead
