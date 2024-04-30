@@ -109,6 +109,9 @@ output_dir = paste(job_dir, "MetaboAnalystR_Output", sep = "\\")
 if (!dir.exists(output_dir)){
   dir.create(output_dir)
 }
+# Empty the MetaboAnalystR Output folder if it previously existed
+file.remove(list.files(output_dir, full.names = TRUE))
+
 setwd(output_dir)
 
 
@@ -122,12 +125,12 @@ setwd(output_dir)
 library(MetaboAnalystR)
 
 # For the tutorial dataset, use the following:
-# conc = compound concentration data
-# pktable = peak intensity table
-# stat = statistics; anal.type indicates analysis type to be performed
-# paired = FALSE
+# data.type: conc = compound concentration data
+# anal.type: stat = statistics; anal.type indicates analysis type to be performed
+# paired: FALSE = data is not paired
 # mSet<-InitDataObjects("conc", "stat", FALSE);
-# ***For my HE LC-MS/MS data, I may want to use the following:
+# ***For my HE LC-MS/MS data, I will want to use the following:
+# data.type: pktable = peak intensity table
 mSet<-InitDataObjects("pktable", "stat", FALSE);
 
 # May want to address the warning message for font in Windows when previous section is run:
@@ -143,22 +146,26 @@ if (!file.exists(input_table_dir)){
 # Format for MetaboAnalystR tutorial dataset (human_cachexia.csv):
 # mSet<-Read.TextData(mSet, input_table_dir, "rowu", "disc");
 # ***For my HE LC-MS/MS data, I may want to use the following:
+# format: colu = unpaired data, in columns, rather than paired (_p) or in rows (row_)
+# lbl.type: disc = discrete data, rather than continuous (cont)
 mSet<-Read.TextData(mSet, input_table_dir, "colu", "disc");
 mSet<-SanityCheckData(mSet);
 
 ##############
 # Replace Missing Values
 ############## 
-# Use ReplaceMin to replace missing values in the metabolomics data with a small volume (default is half of the minimum positive value in the data)
+# Use ReplaceMin to replace missing or 0 values in the metabolomics data with a small volume (default is half of the minimum positive value in the data)
 mSet<-ReplaceMin(mSet);
-# ***Use same for my HE LC-MS/MS data
 
 ##############
 # Normalize Data
 ############## 
+# Prepare data for normalization (function should always be initialized)
 mSet<-PreparePrenormData(mSet);
-# Normalize using tutorial's defaults:
-mSet<-Normalization(mSet, "NULL", "LogNorm", "MeanCenter", "S10T0", ratio=FALSE, ratioNum=20)
+
+# Tutorial's defaults for normalization:
+# mSet<-Normalization(mSet, "NULL", "LogNorm", "MeanCenter", "S10T0", ratio=FALSE, ratioNum=20)
+
 # ***For normalizing my HE LC-MS/MS data, I may want to use the following:
 # mSet<-Normalization(mSet, "SumNorm", "NULL", "MeanCenter")
 # function form: Normalization(mSetObj, rowNorm, transNorm, scaleNorm, ref=NULL, ratio=FALSE, ratioNum=20)
@@ -166,14 +173,17 @@ mSet<-Normalization(mSet, "NULL", "LogNorm", "MeanCenter", "S10T0", ratio=FALSE,
 # ^(Check:)  to not ttransform the normalized values (otherwise, could log-transform or cubic root-transform)
 # ^(Check:) set scaleNorm to NULL
 # remove ref because default is NULL and I do not have a reference sample
+# rowNorm: "SumNorm" = normalization to constant sum
+# transNorm: "NULL" = no transformation
+# scaleNorm: "MeanCenter" = mean centering
+# ref: NULL = no reference sample (default)
+mSet<-Normalization(mSet, "SumNorm", "NULL", "MeanCenter")
 
 # Two plot summary plot: Feature View of before and after normalization:
-mSet<-PlotNormSummary(mSet, "norm_0_", format ="png", dpi=72, width=NA);
-# ***Use same for my HE LC-MS/MS data
+mSet<-PlotNormSummary(mSet, paste("Normalization_feature_", job_name, "_"), format ="png", dpi=300, width=NA);
 
 # Two plot summary plot: Sample View of before and after normalization
-mSet<-PlotSampleNormSummary(mSet, "snorm_0_", format = "png", dpi=72, width=NA);
-# ***Use same for my HE LC-MS/MS data
+mSet<-PlotSampleNormSummary(mSet, paste("Normalization_sample_", job_name, "_"), format = "png", dpi=300, width=NA);
 
 ##############
 # Fold-change Analysis
@@ -182,28 +192,42 @@ mSet<-PlotSampleNormSummary(mSet, "snorm_0_", format = "png", dpi=72, width=NA);
 mSet<-FC.Anal(mSet, 2.0, 0, FALSE)
 
 # Plot fold-change analysis. "fc_0_" is the filename, so for custom script, set filename to a changeable variable, followed by "_log2FC_"
-mSet<-PlotFC(mSet, "fc_0_", "png", 72, width=NA)
+mSet<-PlotFC(mSet, paste("Fold-change_",job_name, "_"), "png", 72, width=NA)
 
-# To view fold-change 
-mSet$analSet$fc$fc.log
+# # To view fold-change 
+# mSet$analSet$fc$fc.log
 
 ##############
 # T-test
 ############## 
 # Perform T-test (parametric)
+# nonpar: F = false, for using a non-parametric test, which is a distribution-free test with fewer assumptions. T-tests are parametric.
+# threshp: 0.05 = threshold p-value
+# paired: FALSE = data is not paired
+# equal.var: TRUE = evaluates if the group variance is equal, to inform which t-test to use
+# pvalType = "fdr" = p-value adjustment method, "fdr" = false discovery rate
+# all_results = FALSE = only show significant results (do not return T-test analysis results for all compounds, only significant?)
 mSet<-Ttests.Anal(mSet, nonpar=F, threshp=0.05, paired=FALSE, equal.var=TRUE, "fdr", FALSE)
-
 # Plot of the T-test results
-mSet<-PlotTT(mSet, imgName = "tt_0_", format = "png", dpi = 72, width=NA)
+mSet<-PlotTT(mSet, imgName = paste("T-test_features_",job_name, "_"), format = "png", dpi=300, width=NA)
 
 ##############
 # Volcano Plot
 ############## 
 # Perform the volcano analysis
-mSet<-Volcano.Anal(mSet, FALSE, 2.0, 0, F, 0.1, TRUE, "raw")
+# paired: FALSE = data is not paired
+# fc.thresh: 2.0 = fold-change threshold
+# cmp.type: 0 = group 1 (CTRL?) vs group 2 (EXP?)
+# nonpar: F = false, for using a non-parametric test, which is a distribution-free test with fewer assumptions. T-tests are parametric.
+# threshp: 0.05 = threshold p-value
+# equal.var: TRUE = evaluates if the group variance is equal, to inform which t-test to use
+# pval.type: "raw" = use raw p-values, instead of FDR-adjusted p-values (Q: why?)
+mSet<-Volcano.Anal(mSet, FALSE, 2.0, 0, F, 0.05, TRUE, "raw")
 
-# Create the volcano plot. "volcano_0_" is the filename, so for custom script, set filename to a changeable variable, followed by "_volcano_"
-mSet<-PlotVolcano(mSet, "volcano_0_", 1, 0, format ="png", dpi=72, width=NA)
+# Create the volcano plot
+# plotLbl: 1 = show labels for significant features
+# plotTheme: 0 = use default theme, or use 2 for less borders
+mSet<-PlotVolcano(mSet, paste("Volcano_", job_name, "_"), 1, 0, format ="png", dpi=300, width=NA)
 
 ##############
 # ANOVA (only for multi-group analysis)
@@ -220,7 +244,7 @@ mSet<-PlotVolcano(mSet, "volcano_0_", 1, 0, format ="png", dpi=72, width=NA)
 # # OPTION 1 - Heatmap specifying pearson distance and an overview
 # mSet<-PlotCorrHeatMap(mSet, "corr_0_", "png", 72, width=NA, "col", "pearson", "bwm", "overview", F, F, 0.0)
 # # OPTION 2 - Heatmap specifying pearson correlation and a detailed view
-# mSet<-PlotCorrHeatMap(mSet, "corr_1_", format = "png", dpi=72, width=NA, "col", "spearman", "bwm", "detail", F, F, 999)
+# mSet<-PlotCorrHeatMap(mSet, "corr_1_", format = "png", dpi=300, width=NA, "col", "spearman", "bwm", "detail", F, F, 999)
 
 ##############
 # Pattern Searching (only for multi-group analysis)
@@ -229,7 +253,7 @@ mSet<-PlotVolcano(mSet, "volcano_0_", 1, 0, format ="png", dpi=72, width=NA)
 # mSet<-FeatureCorrelation(mSet, "pearson", "1,6-Anhydro-beta-D-glucose")
 # 
 # # Plot the correlation analysis on a pattern
-# mSet<-PlotCorr(mSet, "ptn_3_", format="png", dpi=72, width=NA)
+# mSet<-PlotCorr(mSet, "ptn_3_", format="png", dpi=300, width=NA)
 
 
 ##############
@@ -239,26 +263,30 @@ mSet<-PlotVolcano(mSet, "volcano_0_", 1, 0, format ="png", dpi=72, width=NA)
 mSet<-PCA.Anal(mSet)
 
 # Create PCA overview
-mSet<-PlotPCAPairSummary(mSet, "pca_pair_0_", format = "png", dpi = 72, width=NA, 5)
+# pc.num: 5 = the number of principal components to display in the pairwise score plot
+mSet<-PlotPCAPairSummary(mSet, paste("PCA_Pair_", job_name, "_"), format = "png", dpi=300, width=NA, 5)
 
 # Create PCA scree plot
-mSet<-PlotPCAScree(mSet, "pca_scree_0_", "png", dpi = 72, width=NA, 5)
+# A Scree Plot is a simple line segment plot that shows the eigenvalues for each individual PC. The scree plot is used to determine the number of components to retain in PCA, because at a high enough number of considered components, the variance explained by higher components is not meaningful.
+# To visually assess the screen plot, look for the "elbow" in the plot, which is the point where the slope of the line changes the most. This is the point where the marginal gain in variance explained by adding another component is minimal.
+# scree.num: 5 = the number of principal components to display in the scree plot
+mSet<-PlotPCAScree(mSet, paste("PCA_Scree_", job_name, "_"), "png", dpi=300, width=NA, 5)
 
-# Create a 2D PCA score plot
-mSet<-PlotPCA2DScore(mSet, "pca_score2d_0_", format = "png", dpi=72, width=NA, 1, 2, 0.95, 1, 0)
+# Create a 2D PCA score plot, using principal components 1 and 2
+mSet<-PlotPCA2DScore(mSet, paste("PCA_score_2D_1_2_", job_name, "_"), format = "png", dpi=300, width=NA, 1, 2, 0.95, 1, 0)
 
-# Create a 3D PCA score plot
-mSet<-PlotPCA3DScoreImg(mSet, "pca_score3d_0_", "png", 72, width=NA, 1,2,3, 40)
+# Create a 3D PCA score plot, using principal components 1, 2, and 3
+mSet<-PlotPCA3DScoreImg(mSet, paste("PCA_score_3D_", job_name, "_"), "png", 72, width=NA, 1,2,3, 40)
 
-# Create a PCA loadings Plots
-mSet<-PlotPCALoading(mSet, "pca_loading_0_", "png", 72, width=NA, 1,2);
+# Create a PCA loadings Plots, using principal components 1 and 2
+mSet<-PlotPCALoading(mSet, paste("PCA_Loading_1_2_", job_name, "_"), "png", 72, width=NA, 1,2);
 
-# Create a PCA Biplot
-mSet<-PlotPCABiplot(mSet, "pca_biplot_0_", format = "png", dpi = 72, width=NA, 1, 2)
+# Create a PCA Biplot, using principal components 1 and 2
+mSet<-PlotPCABiplot(mSet, paste("PCA_BiPlot_1_2_", job_name, "_"), format = "png", dpi=300, width=NA, 1, 2)
 
-# View the 3D interactive PLS-DA score plot
-mSet$imgSet$pca.3d
-# ^ I was not able to get this 3d viewer to work
+# # View the 3D interactive PLS-DA score plot
+# mSet$imgSet$pca.3d
+# # ^ I was not able to get this 3d viewer to work
 
 # Reset wd to starting wd
 setwd(wd)
