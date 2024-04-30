@@ -180,10 +180,10 @@ mSet<-PreparePrenormData(mSet);
 mSet<-Normalization(mSet, "SumNorm", "NULL", "MeanCenter")
 
 # Two plot summary plot: Feature View of before and after normalization:
-mSet<-PlotNormSummary(mSet, paste("Normalization_feature_", job_name, "_"), format ="png", dpi=300, width=NA);
+mSet<-PlotNormSummary(mSet, paste("Normalization_feature_", job_name, "_", sep=''), format ="png", dpi=300, width=NA);
 
 # Two plot summary plot: Sample View of before and after normalization
-mSet<-PlotSampleNormSummary(mSet, paste("Normalization_sample_", job_name, "_"), format = "png", dpi=300, width=NA);
+mSet<-PlotSampleNormSummary(mSet, paste("Normalization_sample_", job_name, "_", sep=''), format = "png", dpi=300, width=NA);
 
 ##############
 # Fold-change Analysis
@@ -192,7 +192,7 @@ mSet<-PlotSampleNormSummary(mSet, paste("Normalization_sample_", job_name, "_"),
 mSet<-FC.Anal(mSet, 2.0, 0, FALSE)
 
 # Plot fold-change analysis. "fc_0_" is the filename, so for custom script, set filename to a changeable variable, followed by "_log2FC_"
-mSet<-PlotFC(mSet, paste("Fold-change_",job_name, "_"), "png", 72, width=NA)
+mSet<-PlotFC(mSet, paste("Fold-change_",job_name, "_", sep=''), "png", 72, width=NA)
 
 # # To view fold-change 
 # mSet$analSet$fc$fc.log
@@ -209,7 +209,7 @@ mSet<-PlotFC(mSet, paste("Fold-change_",job_name, "_"), "png", 72, width=NA)
 # all_results = FALSE = only show significant results (do not return T-test analysis results for all compounds, only significant?)
 mSet<-Ttests.Anal(mSet, nonpar=F, threshp=0.05, paired=FALSE, equal.var=TRUE, "fdr", FALSE)
 # Plot of the T-test results
-mSet<-PlotTT(mSet, imgName = paste("T-test_features_",job_name, "_"), format = "png", dpi=300, width=NA)
+mSet<-PlotTT(mSet, imgName = paste("T-test_features_",job_name, "_", sep=''), format = "png", dpi=300, width=NA)
 
 ##############
 # Volcano Plot
@@ -227,7 +227,7 @@ mSet<-Volcano.Anal(mSet, FALSE, 2.0, 0, F, 0.05, TRUE, "raw")
 # Create the volcano plot
 # plotLbl: 1 = show labels for significant features
 # plotTheme: 0 = use default theme, or use 2 for less borders
-mSet<-PlotVolcano(mSet, paste("Volcano_", job_name, "_"), 1, 0, format ="png", dpi=300, width=NA)
+mSet<-PlotVolcano(mSet, paste("Volcano_", job_name, "_", sep=''), 1, 0, format ="png", dpi=300, width=NA)
 
 ##############
 # ANOVA (only for multi-group analysis)
@@ -264,25 +264,25 @@ mSet<-PCA.Anal(mSet)
 
 # Create PCA overview
 # pc.num: 5 = the number of principal components to display in the pairwise score plot
-mSet<-PlotPCAPairSummary(mSet, paste("PCA_Pair_", job_name, "_"), format = "png", dpi=300, width=NA, 5)
+mSet<-PlotPCAPairSummary(mSet, paste("PCA_Pair_", job_name, "_", sep=''), format = "png", dpi=300, width=NA, 5)
 
 # Create PCA scree plot
 # A Scree Plot is a simple line segment plot that shows the eigenvalues for each individual PC. The scree plot is used to determine the number of components to retain in PCA, because at a high enough number of considered components, the variance explained by higher components is not meaningful.
 # To visually assess the screen plot, look for the "elbow" in the plot, which is the point where the slope of the line changes the most. This is the point where the marginal gain in variance explained by adding another component is minimal.
 # scree.num: 5 = the number of principal components to display in the scree plot
-mSet<-PlotPCAScree(mSet, paste("PCA_Scree_", job_name, "_"), "png", dpi=300, width=NA, 5)
+mSet<-PlotPCAScree(mSet, paste("PCA_Scree_", job_name, "_", sep=''), "png", dpi=300, width=NA, 5)
 
 # Create a 2D PCA score plot, using principal components 1 and 2
-mSet<-PlotPCA2DScore(mSet, paste("PCA_score_2D_1_2_", job_name, "_"), format = "png", dpi=300, width=NA, 1, 2, 0.95, 1, 0)
+mSet<-PlotPCA2DScore(mSet, paste("PCA_score_2D_1_2_", job_name, "_", sep=''), format = "png", dpi=300, width=NA, 1, 2, 0.95, 1, 0)
 
 # Create a 3D PCA score plot, using principal components 1, 2, and 3
-mSet<-PlotPCA3DScoreImg(mSet, paste("PCA_score_3D_", job_name, "_"), "png", 72, width=NA, 1,2,3, 40)
+mSet<-PlotPCA3DScoreImg(mSet, paste("PCA_score_3D_", job_name, "_", sep=''), "png", 72, width=NA, 1,2,3, 40)
 
 # Create a PCA loadings Plots, using principal components 1 and 2
-mSet<-PlotPCALoading(mSet, paste("PCA_Loading_1_2_", job_name, "_"), "png", 72, width=NA, 1,2);
+mSet<-PlotPCALoading(mSet, paste("PCA_Loading_1_2_", job_name, "_", sep=''), "png", 72, width=NA, 1,2);
 
 # Create a PCA Biplot, using principal components 1 and 2
-mSet<-PlotPCABiplot(mSet, paste("PCA_BiPlot_1_2_", job_name, "_"), format = "png", dpi=300, width=NA, 1, 2)
+mSet<-PlotPCABiplot(mSet, paste("PCA_BiPlot_1_2_", job_name, "_", sep=''), format = "png", dpi=300, width=NA, 1, 2)
 
 # # View the 3D interactive PLS-DA score plot
 # mSet$imgSet$pca.3d
