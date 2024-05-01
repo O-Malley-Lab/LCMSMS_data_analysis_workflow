@@ -147,6 +147,8 @@ metadata_job_tab = 'Job to Run'
 # String directory location of your local MZmine3 executable (need to install MZmine3 to enable commandline use)
 mzmine_exe_dir = 'D:\MZmine\MZmine.exe'
 
+# Note, for input mzML files, all control file should have 'CTRL' in filename, otherwise script will not know which file is EXP and which is CTRL for comparison. So far, this script only handles two classes in any given job, 'CTRL' and 'EXP'.
+
 
 """""""""""""""""""""""""""""""""""""""""""""
 Create GNPS and MetaboAnalyst Metadata .tsv files
