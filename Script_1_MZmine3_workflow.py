@@ -11,6 +11,7 @@ import os
 from os.path import join as pjoin
 import xml.etree.ElementTree as ET
 import subprocess
+import shutil
 
 """""""""""""""""""""""""""""""""""""""""""""
 Functions
@@ -167,9 +168,17 @@ if not os.path.exists(pjoin(temp_overall_folder, job_name)):
     os.makedirs(pjoin(temp_overall_folder, job_name))
 temp_folder = pjoin(temp_overall_folder, job_name)
 
-# Empty the temp_folder of any files
+# Empty the temp_folder of any files and folders
 for filename in os.listdir(temp_folder):
-    os.remove(pjoin(temp_folder, filename))
+    file_path = pjoin(temp_folder, filename)
+    try:
+        if os.path.isfile(file_path) or os.path.islink(file_path):
+            os.unlink(file_path)
+        elif os.path.isdir(file_path):
+            shutil.rmtree(file_path)
+    except Exception as e:
+        print('Failed to delete %s. Reason: %s' % (file_path, e))
+
 
 # Format of metadata .tsv: two columns, Filename and Class. List the filenames from folder Job Name, where filenames with 'CTRL' in them are in the 'CTRL' class and filenames without 'CTRL' in them are in the 'EXP' class.
 # Create metadata .tsv file in temp folder
@@ -210,8 +219,8 @@ Edit basic .xml parameters file: input filenames
 """
 # Import basic .xml parameters file using ElementTree https://docs.python.org/3/library/xml.etree.elementtree.html
 
-# Import and parse .xml file from input_folder
-mzmine3_xml_filename = 'MZmine3_batch_params_LCMSMS_HE_for_Commandline_2024_8_test_for_Python_workflow.xml'
+# Import and parse .xml file from input_folder. Get mzmine3_xml_filename from the metadata table, string value in column "MZmine3 batch template"
+mzmine3_xml_filename = metadata['MZmine3 batch template'][0]
 xml_tree = ET.parse(pjoin(input_folder, mzmine3_xml_filename))
 
 # Get root (batch mzmine_version="3.6.0"
