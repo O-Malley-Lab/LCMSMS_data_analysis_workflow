@@ -178,8 +178,10 @@ metadata_filepath = pjoin(temp_folder, metadata_filename)
 # Use pandas to create metadata .tsv file
 metadata_df = pd.DataFrame(columns = ['Filename', 'Class'])
 
-# Get EXP and CTRL lists of filenames in job_name folder
+# Get EXP and CTRL lists of filenames in job_name folder. Only get the list of files that end in .mzML
 mzml_filenames = os.listdir(pjoin(input_folder, job_name))
+mzml_filenames = [filename for filename in mzml_filenames if filename.endswith('.mzML')]
+
 # If control filenames have 'Control' instead of "CTRL', edit filenames
 for filename in mzml_filenames:
     if 'Control' in filename:
