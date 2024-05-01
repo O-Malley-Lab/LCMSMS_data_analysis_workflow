@@ -260,7 +260,7 @@ change_node_parameters(xml_root, 'batchstep[@method="io.github.mzmine.modules.io
 """
 Edit GNPS auto-run parameters
 """
-# Within the xml_method_gnps_child, the node <parameter name="Submit to GNPS" selected="false"> (to-do: change false to true when you want to auto-run GNPS), there are nodes to edit: Meta data file, Job title, Email, Username, Password
+# Within the xml_method_gnps_child, the node <parameter name="Submit to GNPS" selected="false">, there are nodes to edit: Meta data file, Job title, Email, Username, Password
 # If you are another user, you will want to change the Email, Username, and Password
 
 # Make edits
@@ -331,6 +331,40 @@ print("MZmine3 job started for " + job_name)
 
 
 """""""""""""""""""""""""""""""""""""""""""""
+Rearrange MZmine3 output files for easy GNPS input
+"""""""""""""""""""""""""""""""""""""""""""""
+# Create a new folder in temp, job_name folder "GNPS_input_for_" + job_name
+gnps_input_folder = pjoin(temp_folder, "GNPS_input_for_" + job_name)
+os.makedirs(gnps_input_folder)
+
+"""
+.mzML files
+"""
+# Copy .mzML files from input folder to GNPS_input_for_job_name folder
+for filename in mzml_filenames:
+    shutil.copy(pjoin(input_folder, job_name, filename), pjoin(gnps_input_folder, filename))
+
+"""
+Quant Peak Area .csv
+"""
+# Cut the quant peak area .csv file from temp folder, job_name folder to the GNPS_input_for_job_name folder
+shutil.move(pjoin(temp_folder, job_name + '_gnps_quant.csv'), pjoin(gnps_input_folder, job_name + '_gnps_quant.csv'))
+
+"""
+.mgf MS2 file
+"""
+# MZmine3 produces a .mgf file in the temp folder, job_name folder. Cut and paste the .mgf file to the GNPS_input_for_job_name folder
+shutil.move(pjoin(temp_folder, job_name + '_gnps.mgf'), pjoin(gnps_input_folder, job_name + '_gnps.mgf'))
+
+"""
+Metadata .tsv file
+"""
+# Copy the metadata .tsv from temp folder, job_name folder to the GNPS_input_for_job_name folder
+shutil.copy(metadata_filepath, pjoin(gnps_input_folder, metadata_filename))
+""
+
+
+"""""""""""""""""""""""""""""""""""""""""""""
 Use the MZmine3 output for GNPS input to generate the MetaboAnalyst input <-- to-do
 """""""""""""""""""""""""""""""""""""""""""""
 # Note, the GNPS export file has less rows than the corresponding MetaboAnalyst export file from MZmine3. For this work, I want to compare features directly between MetaboAnalyst, GNPS, etc., so having the same features input into those tools is helpful. I was unable to find a way to export the MetaboAnalyst import file from MZmine3 commandline. To get the MetaboAnalyst import file from the MZmine3 gui, you need to manually import the metadata info before being able to indicate the variable to sort groups by (ie: 'Class').
@@ -348,7 +382,7 @@ Use the MZmine3 output for GNPS input to generate the MetaboAnalyst input <-- to
 
 # Import GNPS input file
 gnps_input_filename = job_name + '_gnps_quant.csv'
-gnps_input_filepath = pjoin(temp_folder, gnps_input_filename)
+gnps_input_filepath = pjoin(gnps_input_folder, gnps_input_filename)
 gnps_input_df = pd.read_csv(gnps_input_filepath)
 # Sort by row ID
 gnps_input_df = gnps_input_df.sort_values(by = 'row ID')
