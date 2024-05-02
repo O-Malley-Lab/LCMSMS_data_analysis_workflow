@@ -12,6 +12,7 @@ from os.path import join as pjoin
 import xml.etree.ElementTree as ET
 import subprocess
 import shutil
+import ftplib
 
 """""""""""""""""""""""""""""""""""""""""""""
 Functions
@@ -100,7 +101,7 @@ def commandline_MZmine3(mzmine_exe_dir, xml_temp_dir_pre_str, job_name, mzmine3_
     -------
     """
     # Command line arguments for MZmine3 in list format. '-memory' and 'all' enable use of all available memory to decrease processing time.
-    command_args = [mzmine_exe_dir, '-batch', pjoin(xml_temp_dir_pre_str, job_name, mzmine3_xml_filename_new), '-memory', 'all']
+    command_args = [MZMINE_EXE_DIR, '-batch', pjoin(xml_temp_dir_pre_str, job_name, mzmine3_xml_filename_new), '-memory', 'all']
 
     # Run MZmine3 in commandline, suppress stdout and stderr. If output is not suppressed, the buffer will fill up and the process will hang.
     process = subprocess.Popen(command_args, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
@@ -138,24 +139,30 @@ def create_metaboanalyst_ids(gnps_input_df):
 """""""""""""""""""""""""""""""""""""""""""""
 Values
 """""""""""""""""""""""""""""""""""""""""""""
-input_folder = r'input' 
-temp_overall_folder = r'temp'
+INPUT_FOLDER = r'input' 
+TEMP_OVERALL_FOLDER = r'temp'
 
-# Use "Overall_Running_Metadata_for_All_LCMSMS_Jobs.xlsx" from input_folder to get relevant parameters for job to run. Use the excel tab "Job to Run"
-metadata_overall_filename = 'Overall_Running_Metadata_for_All_LCMSMS_Jobs.xlsx'
-metadata_job_tab = 'Job to Run'
+# Use "Overall_Running_Metadata_for_All_LCMSMS_Jobs.xlsx" from INPUT_FOLDER to get relevant parameters for job to run. Use the excel tab "Job to Run"
+METADATA_OVERALL_FILENAME = 'Overall_Running_Metadata_for_All_LCMSMS_Jobs.xlsx'
+METADATA_JOB_TAB = 'Job to Run'
 
 # String directory location of your local MZmine3 executable (need to install MZmine3 to enable commandline use)
-mzmine_exe_dir = 'D:\MZmine\MZmine.exe'
+MZMINE_EXE_DIR = 'D:\MZmine\MZmine.exe'
 
 # Note, for input mzML files, all control file should have 'CTRL' in filename, otherwise script will not know which file is EXP and which is CTRL for comparison. So far, this script only handles two classes in any given job, 'CTRL' and 'EXP'.
+
+# GNPS FTP server: massive.ucsd.edu (check GNPS documentation if this ever changes)
+HOSTNAME = 'massive.ucsd.edu'
+# later edit these to be encoded in a separate (not public) file
+USERNAME = 'lbutkovich'
+PASSWD = 'password123'
 
 
 """""""""""""""""""""""""""""""""""""""""""""
 Create GNPS and MetaboAnalyst Metadata .tsv files
 """""""""""""""""""""""""""""""""""""""""""""
 # Import metadata table for job
-metadata = pd.read_excel(pjoin(input_folder, metadata_overall_filename), sheet_name = metadata_job_tab)
+metadata = pd.read_excel(pjoin(INPUT_FOLDER, METADATA_OVERALL_FILENAME), sheet_name = METADATA_JOB_TAB)
 
 # Extract relevant information
 job_name = metadata['Job Name'][0]
@@ -164,9 +171,9 @@ exp_rep_num = metadata['EXP num replicates'][0]
 ctrl_rep_num = metadata['CTRL num replicates'][0]
 
 # If it does not already exist, make a folder in temp folder for the job name
-if not os.path.exists(pjoin(temp_overall_folder, job_name)):
-    os.makedirs(pjoin(temp_overall_folder, job_name))
-temp_folder = pjoin(temp_overall_folder, job_name)
+if not os.path.exists(pjoin(TEMP_OVERALL_FOLDER, job_name)):
+    os.makedirs(pjoin(TEMP_OVERALL_FOLDER, job_name))
+temp_folder = pjoin(TEMP_OVERALL_FOLDER, job_name)
 
 # Empty the temp_folder of any files and folders
 for filename in os.listdir(temp_folder):
@@ -188,15 +195,15 @@ metadata_filepath = pjoin(temp_folder, metadata_filename)
 metadata_df = pd.DataFrame(columns = ['Filename', 'Class'])
 
 # Get EXP and CTRL lists of filenames in job_name folder. Only get the list of files that end in .mzML
-mzml_filenames = os.listdir(pjoin(input_folder, job_name))
+mzml_filenames = os.listdir(pjoin(INPUT_FOLDER, job_name))
 mzml_filenames = [filename for filename in mzml_filenames if filename.endswith('.mzML')]
 
 # If control filenames have 'Control' instead of "CTRL', edit filenames
 for filename in mzml_filenames:
     if 'Control' in filename:
-        os.rename(pjoin(input_folder, job_name, filename), pjoin(input_folder, job_name, filename.replace('Control', 'CTRL')))
+        os.rename(pjoin(INPUT_FOLDER, job_name, filename), pjoin(INPUT_FOLDER, job_name, filename.replace('Control', 'CTRL')))
 # reset mzml_filenames
-mzml_filenames = os.listdir(pjoin(input_folder, job_name))
+mzml_filenames = os.listdir(pjoin(INPUT_FOLDER, job_name))
 # Make list of filenames in ctrl_folder_name
 ctrl_filenames = [filename for filename in mzml_filenames if filename.endswith('.mzML') and 'CTRL' in filename]
 # Give an error message if there are no control files
@@ -219,9 +226,9 @@ Edit basic .xml parameters file: input filenames
 """
 # Import basic .xml parameters file using ElementTree https://docs.python.org/3/library/xml.etree.elementtree.html
 
-# Import and parse .xml file from input_folder. Get mzmine3_xml_filename from the metadata table, string value in column "MZmine3 batch template"
+# Import and parse .xml file from INPUT_FOLDER. Get mzmine3_xml_filename from the metadata table, string value in column "MZmine3 batch template"
 mzmine3_xml_filename = metadata['MZmine3 batch template'][0]
-xml_tree = ET.parse(pjoin(input_folder, mzmine3_xml_filename))
+xml_tree = ET.parse(pjoin(INPUT_FOLDER, mzmine3_xml_filename))
 
 # Get root (batch mzmine_version="3.6.0"
 xml_root = xml_tree.getroot()
@@ -325,7 +332,7 @@ Use XML file to run MZmine3 in Commandline <-- to-do
 # Later, implement GNPS job auto-run <-- to-do
 
 # Run MZmine3 in commandline using the .xml file. Use the function commandline_MZmine3
-exit_code = commandline_MZmine3(mzmine_exe_dir, xml_temp_dir_pre_str, job_name, mzmine3_xml_filename_new)
+exit_code = commandline_MZmine3(MZMINE_EXE_DIR, xml_temp_dir_pre_str, job_name, mzmine3_xml_filename_new)
 print(f"Process finished with exit code {exit_code}")
 print("MZmine3 job started for " + job_name)
 
@@ -342,7 +349,7 @@ os.makedirs(gnps_input_folder)
 """
 # Copy .mzML files from input folder to GNPS_input_for_job_name folder
 for filename in mzml_filenames:
-    shutil.copy(pjoin(input_folder, job_name, filename), pjoin(gnps_input_folder, filename))
+    shutil.copy(pjoin(INPUT_FOLDER, job_name, filename), pjoin(gnps_input_folder, filename))
 
 """
 Quant Peak Area .csv
@@ -363,9 +370,13 @@ Metadata .tsv file
 shutil.copy(metadata_filepath, pjoin(gnps_input_folder, metadata_filename))
 ""
 
+"""""""""""""""""""""""""""""""""""""""""""""
+Use FTP () to upload GNPS_input_for_job_name folder to GNPS
+"""""""""""""""""""""""""""""""""""""""""""""
+
 
 """""""""""""""""""""""""""""""""""""""""""""
-Use the MZmine3 output for GNPS input to generate the MetaboAnalyst input <-- to-do
+Use the MZmine3 output for GNPS input to generate the MetaboAnalyst input
 """""""""""""""""""""""""""""""""""""""""""""
 # Note, the GNPS export file has less rows than the corresponding MetaboAnalyst export file from MZmine3. For this work, I want to compare features directly between MetaboAnalyst, GNPS, etc., so having the same features input into those tools is helpful. I was unable to find a way to export the MetaboAnalyst import file from MZmine3 commandline. To get the MetaboAnalyst import file from the MZmine3 gui, you need to manually import the metadata info before being able to indicate the variable to sort groups by (ie: 'Class').
 
@@ -438,3 +449,4 @@ for filename_gnps in mzml_filenames:
 metaboanalyst_input_filename = job_name + '_MetaboAnalyst_input.csv'
 metaboanalyst_input_filepath = pjoin(temp_folder, metaboanalyst_input_filename)
 metaboanalyst_input_df.to_csv(metaboanalyst_input_filepath, index = False)
+
