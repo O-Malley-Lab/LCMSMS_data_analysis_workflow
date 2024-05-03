@@ -272,7 +272,8 @@ metadata_df.to_csv(metadata_filepath, sep = '\t', index = False)
 metadata_df_gnps = metadata_df.copy()
 metadata_df_gnps.columns = ['filename', 'ATTRIBUTE_GROUP']
 metadata_filename_gnps = job_name + '_metadata_gnps.tsv'
-metadata_df_gnps.to_csv(pjoin(temp_folder, metadata_filename_gnps), sep = '\t', index = False)
+metadata_filepath_gnps = pjoin(temp_folder, metadata_filename_gnps)
+metadata_df_gnps.to_csv(metadata_filepath_gnps, sep = '\t', index = False)
 
 
 """""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""
@@ -425,7 +426,7 @@ shutil.move(pjoin(temp_folder, job_name + '_gnps.mgf'), pjoin(gnps_input_folder,
 Metadata .tsv file
 """
 # Copy the GNPS metadata .tsv from temp folder, job_name folder to the GNPS_input_for_job_name folder
-shutil.copy(metadata_filepath, pjoin(gnps_input_folder, metadata_filename_gnps))
+shutil.copy(metadata_filepath_gnps, pjoin(gnps_input_folder, metadata_filename_gnps))
 ""
 
 """""""""""""""""""""""""""""""""""""""""""""
