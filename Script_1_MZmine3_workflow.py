@@ -15,7 +15,7 @@ import subprocess
 import shutil
 import ftplib
 # Install python-dotenv
-from dotenv import load_dotenv
+from dotenv import dotenv_values
 
 """""""""""""""""""""""""""""""""""""""""""""
 Functions
@@ -36,10 +36,6 @@ def change_node_parameters(root, node_str, param_str, tag_str, dir_param):
         Tag to use for the parameter (see text in '<...>' in .XML file).
     dir_param : list of str
         List of new values for the parameter (can be a single value).
-    param_pre_str : str, optional
-        String to add before the parameter value (for example, for a directory string value in the .XML file).
-    param_post_str : str, optional
-        String to add after the parameter value (for example, for a directory string value in the .XML file).
 
     Output
     - None
@@ -184,6 +180,11 @@ def delete_folder(ftp, folder_name):
             # If it fails, assume it's a directory and recurse
             delete_folder(ftp, item)
 
+    # Change directory
+    ftp.cwd('..')
+    # Delete folder
+    ftp.rmd(folder_name)
+
 """""""""""""""""""""""""""""""""""""""""""""
 Values
 """""""""""""""""""""""""""""""""""""""""""""
@@ -203,10 +204,10 @@ MZMINE_EXE_DIR = 'D:\MZmine\MZmine.exe'
 HOSTNAME = 'massive.ucsd.edu'
 ALL_UPLOADS_FOLDER_NAME = "GNPS_upload_from_MZmine3_script_1"
 # Load .env file
-load_dotenv()
+config = dotenv_values(".env")
 # Get USERNAME and PASSWD from .env file
-USERNAME = os.getenv('USERNAME')
-PASSWD = os.getenv('PASSWD')
+USERNAME = config['USERNAME']
+PASSWD = config['PASSWD']
 
 """""""""""""""""""""""""""""""""""""""""""""
 Create GNPS and MetaboAnalyst Metadata .tsv files
@@ -266,6 +267,12 @@ exp_filenames = [filename for filename in mzml_filenames if filename.endswith('.
 metadata_df['Filename'] = ctrl_filenames + exp_filenames
 metadata_df['Class'] = ['CTRL']*len(ctrl_filenames) + ['EXP']*len(exp_filenames)
 metadata_df.to_csv(metadata_filepath, sep = '\t', index = False)
+
+# Make a copy of metadata_df for GNPS metadata file, where the headers are changed to 'filename' and 'ATTRIBUTE_GROUP'
+metadata_df_gnps = metadata_df.copy()
+metadata_df_gnps.columns = ['filename', 'ATTRIBUTE_GROUP']
+metadata_filename_gnps = job_name + '_metadata_gnps.tsv'
+metadata_df_gnps.to_csv(pjoin(temp_folder, metadata_filename_gnps), sep = '\t', index = False)
 
 
 """""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""
@@ -328,17 +335,17 @@ xml_gnps_autorun_node = xml_gnps_child.find('parameter[@name="Submit to GNPS"]')
 
 # Adjust metadata file for GNPS job auto-run
 xml_gnps_autorun_metadata_subnode = xml_gnps_autorun_node.find('parameter[@name="Meta data file"]')
-# Within this node, adjust current_file and last_file
+# Within this node, adjust current_file and last_file to be the metadata file (GNPS specific format)
 current_file = ET.Element('current_file')
 for filename in xml_gnps_autorun_metadata_subnode.findall('current_file'):
     xml_gnps_autorun_metadata_subnode.remove(filename)
-current_file.text = xml_temp_dir_pre_str + job_name + '\\' + metadata_filename
+current_file.text = xml_temp_dir_pre_str + job_name + '\\' + metadata_filename_gnps
 xml_gnps_autorun_metadata_subnode.append(current_file)
 
 last_file = ET.Element('last_file')
 for filename in xml_gnps_autorun_metadata_subnode.findall('last_file'):
     xml_gnps_autorun_metadata_subnode.remove(filename)
-last_file.text = xml_temp_dir_pre_str + job_name + '\\' + metadata_filename
+last_file.text = xml_temp_dir_pre_str + job_name + '\\' + metadata_filename_gnps
 xml_gnps_autorun_metadata_subnode.append(last_file)
 
 # Adjust job title for GNPS job auto-run
@@ -417,8 +424,8 @@ shutil.move(pjoin(temp_folder, job_name + '_gnps.mgf'), pjoin(gnps_input_folder,
 """
 Metadata .tsv file
 """
-# Copy the metadata .tsv from temp folder, job_name folder to the GNPS_input_for_job_name folder
-shutil.copy(metadata_filepath, pjoin(gnps_input_folder, metadata_filename))
+# Copy the GNPS metadata .tsv from temp folder, job_name folder to the GNPS_input_for_job_name folder
+shutil.copy(metadata_filepath, pjoin(gnps_input_folder, metadata_filename_gnps))
 ""
 
 """""""""""""""""""""""""""""""""""""""""""""
