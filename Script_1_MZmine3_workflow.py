@@ -237,14 +237,10 @@ for filename in os.listdir(temp_folder):
         print('Failed to delete %s. Reason: %s' % (file_path, e))
 
 
-# Format of MZmine3 metadata .tsv: two columns, Filename and Class. List the filenames from folder Job Name, where filenames with 'CTRL' in them are in the 'CTRL' class and filenames without 'CTRL' in them are in the 'EXP' class.
+# Format of metadata .tsv: two columns, Filename and Class. List the filenames from folder Job Name, where filenames with 'CTRL' in them are in the 'CTRL' class and filenames without 'CTRL' in them are in the 'EXP' class.
 # Create metadata .tsv file in temp folder
-# Format of GNPS metadata .tsv: same as MZmine3 except header is "filename" and "ATTRIBUTE_Group"
-metadata_filename_mzmine3 = job_name + '_metadata.tsv'
-metadata_filepath_mzmine3 = pjoin(temp_folder, metadata_filename_mzmine3)
-metadata_filename_gnps = job_name + '_metadata_gnps.tsv'
-metadata_filepath_gnps = pjoin(temp_folder, job_name + '_metadata_gnps.tsv')
-
+metadata_filename = job_name + '_metadata.tsv'
+metadata_filepath = pjoin(temp_folder, metadata_filename)
 # Use pandas to create metadata .tsv file
 metadata_df = pd.DataFrame(columns = ['Filename', 'Class'])
 
@@ -269,12 +265,7 @@ exp_filenames = [filename for filename in mzml_filenames if filename.endswith('.
 # Add filenames to metadata_df
 metadata_df['Filename'] = ctrl_filenames + exp_filenames
 metadata_df['Class'] = ['CTRL']*len(ctrl_filenames) + ['EXP']*len(exp_filenames)
-metadata_df.to_csv(metadata_filepath_mzmine3, sep = '\t', index = False)
-
-# Create metadata .tsv file for GNPS by adjusting MetaboAnalyst metadata .tsv file
-metadata_df_gnps = metadata_df.copy()
-metadata_df_gnps.columns = ['filename', 'ATTRIBUTE_Group']
-metadata_df_gnps.to_csv(metadata_filepath_gnps, sep = '\t', index = False)
+metadata_df.to_csv(metadata_filepath, sep = '\t', index = False)
 
 
 """""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""
@@ -308,9 +299,9 @@ change_node_parameters(xml_root, 'batchstep[@method="io.github.mzmine.modules.io
 Edit basic .xml parameters file: metadata
 """
 # Update current_file for metadata section
-change_node_parameters(xml_root, 'batchstep[@method="io.github.mzmine.modules.visualization.projectmetadata.io.ProjectMetadataImportModule"][@parameter_version="1"]', 'parameter[@name="File names"]', 'current_file', [xml_temp_dir_pre_str + job_name + '\\' + metadata_filename_mzmine3])
+change_node_parameters(xml_root, 'batchstep[@method="io.github.mzmine.modules.visualization.projectmetadata.io.ProjectMetadataImportModule"][@parameter_version="1"]', 'parameter[@name="File names"]', 'current_file', [xml_temp_dir_pre_str + job_name + '\\' + metadata_filename])
 # Update last_file for metadata section
-change_node_parameters(xml_root, 'batchstep[@method="io.github.mzmine.modules.visualization.projectmetadata.io.ProjectMetadataImportModule"][@parameter_version="1"]', 'parameter[@name="File names"]', 'last_file', [xml_temp_dir_pre_str + job_name + '\\' + metadata_filename_mzmine3])
+change_node_parameters(xml_root, 'batchstep[@method="io.github.mzmine.modules.visualization.projectmetadata.io.ProjectMetadataImportModule"][@parameter_version="1"]', 'parameter[@name="File names"]', 'last_file', [xml_temp_dir_pre_str + job_name + '\\' + metadata_filename])
 
 
 """
@@ -335,20 +326,19 @@ xml_gnps_child = xml_root.find('batchstep[@method="io.github.mzmine.modules.io.e
 xml_gnps_autorun_node = xml_gnps_child.find('parameter[@name="Submit to GNPS"]')
 # xml_method_gnps_autorun_node.set('selected', 'true')
 
-# Adjust metadata file for GNPS job auto-run. Use metadata specific for GNPS
-xml_gnps_autorun_metadata_subnode = xml_gnps_autorun_node.find('parameter[@name="Metadata file"]')
-for filename in xml_gnps_autorun_metadata_subnode.findall('current_file'):
-    xml_gnps_autorun_metadata_subnode.remove(filename)
+# Adjust metadata file for GNPS job auto-run
+xml_gnps_autorun_metadata_subnode = xml_gnps_autorun_node.find('parameter[@name="Meta data file"]')
+# Within this node, adjust current_file and last_file
 current_file = ET.Element('current_file')
 for filename in xml_gnps_autorun_metadata_subnode.findall('current_file'):
     xml_gnps_autorun_metadata_subnode.remove(filename)
-current_file.text = xml_temp_dir_pre_str + job_name + '\\' + metadata_filename_gnps
+current_file.text = xml_temp_dir_pre_str + job_name + '\\' + metadata_filename
 xml_gnps_autorun_metadata_subnode.append(current_file)
 
 last_file = ET.Element('last_file')
 for filename in xml_gnps_autorun_metadata_subnode.findall('last_file'):
     xml_gnps_autorun_metadata_subnode.remove(filename)
-last_file.text = xml_temp_dir_pre_str + job_name + '\\' + metadata_filename_gnps
+last_file.text = xml_temp_dir_pre_str + job_name + '\\' + metadata_filename
 xml_gnps_autorun_metadata_subnode.append(last_file)
 
 # Adjust job title for GNPS job auto-run
@@ -428,7 +418,8 @@ shutil.move(pjoin(temp_folder, job_name + '_gnps.mgf'), pjoin(gnps_input_folder,
 Metadata .tsv file
 """
 # Copy the metadata .tsv from temp folder, job_name folder to the GNPS_input_for_job_name folder
-shutil.copy(metadata_filepath_gnps, pjoin(gnps_input_folder, metadata_filename_gnps))
+shutil.copy(metadata_filepath, pjoin(gnps_input_folder, metadata_filename))
+""
 
 """""""""""""""""""""""""""""""""""""""""""""
 Use FTP () to upload GNPS_input_for_job_name folder to GNPS
