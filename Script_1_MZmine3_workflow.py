@@ -136,6 +136,51 @@ def create_metaboanalyst_ids(gnps_input_df):
         metaboanalyst_ids.append(metaboanalyst_id)
     return metaboanalyst_ids
 
+def ftp_login(hostname, username, passwd):
+    """
+    Login to FTP server
+    """
+    ftp = ftplib.FTP(hostname)
+    ftp.login(user=username, passwd=passwd)
+    return ftp
+
+def make_folder_if_not_exist(ftp, folder_name):
+    """
+    Makes a new folder if it doesn't exist
+    Does nothing otherwise
+    """
+    # List existing folders in current directory
+    existing_folders = ftp.nlst()
+    # create folder if it doesn't already exist
+    if folder_name not in existing_folders:
+        ftp.mkd(folder_name)
+
+def upload_file(ftp, file_path):
+    """
+    Upload a file to the FTP server
+    """
+    file_name = os.path.basename(file_path)
+    with open(file_path, 'rb') as file:
+        ftp.storbinary('STOR ' + file_name, file)
+
+def delete_folder(ftp, folder_name):
+    """
+    Delete a folder on the FTP server
+    """
+    # Change directory
+    ftp.cwd(folder_name)
+
+    # List files in current directory
+    items = ftp.nlst()
+
+    # Delete files
+    for item in items:
+        try:
+            ftp.delete(item)
+        except ftplib.error_perm:
+            # If it fails, assume it's a directory and recurse
+            delete_folder(ftp, item)
+
 """""""""""""""""""""""""""""""""""""""""""""
 Values
 """""""""""""""""""""""""""""""""""""""""""""
@@ -153,6 +198,7 @@ MZMINE_EXE_DIR = 'D:\MZmine\MZmine.exe'
 
 # GNPS FTP server: massive.ucsd.edu (check GNPS documentation if this ever changes)
 HOSTNAME = 'massive.ucsd.edu'
+ALL_UPLOADS_FOLDER_NAME = "GNPS_upload_from_MZmine3_script_1"
 # later edit these to be encoded in a separate (not public) file
 USERNAME = 'lbutkovich'
 PASSWD = 'password123'
@@ -373,6 +419,39 @@ shutil.copy(metadata_filepath, pjoin(gnps_input_folder, metadata_filename))
 """""""""""""""""""""""""""""""""""""""""""""
 Use FTP () to upload GNPS_input_for_job_name folder to GNPS
 """""""""""""""""""""""""""""""""""""""""""""
+# Using , login to FTP server
+ftp = ftp_login(HOSTNAME, USERNAME, PASSWD)
+# If desired, uncomment below to list files in current directory
+# ftp.retrlines('LIST')
+# print('---')
+
+# Make a new folder named ALL_UPLOADS_FOLDER_NAME value to hold all job upload folders, if it does not already exist in the FTP server
+make_folder_if_not_exist(ftp, ALL_UPLOADS_FOLDER_NAME)
+
+# Change directory
+ftp.cwd(ALL_UPLOADS_FOLDER_NAME)
+
+# If the job_name folder already exists in the ALL_UPLOADS_FOLDER_NAME folder, delete it (we want all new files each time we run the script)
+if job_name in ftp.nlst():
+    delete_folder(ftp, job_name)
+
+# Make a new folder named job_name to hold the GNPS input files for this job, if it does not already exist in the ALL_UPLOADS_FOLDER_NAME folder in the FTP server
+make_folder_if_not_exist(ftp, job_name)
+
+# Change directory
+ftp.cwd(job_name)
+
+# For each filename in the GNPS_input_for_job_name folder, upload the file to the FTP server (in the job_name folder)
+for filename in os.listdir(gnps_input_folder):
+    upload_file(ftp, pjoin(gnps_input_folder, filename))
+
+# List files in current directory
+print("Files uploaded for GNPS access: ")
+ftp.retrlines('LIST')
+print('---')
+
+# Logout of FTP
+ftp.quit()
 
 
 """""""""""""""""""""""""""""""""""""""""""""
