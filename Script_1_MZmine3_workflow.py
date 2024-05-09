@@ -209,6 +209,12 @@ config = dotenv_values(".env")
 USERNAME = config['USERNAME']
 PASSWD = config['PASSWD']
 
+# PRIOR to running script, you need to manually create/generate the batch parameters .xml file for your jobs (filename specified in METADATA_OVERALL_FILENAME column 'MZmine3 batch template'). You should manually look at the parameters settings in the MZmine3 GUI to ensure they are correct for your job. This script will edit the .xml file to input the correct filenames and metadata for the job. Parameters to particularly consider:
+# - Instrument-specific parameters (MZmine3 allows you to specify a setup, and you will get some default paramets)
+# - Mass detection cutoffs for MS1 and MS2: in the mass detection steps, use the 'Show preview' option under setup to visually see examples of noise levels in your data. You can adjust the mass detection cutoffs to minimize noise peaks.
+# - ADAP Chromatogram builder parameters: minimum instensity for consecutive scans, minimum absolute height
+# Once you select parameters, you can usually use the same parameters across additional sample groups run with the same instrument and method.
+
 """""""""""""""""""""""""""""""""""""""""""""
 Create GNPS and MetaboAnalyst Metadata .tsv files
 """""""""""""""""""""""""""""""""""""""""""""
@@ -249,10 +255,12 @@ metadata_df = pd.DataFrame(columns = ['Filename', 'Class'])
 mzml_filenames = os.listdir(pjoin(INPUT_FOLDER, job_name))
 mzml_filenames = [filename for filename in mzml_filenames if filename.endswith('.mzML')]
 
-# If control filenames have 'Control' instead of "CTRL', edit filenames
+# If control filenames have 'Control' or "Ctrl" instead of "CTRL', edit filenames
 for filename in mzml_filenames:
     if 'Control' in filename:
         os.rename(pjoin(INPUT_FOLDER, job_name, filename), pjoin(INPUT_FOLDER, job_name, filename.replace('Control', 'CTRL')))
+    if 'Ctrl' in filename:
+        os.rename(pjoin(INPUT_FOLDER, job_name, filename), pjoin(INPUT_FOLDER, job_name, filename.replace('Ctrl', 'CTRL')))
 # reset mzml_filenames
 mzml_filenames = os.listdir(pjoin(INPUT_FOLDER, job_name))
 # Make list of filenames in ctrl_folder_name
