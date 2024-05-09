@@ -156,3 +156,6 @@ temp
 
 # .env files
 .env
+
+# Input files
+input/
