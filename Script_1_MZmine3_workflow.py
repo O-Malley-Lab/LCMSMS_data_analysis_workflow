@@ -227,9 +227,11 @@ metadata = pd.read_excel(pjoin(INPUT_FOLDER, METADATA_OVERALL_FILENAME), sheet_n
 
 # Extract relevant information
 job_name = metadata['Job Name'][0]
+control_folder_name = metadata['Control Folder'][0]
 ionization = metadata['Ionization'][0]
 exp_rep_num = metadata['EXP num replicates'][0]
 ctrl_rep_num = metadata['CTRL num replicates'][0]
+
 
 # If it does not already exist, make a folder in temp folder for the job name
 if not os.path.exists(pjoin(TEMP_OVERALL_FOLDER, job_name)):
@@ -256,28 +258,26 @@ metadata_filepath = pjoin(temp_folder, metadata_filename)
 metadata_df = pd.DataFrame(columns = ['Filename', 'Class'])
 
 # Get EXP and CTRL lists of filenames in job_name folder. Only get the list of files that end in .mzML
-mzml_filenames = os.listdir(pjoin(INPUT_FOLDER, job_name))
-mzml_filenames = [filename for filename in mzml_filenames if filename.endswith('.mzML')]
-
-# If control filenames have 'Control' or "Ctrl" instead of "CTRL', edit filenames
-for filename in mzml_filenames:
-    if 'Control' in filename:
-        os.rename(pjoin(INPUT_FOLDER, job_name, filename), pjoin(INPUT_FOLDER, job_name, filename.replace('Control', 'CTRL')))
-    if 'Ctrl' in filename:
-        os.rename(pjoin(INPUT_FOLDER, job_name, filename), pjoin(INPUT_FOLDER, job_name, filename.replace('Ctrl', 'CTRL')))
-# reset mzml_filenames
-mzml_filenames = os.listdir(pjoin(INPUT_FOLDER, job_name))
-mzml_filenames = [filename for filename in mzml_filenames if filename.endswith('.mzML')]
-# Make list of filenames in ctrl_folder_name
-ctrl_filenames = [filename for filename in mzml_filenames if filename.endswith('.mzML') and 'CTRL' in filename]
+# EXP .mzML filenames
+job_name_folder_contents = os.listdir(pjoin(INPUT_FOLDER, job_name))
+exp_filenames = []
+for filename in job_name_folder_contents:
+    if filename.endswith('.mzML'):
+        exp_filenames.append(filename)
+# CTRL .mzML filenames
+ctrl_folder_contents = os.listdir(pjoin(INPUT_FOLDER, control_folder_name))
+ctrl_filenames = []
+for filename in ctrl_folder_contents:
+    if filename.endswith('.mzML'):
+        ctrl_filenames.append(filename)
 # Give an error message if there are no control files
 if len(ctrl_filenames) == 0:
-    raise ValueError('No control files found in folder ' + job_name + '; rename control files to contain CTRL in filename')
-# Make list of filenames in exp_folder_name
-exp_filenames = [filename for filename in mzml_filenames if filename.endswith('.mzML') and 'CTRL' not in filename]
+    raise ValueError('No ' + job_name + ' control files found in folder ' + control_folder_name)
+# Add exp_filenames and ctrl_filenames to mzml_filenames
+mzml_filenames = ctrl_filenames + exp_filenames
 
 # Add filenames to metadata_df
-metadata_df['Filename'] = ctrl_filenames + exp_filenames
+metadata_df['Filename'] = mzml_filenames
 metadata_df['Class'] = ['CTRL']*len(ctrl_filenames) + ['EXP']*len(exp_filenames)
 metadata_df.to_csv(metadata_filepath, sep = '\t', index = False)
 
@@ -313,7 +313,7 @@ xml_temp_dir_pre_str = os.getcwd() + '\\temp\\'
 
 # Update mzml filenames for MZmine3 to use
 # Set xml_method_filenames_child to the child of xml_root with the following: batchstep method="io.github.mzmine.modules.io.import_rawdata_all.AllSpectralDataImportModule" parameter_version="1"
-change_node_parameters(xml_root, 'batchstep[@method="io.github.mzmine.modules.io.import_rawdata_all.AllSpectralDataImportModule"][@parameter_version="1"]', 'parameter[@name="File names"]', 'file', [xml_input_dir_pre_str + job_name + '\\' + filename for filename in mzml_filenames])
+change_node_parameters(xml_root, 'batchstep[@method="io.github.mzmine.modules.io.import_rawdata_all.AllSpectralDataImportModule"][@parameter_version="1"]', 'parameter[@name="File names"]', 'file', [xml_input_dir_pre_str + job_name + '\\' + filename for filename in exp_filenames] + [xml_input_dir_pre_str + control_folder_name + '\\' + filename for filename in ctrl_filenames])
 
 
 """
@@ -372,7 +372,8 @@ xml_method_gnps_autorun_email_node.text = 'lbutkovich@ucsb.edu'
 
 # Adjust username for GNPS job auto-run
 xml_method_gnps_autorun_username_node = xml_gnps_autorun_node.find('parameter[@name="Username"]')
-xml_method_gnps_autorun_username_node.text = 'lbutkovich'
+# Get username from .env file
+xml_method_gnps_autorun_username_node.text = os.getenv('USERNAME')
 
 # Adjust password for GNPS job auto-run
 xml_method_gnps_autorun_password_node = xml_gnps_autorun_node.find('parameter[@name="Password"]')
@@ -418,35 +419,41 @@ start = time.time()
 """""""""""""""""""""""""""""""""""""""""""""
 Rearrange MZmine3 output files for easy GNPS input
 """""""""""""""""""""""""""""""""""""""""""""
-# Create a new folder in temp, job_name folder "GNPS_input_for_" + job_name
-gnps_input_folder = pjoin(temp_folder, "GNPS_input_for_" + job_name)
-os.makedirs(gnps_input_folder)
+# Update: .mzML files are large, so instead of transferring them to a specific folder, we will leave them in their input files and only access them from there. Additionally, all other files for GNPS input will also not be moved or copied and will only be accessed and used from their original locations.
 
-"""
-.mzML files
-"""
-# Copy .mzML files from input folder to GNPS_input_for_job_name folder
-for filename in mzml_filenames:
-    shutil.copy(pjoin(INPUT_FOLDER, job_name, filename), pjoin(gnps_input_folder, filename))
+# # Create a new folder in temp, job_name folder "GNPS_input_for_" + job_name
+# gnps_input_folder = pjoin(temp_folder, "GNPS_input_for_" + job_name)
+# os.makedirs(gnps_input_folder)
 
-"""
-Quant Peak Area .csv
-"""
-# Cut the quant peak area .csv file from temp folder, job_name folder to the GNPS_input_for_job_name folder
-shutil.move(pjoin(temp_folder, job_name + '_gnps_quant.csv'), pjoin(gnps_input_folder, job_name + '_gnps_quant.csv'))
+# """
+# .mzML files
+# """
 
-"""
-.mgf MS2 file
-"""
-# MZmine3 produces a .mgf file in the temp folder, job_name folder. Cut and paste the .mgf file to the GNPS_input_for_job_name folder
-shutil.move(pjoin(temp_folder, job_name + '_gnps.mgf'), pjoin(gnps_input_folder, job_name + '_gnps.mgf'))
+# # # Copy .mzML files from input folder to GNPS_input_for_job_name folder
+# # for filename in exp_filenames:
+# #     shutil.copy(pjoin(INPUT_FOLDER, job_name, filename), pjoin(gnps_input_folder, filename))
 
-"""
-Metadata .tsv file
-"""
-# Copy the GNPS metadata .tsv from temp folder, job_name folder to the GNPS_input_for_job_name folder
-shutil.copy(metadata_filepath_gnps, pjoin(gnps_input_folder, metadata_filename_gnps))
-""
+# # for filename in ctrl_filenames:
+# #     shutil.copy(pjoin(INPUT_FOLDER, control_folder_name, filename), pjoin(gnps_input_folder, filename))
+
+# """
+# Quant Peak Area .csv
+# """
+# # Cut the quant peak area .csv file from temp folder, job_name folder to the GNPS_input_for_job_name folder
+# shutil.move(pjoin(temp_folder, job_name + '_gnps_quant.csv'), pjoin(gnps_input_folder, job_name + '_gnps_quant.csv'))
+
+# """
+# .mgf MS2 file
+# """
+# # MZmine3 produces a .mgf file in the temp folder, job_name folder. Cut and paste the .mgf file to the GNPS_input_for_job_name folder
+# shutil.move(pjoin(temp_folder, job_name + '_gnps.mgf'), pjoin(gnps_input_folder, job_name + '_gnps.mgf'))
+
+# """
+# Metadata .tsv file
+# """
+# # Copy the GNPS metadata .tsv from temp folder, job_name folder to the GNPS_input_for_job_name folder
+# shutil.copy(metadata_filepath_gnps, pjoin(gnps_input_folder, metadata_filename_gnps))
+# ""
 
 """""""""""""""""""""""""""""""""""""""""""""
 Use FTP () to upload GNPS_input_for_job_name folder to GNPS
@@ -475,9 +482,20 @@ if RUN_FTP:
     # Change directory
     ftp.cwd(job_name)
 
-    # For each filename in the GNPS_input_for_job_name folder, upload the file to the FTP server (in the job_name folder)
-    for filename in os.listdir(gnps_input_folder):
-        upload_file(ftp, pjoin(gnps_input_folder, filename))
+    # For each .mzML filename (EXP and CTRL), upload the file to the FTP server (in the job_name folder)
+    for filename in exp_filenames:
+        upload_file(ftp, pjoin(INPUT_FOLDER, job_name, filename))
+    for filename in ctrl_filenames:
+        upload_file(ftp, pjoin(INPUT_FOLDER, control_folder_name, filename))
+
+    # Upload the quant peak area .csv file to the FTP server (in temp_folder)
+    upload_file(ftp, pjoin(temp_folder, job_name + '_gnps_quant.csv'))
+
+    # Upload the .mgf file to the FTP server (in temp_folder)
+    upload_file(ftp, pjoin(temp_folder, job_name + '_gnps.mgf'))
+
+    # Upload the metadata .tsv file to the FTP server (in temp_folder)
+    upload_file(ftp, metadata_filepath_gnps)
 
     # List files in current directory
     print("Files uploaded for GNPS access: ")
@@ -512,7 +530,7 @@ Use the MZmine3 output for GNPS input to generate the MetaboAnalyst input
 
 # Import GNPS input file
 gnps_input_filename = job_name + '_gnps_quant.csv'
-gnps_input_filepath = pjoin(gnps_input_folder, gnps_input_filename)
+gnps_input_filepath = pjoin(temp_folder, gnps_input_filename)
 gnps_input_df = pd.read_csv(gnps_input_filepath)
 # Sort by row ID
 gnps_input_df = gnps_input_df.sort_values(by = 'row ID')
