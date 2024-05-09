@@ -16,6 +16,8 @@ import shutil
 import ftplib
 # Install python-dotenv
 from dotenv import dotenv_values
+import time
+start = time.time()
 
 """""""""""""""""""""""""""""""""""""""""""""
 Functions
@@ -100,7 +102,7 @@ def commandline_MZmine3(mzmine_exe_dir, xml_temp_dir_pre_str, job_name, mzmine3_
     -------
     """
     # Command line arguments for MZmine3 in list format. '-memory' and 'all' enable use of all available memory to decrease processing time.
-    command_args = [MZMINE_EXE_DIR, '-batch', pjoin(xml_temp_dir_pre_str, job_name, mzmine3_xml_filename_new), '-memory', 'all']
+    command_args = [mzmine_exe_dir, '-batch', pjoin(xml_temp_dir_pre_str, job_name, mzmine3_xml_filename_new), '-memory', 'all']
 
     # Run MZmine3 in commandline, suppress stdout and stderr. If output is not suppressed, the buffer will fill up and the process will hang.
     process = subprocess.Popen(command_args, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
@@ -209,6 +211,8 @@ config = dotenv_values(".env")
 USERNAME = config['USERNAME']
 PASSWD = config['PASSWD']
 
+RUN_FTP = False
+
 # PRIOR to running script, you need to manually create/generate the batch parameters .xml file for your jobs (filename specified in METADATA_OVERALL_FILENAME column 'MZmine3 batch template'). You should manually look at the parameters settings in the MZmine3 GUI to ensure they are correct for your job. This script will edit the .xml file to input the correct filenames and metadata for the job. Parameters to particularly consider:
 # - Instrument-specific parameters (MZmine3 allows you to specify a setup, and you will get some default paramets)
 # - Mass detection cutoffs for MS1 and MS2: in the mass detection steps, use the 'Show preview' option under setup to visually see examples of noise levels in your data. You can adjust the mass detection cutoffs to minimize noise peaks.
@@ -263,6 +267,7 @@ for filename in mzml_filenames:
         os.rename(pjoin(INPUT_FOLDER, job_name, filename), pjoin(INPUT_FOLDER, job_name, filename.replace('Ctrl', 'CTRL')))
 # reset mzml_filenames
 mzml_filenames = os.listdir(pjoin(INPUT_FOLDER, job_name))
+mzml_filenames = [filename for filename in mzml_filenames if filename.endswith('.mzML')]
 # Make list of filenames in ctrl_folder_name
 ctrl_filenames = [filename for filename in mzml_filenames if filename.endswith('.mzML') and 'CTRL' in filename]
 # Give an error message if there are no control files
@@ -397,12 +402,18 @@ xml_tree.write(pjoin(temp_folder, mzmine3_xml_filename_new))
 Use XML file to run MZmine3 in Commandline <-- to-do
 """""""""""""""""""""""""""""""""""""""""""""
 # Later, implement GNPS job auto-run <-- to-do
+# Print time taken to prepare files for MZmine3
+print('Finished preparing files for MZmine3, took %.2f seconds' % (time.time() - start))
+start = time.time()
 
 # Run MZmine3 in commandline using the .xml file. Use the function commandline_MZmine3
 exit_code = commandline_MZmine3(MZMINE_EXE_DIR, xml_temp_dir_pre_str, job_name, mzmine3_xml_filename_new)
 print(f"Process finished with exit code {exit_code}")
 print("MZmine3 job started for " + job_name)
 
+# Print time taken to run MZmine3
+print('Finished running MZmine3, took %.2f seconds' % (time.time() - start))
+start = time.time() 
 
 """""""""""""""""""""""""""""""""""""""""""""
 Rearrange MZmine3 output files for easy GNPS input
@@ -440,39 +451,47 @@ shutil.copy(metadata_filepath_gnps, pjoin(gnps_input_folder, metadata_filename_g
 """""""""""""""""""""""""""""""""""""""""""""
 Use FTP () to upload GNPS_input_for_job_name folder to GNPS
 """""""""""""""""""""""""""""""""""""""""""""
-# Using , login to FTP server
-ftp = ftp_login(HOSTNAME, USERNAME, PASSWD)
-# If desired, uncomment below to list files in current directory
-# ftp.retrlines('LIST')
-# print('---')
+# Only run this section if RUN_FTP is True
+if RUN_FTP:
+    # Using , login to FTP server
+    ftp = ftp_login(HOSTNAME, USERNAME, PASSWD)
+    # If desired, uncomment below to list files in current directory
+    # ftp.retrlines('LIST')
+    # print('---')
 
-# Make a new folder named ALL_UPLOADS_FOLDER_NAME value to hold all job upload folders, if it does not already exist in the FTP server
-make_folder_if_not_exist(ftp, ALL_UPLOADS_FOLDER_NAME)
+    # Make a new folder named ALL_UPLOADS_FOLDER_NAME value to hold all job upload folders, if it does not already exist in the FTP server
+    make_folder_if_not_exist(ftp, ALL_UPLOADS_FOLDER_NAME)
 
-# Change directory
-ftp.cwd(ALL_UPLOADS_FOLDER_NAME)
+    # Change directory
+    ftp.cwd(ALL_UPLOADS_FOLDER_NAME)
 
-# If the job_name folder already exists in the ALL_UPLOADS_FOLDER_NAME folder, delete it (we want all new files each time we run the script)
-if job_name in ftp.nlst():
-    delete_folder(ftp, job_name)
+    # If the job_name folder already exists in the ALL_UPLOADS_FOLDER_NAME folder, delete it (we want all new files each time we run the script)
+    if job_name in ftp.nlst():
+        delete_folder(ftp, job_name)
 
-# Make a new folder named job_name to hold the GNPS input files for this job, if it does not already exist in the ALL_UPLOADS_FOLDER_NAME folder in the FTP server
-make_folder_if_not_exist(ftp, job_name)
+    # Make a new folder named job_name to hold the GNPS input files for this job, if it does not already exist in the ALL_UPLOADS_FOLDER_NAME folder in the FTP server
+    make_folder_if_not_exist(ftp, job_name)
 
-# Change directory
-ftp.cwd(job_name)
+    # Change directory
+    ftp.cwd(job_name)
 
-# For each filename in the GNPS_input_for_job_name folder, upload the file to the FTP server (in the job_name folder)
-for filename in os.listdir(gnps_input_folder):
-    upload_file(ftp, pjoin(gnps_input_folder, filename))
+    # For each filename in the GNPS_input_for_job_name folder, upload the file to the FTP server (in the job_name folder)
+    for filename in os.listdir(gnps_input_folder):
+        upload_file(ftp, pjoin(gnps_input_folder, filename))
 
-# List files in current directory
-print("Files uploaded for GNPS access: ")
-ftp.retrlines('LIST')
-print('---')
+    # List files in current directory
+    print("Files uploaded for GNPS access: ")
+    ftp.retrlines('LIST')
+    print('---')
 
-# Logout of FTP
-ftp.quit()
+    # Logout of FTP
+    ftp.quit()
+
+    # Print time taken to prepare files for GNPS
+    print('Finished FTP file transfer for GNPS, took %.2f seconds' % (time.time() - start))
+    start = time.time()
+else:
+    print("FTP for GNPS access was not run. To run FTP, set RUN_FTP to True.")
 
 
 """""""""""""""""""""""""""""""""""""""""""""
@@ -550,3 +569,6 @@ metaboanalyst_input_filename = job_name + '_MetaboAnalyst_input.csv'
 metaboanalyst_input_filepath = pjoin(temp_folder, metaboanalyst_input_filename)
 metaboanalyst_input_df.to_csv(metaboanalyst_input_filepath, index = False)
 
+# Print time taken to prepare files for MetaboAnalyst
+print('Finished preparing files for MetaboAnalyst, took %.2f seconds' % (time.time() - start))
+start = time.time()
