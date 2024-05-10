@@ -210,8 +210,7 @@ config = dotenv_values(".env")
 # Get USERNAME and PASSWD from .env file
 USERNAME = config['USERNAME']
 PASSWD = config['PASSWD']
-
-RUN_FTP = False
+RUN_FTP = True
 
 # PRIOR to running script, you need to manually create/generate the batch parameters .xml file for your jobs (filename specified in METADATA_OVERALL_FILENAME column 'MZmine3 batch template'). You should manually look at the parameters settings in the MZmine3 GUI to ensure they are correct for your job. This script will edit the .xml file to input the correct filenames and metadata for the job. Parameters to particularly consider:
 # - Instrument-specific parameters (MZmine3 allows you to specify a setup, and you will get some default paramets)
@@ -236,11 +235,11 @@ ctrl_rep_num = metadata['CTRL num replicates'][0]
 # If it does not already exist, make a folder in temp folder for the job name
 if not os.path.exists(pjoin(TEMP_OVERALL_FOLDER, job_name)):
     os.makedirs(pjoin(TEMP_OVERALL_FOLDER, job_name))
-temp_folder = pjoin(TEMP_OVERALL_FOLDER, job_name)
+temp_job_folder = pjoin(TEMP_OVERALL_FOLDER, job_name)
 
-# Empty the temp_folder of any files and folders
-for filename in os.listdir(temp_folder):
-    file_path = pjoin(temp_folder, filename)
+# Empty the temp_job_folder of any files and folders
+for filename in os.listdir(temp_job_folder):
+    file_path = pjoin(temp_job_folder, filename)
     try:
         if os.path.isfile(file_path) or os.path.islink(file_path):
             os.unlink(file_path)
@@ -253,7 +252,7 @@ for filename in os.listdir(temp_folder):
 # Format of metadata .tsv: two columns, Filename and Class. List the filenames from folder Job Name, where filenames with 'CTRL' in them are in the 'CTRL' class and filenames without 'CTRL' in them are in the 'EXP' class.
 # Create metadata .tsv file in temp folder
 metadata_filename = job_name + '_metadata.tsv'
-metadata_filepath = pjoin(temp_folder, metadata_filename)
+metadata_filepath = pjoin(temp_job_folder, metadata_filename)
 # Use pandas to create metadata .tsv file
 metadata_df = pd.DataFrame(columns = ['Filename', 'Class'])
 
@@ -285,7 +284,7 @@ metadata_df.to_csv(metadata_filepath, sep = '\t', index = False)
 metadata_df_gnps = metadata_df.copy()
 metadata_df_gnps.columns = ['filename', 'ATTRIBUTE_GROUP']
 metadata_filename_gnps = job_name + '_metadata_gnps.tsv'
-metadata_filepath_gnps = pjoin(temp_folder, metadata_filename_gnps)
+metadata_filepath_gnps = pjoin(temp_job_folder, metadata_filename_gnps)
 metadata_df_gnps.to_csv(metadata_filepath_gnps, sep = '\t', index = False)
 
 
@@ -396,7 +395,7 @@ xml_root_prettified = prettify(xml_root)
 xml_tree = ET.ElementTree(xml_root_prettified)
 # Save new xml file as a new file in temp folder
 mzmine3_xml_filename_new = job_name + '_mzmine3.xml'
-xml_tree.write(pjoin(temp_folder, mzmine3_xml_filename_new))
+xml_tree.write(pjoin(temp_job_folder, mzmine3_xml_filename_new))
 
 
 """""""""""""""""""""""""""""""""""""""""""""
@@ -422,7 +421,7 @@ Rearrange MZmine3 output files for easy GNPS input
 # Update: .mzML files are large, so instead of transferring them to a specific folder, we will leave them in their input files and only access them from there. Additionally, all other files for GNPS input will also not be moved or copied and will only be accessed and used from their original locations.
 
 # # Create a new folder in temp, job_name folder "GNPS_input_for_" + job_name
-# gnps_input_folder = pjoin(temp_folder, "GNPS_input_for_" + job_name)
+# gnps_input_folder = pjoin(temp_job_folder, "GNPS_input_for_" + job_name)
 # os.makedirs(gnps_input_folder)
 
 # """
@@ -440,13 +439,13 @@ Rearrange MZmine3 output files for easy GNPS input
 # Quant Peak Area .csv
 # """
 # # Cut the quant peak area .csv file from temp folder, job_name folder to the GNPS_input_for_job_name folder
-# shutil.move(pjoin(temp_folder, job_name + '_gnps_quant.csv'), pjoin(gnps_input_folder, job_name + '_gnps_quant.csv'))
+# shutil.move(pjoin(temp_job_folder, job_name + '_gnps_quant.csv'), pjoin(gnps_input_folder, job_name + '_gnps_quant.csv'))
 
 # """
 # .mgf MS2 file
 # """
 # # MZmine3 produces a .mgf file in the temp folder, job_name folder. Cut and paste the .mgf file to the GNPS_input_for_job_name folder
-# shutil.move(pjoin(temp_folder, job_name + '_gnps.mgf'), pjoin(gnps_input_folder, job_name + '_gnps.mgf'))
+# shutil.move(pjoin(temp_job_folder, job_name + '_gnps.mgf'), pjoin(gnps_input_folder, job_name + '_gnps.mgf'))
 
 # """
 # Metadata .tsv file
@@ -488,13 +487,13 @@ if RUN_FTP:
     for filename in ctrl_filenames:
         upload_file(ftp, pjoin(INPUT_FOLDER, control_folder_name, filename))
 
-    # Upload the quant peak area .csv file to the FTP server (in temp_folder)
-    upload_file(ftp, pjoin(temp_folder, job_name + '_gnps_quant.csv'))
+    # Upload the quant peak area .csv file to the FTP server (in temp_job_folder)
+    upload_file(ftp, pjoin(temp_job_folder, job_name + '_gnps_quant.csv'))
 
-    # Upload the .mgf file to the FTP server (in temp_folder)
-    upload_file(ftp, pjoin(temp_folder, job_name + '_gnps.mgf'))
+    # Upload the .mgf file to the FTP server (in temp_job_folder)
+    upload_file(ftp, pjoin(temp_job_folder, job_name + '_gnps.mgf'))
 
-    # Upload the metadata .tsv file to the FTP server (in temp_folder)
+    # Upload the metadata .tsv file to the FTP server (in temp_job_folder)
     upload_file(ftp, metadata_filepath_gnps)
 
     # List files in current directory
@@ -530,7 +529,7 @@ Use the MZmine3 output for GNPS input to generate the MetaboAnalyst input
 
 # Import GNPS input file
 gnps_input_filename = job_name + '_gnps_quant.csv'
-gnps_input_filepath = pjoin(temp_folder, gnps_input_filename)
+gnps_input_filepath = pjoin(temp_job_folder, gnps_input_filename)
 gnps_input_df = pd.read_csv(gnps_input_filepath)
 # Sort by row ID
 gnps_input_df = gnps_input_df.sort_values(by = 'row ID')
@@ -584,7 +583,7 @@ for filename_gnps in mzml_filenames:
 
 # Export the MetaboAnalyst input file to temp folder
 metaboanalyst_input_filename = job_name + '_MetaboAnalyst_input.csv'
-metaboanalyst_input_filepath = pjoin(temp_folder, metaboanalyst_input_filename)
+metaboanalyst_input_filepath = pjoin(temp_job_folder, metaboanalyst_input_filename)
 metaboanalyst_input_df.to_csv(metaboanalyst_input_filepath, index = False)
 
 # Print time taken to prepare files for MetaboAnalyst
