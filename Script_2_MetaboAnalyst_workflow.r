@@ -82,6 +82,7 @@ metadata_overall_filename = 'Overall_Running_Metadata_for_All_LCMSMS_Jobs.xlsx'
 metadata_job_tab = 'Job to Run'
 metadata_job_column = 'Job Name'
 input_table_post_str = "_MetaboAnalyst_input.csv"
+cell_pellets_weights_post_str = ""
 
 ##############
 # Set working directory
@@ -158,6 +159,30 @@ mSet<-SanityCheckData(mSet);
 mSet<-ReplaceMin(mSet);
 
 ##############
+# Data Filtering (Currently not implemented)
+############## 
+# The following info on Data Filtering is from the web version of MetaboAnalyst one-factor statistical analysis workflow
+# The purpose of the data filtering is to identify and remove variables that are unlikely to be of use when modeling the data
+# These non-informative variables include those with (1) low repeatability, as characterized by those with high percent RSD (relative standard deviation), (2) near-constant variables, and (3) very small values.
+
+# FilterVariable function in MetaboAnalystR states that final dataset should have no more than 5000 variables for effective computing
+
+# Plot the features before filtering < to-do
+
+# Reliability filter
+# default off, requires QC samples
+
+# Variance filter
+# Use RSD, with 40% filtered out for LC-MS with number of features over 1000
+# mSet<-FilterVariable(mSet, qc.filter=FALSE, filter="rsd", filter.cutoff=40)
+
+# Abundance filter
+# default mean intensity value
+
+# Plot the features after filtering < to-do
+
+
+##############
 # Normalize Data
 ############## 
 # Prepare data for normalization (function should always be initialized)
@@ -177,6 +202,9 @@ mSet<-PreparePrenormData(mSet);
 # transNorm: "NULL" = no transformation
 # scaleNorm: "MeanCenter" = mean centering
 # ref: NULL = no reference sample (default)
+
+# If there is not cell pellet weights data to normalize to, use SumNorm.
+# Other factors to take into account: chemical standard levels, QC or BLANK samples (Q: how to handle?)
 mSet<-Normalization(mSet, "SumNorm", "NULL", "MeanCenter")
 
 # Two plot summary plot: Feature View of before and after normalization:
