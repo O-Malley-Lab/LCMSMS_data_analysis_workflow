@@ -83,8 +83,7 @@ metadata_overall_filename = 'Overall_Running_Metadata_for_All_LCMSMS_Jobs.xlsx'
 metadata_job_tab = 'Job to Run'
 metadata_job_column = 'Job Name'
 input_table_post_str = "_MetaboAnalyst_input.csv"
-# Example filename for cell pellet weights: "Anid_HE_TJGIp11_pos_20210511_cell_pellet_weights.xlsx", where job_name is "Anid_HE_TJGIp11_pos_20210511"
-cell_pellets_weights_post_str = "_cell_pellet_weights.xlsx"
+
 
 ##############
 # Set working directory
@@ -129,38 +128,29 @@ wd_output = getwd()
 # Load MetaboAnalystR
 library(MetaboAnalystR)
 
-# For the tutorial dataset, use the following:
-# data.type: conc = compound concentration data
-# anal.type: stat = statistics; anal.type indicates analysis type to be performed
-# paired: FALSE = data is not paired
-# mSet<-InitDataObjects("conc", "stat", FALSE);
-# ***For my HE LC-MS/MS data, I will want to use the following:
+# Initialize data object mSet for MetaboAnalystR
 # data.type: pktable = peak intensity table
 mSet<-InitDataObjects("pktable", "stat", FALSE);
 
-# May want to address the warning message for font in Windows when previous section is run:
-par(family="Arial")
-
-# Import the data table from MZmine3
+# Import the peak intensity data table from MZmine3 (Script 1)
 input_table_dir = paste(job_dir, "\\", job_name, input_table_post_str, sep='')
-# Print and error message if there is not a file at the input_table_dir
+# Print an error message if there is not a file at the input_table_dir
 if (!file.exists(input_table_dir)){
   print("Error: input table file does not exist in the job folder. Please create the input table file in the job folder.")
   return()
 }
-# Format for MetaboAnalystR tutorial dataset (human_cachexia.csv):
-# mSet<-Read.TextData(mSet, input_table_dir, "rowu", "disc");
-# ***For my HE LC-MS/MS data, I may want to use the following:
+
+# Read the peak intensity data table into mSet
 # format: colu = unpaired data, in columns, rather than paired (_p) or in rows (row_)
 # lbl.type: disc = discrete data, rather than continuous (cont)
 mSet<-Read.TextData(mSet, input_table_dir, "colu", "disc");
 mSet<-SanityCheckData(mSet);
 
+
 ##############
 # Replace Missing Values
 ############## 
-# Use ReplaceMin to replace missing or 0 values in the metabolomics data with a small volume (default is half of the minimum positive value in the data)
-# note, the Github documentation 
+# Replace missing or 0 values in the metabolomics data with a small volume (default is half of the minimum positive value in the data)
 mSet<-ReplaceMin(mSet);
 
 ##############
@@ -188,29 +178,32 @@ mSet<-ReplaceMin(mSet);
 
 
 ##############
-# Normalize Data
+# Normalize Data to TIC
 ############## 
 # Prepare data for normalization (function should always be initialized)
 mSet<-PreparePrenormData(mSet);
 
-# Tutorial's defaults for normalization:
-# mSet<-Normalization(mSet, "NULL", "LogNorm", "MeanCenter", "S10T0", ratio=FALSE, ratioNum=20)
-
-# ***For normalizing my HE LC-MS/MS data, I may want to use the following:
-# mSet<-Normalization(mSet, "SumNorm", "NULL", "MeanCenter")
-# function form: Normalization(mSetObj, rowNorm, transNorm, scaleNorm, ref=NULL, ratio=FALSE, ratioNum=20)
-# ^(Check:) Use SumNorm (for Normalization to constant sum) since I do not have a pooled sample or good reference sample
-# ^(Check:)  to not ttransform the normalized values (otherwise, could log-transform or cubic root-transform)
-# ^(Check:) set scaleNorm to NULL
-# remove ref because default is NULL and I do not have a reference sample
+# Normalize data to total ion chromatogram (TIC)
 # rowNorm: "SumNorm" = normalization to constant sum
 # transNorm: "NULL" = no transformation
-# scaleNorm: "MeanCenter" = mean centering; or use "None" for no scaling
+# scaleNorm: "None" for no scaling; or change to "MeanCenter" = mean centering
 # ref: NULL = no reference sample (default)
 
 mSet<-Normalization(mSet, "SumNorm", "NULL", "None")
 
-# Uncomment below code to do normalization to cell pellet weights:
+# Write the normalized data to a csv file
+write.csv(t(mSet$dataSet$norm), paste(job_name,"_normalized_data_transposed.csv", sep=''), row.names = TRUE)
+
+# Two plot summary plot: Feature View of before and after normalization:
+mSet<-PlotNormSummary(mSet, paste("Normalization_feature_", job_name, "_", sep=''), format ="png", dpi=300, width=NA);
+
+# Two plot summary plot: Sample View of before and after normalization
+mSet<-PlotSampleNormSummary(mSet, paste("Normalization_sample_", job_name, "_", sep=''), format = "png", dpi=300, width=NA);
+
+##############
+# Normalize Data to Sample-specific Factor (Currently not implemented)
+############## 
+# Note: If instead you want to do normalization to cell pellet weights, uncomment below code, comment out the above section to normalize to TIC, and define cell_pellet_weights_post_str with the correct filename by adding it in the Values to Change section
 # cell_pellet_weights_filename = paste(job_name, cell_pellets_weights_post_str, sep='')
 # setwd(wd_input)
 # setwd(job_name)
@@ -233,25 +226,29 @@ mSet<-Normalization(mSet, "SumNorm", "NULL", "None")
 # }
 # setwd(wd_output)
 
-write.csv(t(mSet$dataSet$norm), paste(job_name,"_normalized_data_transposed.csv", sep=''), row.names = TRUE)
+# # Write the normalized data to a csv file
+# write.csv(t(mSet$dataSet$norm), paste(job_name,"_normalized_data_transposed.csv", sep=''), row.names = TRUE)
 
-# Two plot summary plot: Feature View of before and after normalization:
-mSet<-PlotNormSummary(mSet, paste("Normalization_feature_", job_name, "_", sep=''), format ="png", dpi=300, width=NA);
+# # Two plot summary plot: Feature View of before and after normalization:
+# mSet<-PlotNormSummary(mSet, paste("Normalization_feature_", job_name, "_", sep=''), format ="png", dpi=300, width=NA);
 
-# Two plot summary plot: Sample View of before and after normalization
-mSet<-PlotSampleNormSummary(mSet, paste("Normalization_sample_", job_name, "_", sep=''), format = "png", dpi=300, width=NA);
+# # Two plot summary plot: Sample View of before and after normalization
+# mSet<-PlotSampleNormSummary(mSet, paste("Normalization_sample_", job_name, "_", sep=''), format = "png", dpi=300, width=NA);
+
 
 ##############
 # Fold-change Analysis
 ############## 
-# Perform fold-change analysis on uploaded data, unpaired. For tutorial, set fc.thresh to 2.0 fold-change threshold, and cmp.type set to 1 for group 2 (CTRL) vs group 1 (EXP).
+# Perform fold-change analysis on uploaded data, unpaired. 
+# Set fc.thresh to 2.0 fold-change threshold, and cmp.type set to 1 for group 2 (CTRL) vs group 1 (EXP).
 mSet<-FC.Anal(mSet, 2.0, cmp.type=1, FALSE)
 
-# Plot fold-change analysis. "fc_0_" is the filename, so for custom script, set filename to a changeable variable, followed by "_log2FC_"
+# Plot fold-change analysis
 mSet<-PlotFC(mSet, paste("Fold-change_",job_name, "_", sep=''), "png", 72, width=NA)
 
 # # To view fold-change 
 # mSet$analSet$fc$fc.log
+
 
 ##############
 # T-test
@@ -264,8 +261,10 @@ mSet<-PlotFC(mSet, paste("Fold-change_",job_name, "_", sep=''), "png", 72, width
 # pvalType = "fdr" = p-value adjustment method, "fdr" = false discovery rate
 # all_results = FALSE = only show significant results (do not return T-test analysis results for all compounds, only significant?)
 mSet<-Ttests.Anal(mSet, nonpar=F, threshp=0.05, paired=FALSE, equal.var=TRUE, "fdr", FALSE)
+
 # Plot of the T-test results
 mSet<-PlotTT(mSet, imgName = paste("T-test_features_",job_name, "_", sep=''), format = "png", dpi=300, width=NA)
+
 
 ##############
 # Volcano Plot
@@ -286,31 +285,10 @@ mSet<-Volcano.Anal(mSet, FALSE, 2.0, 1, F, 0.05, TRUE, "raw")
 # plotTheme: 0 = use default theme, or use 2 for less borders
 mSet<-PlotVolcano(mSet, paste("Volcano_", job_name, "_", sep=''), 1, 0, format ="png", dpi=300, width=NA)
 
-##############
-# ANOVA (only for multi-group analysis)
-############## 
-# # Perform ANOVA
-# mSet <- ANOVA.Anal(mSet, F, 0.05, "fisher")
-# 
-# # Plot ANOVA
-# mSet <- PlotANOVA(mSet, "aov_0_", "png", 72, width=NA)
 
 ##############
-# Correlation Analysis (only for multi-group analysis)
+# ANOVA, Correlation Analysis, and Pattern Searching are additional MetaboAnalyst tools but are only for multi-group analysis
 ############## 
-# # OPTION 1 - Heatmap specifying pearson distance and an overview
-# mSet<-PlotCorrHeatMap(mSet, "corr_0_", "png", 72, width=NA, "col", "pearson", "bwm", "overview", F, F, 0.0)
-# # OPTION 2 - Heatmap specifying pearson correlation and a detailed view
-# mSet<-PlotCorrHeatMap(mSet, "corr_1_", format = "png", dpi=300, width=NA, "col", "spearman", "bwm", "detail", F, F, 999)
-
-##############
-# Pattern Searching (only for multi-group analysis)
-############## 
-# # Perform correlation analysis on a pattern (a feature of interest in this case)
-# mSet<-FeatureCorrelation(mSet, "pearson", "1,6-Anhydro-beta-D-glucose")
-# 
-# # Plot the correlation analysis on a pattern
-# mSet<-PlotCorr(mSet, "ptn_3_", format="png", dpi=300, width=NA)
 
 
 ##############
@@ -348,6 +326,10 @@ mSet<-PlotPCABiplot(mSet, paste("PCA_BiPlot_1_2_", job_name, "_", sep=''), forma
 # Reset wd to starting wd
 setwd(wd)
 
+
+##############
+# Notes for Future Additions to Script
+############## 
 # For future analysis:
 # Example for generating violin plot for specific feature of interest (adjust feature name):
 # mSet<-UpdateLoadingCmpd(mSet, "760/497.192mz/4.16min")
