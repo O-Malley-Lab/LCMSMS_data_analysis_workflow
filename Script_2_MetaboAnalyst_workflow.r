@@ -76,6 +76,28 @@
 # Start of Script to Run for MetaboAnalystR
 # #############################################
 ##############
+# Functions
+##############
+# format_output_csv_data <- function(csv_filename, job_name){
+#   new_filename = paste(job_name, "_", csv_filename, sep='')
+#   
+#   # Rename file as 
+#   file.rename(csv_filename, new_filename)
+#   
+#   # Import the csv file as a pandas dataframe
+#   data = read.csv(new_filename)
+#   
+#   # Name the first column header 'MetaboAnalyst ID'
+#   colnames(data)[1] = "MetaboAnalyst_ID"
+#   
+#   # Add a column with header 'shared name', where the values are the string prior to the '/' in the first column of data
+#   data$shared_name = sapply(strsplit(as.character(data$MetaboAnalyst_ID), "/"), "[", 1)
+#   
+#   # Save dataframe
+#   write.csv(data, new_filename, row.names = FALSE)
+# }
+
+##############
 # Values to Change
 ##############
 setwd("C:\\Users\\lazab\\Documents\\github\\LCMSMS_data_analysis_workflow")
@@ -325,12 +347,38 @@ mSet<-PlotPCABiplot(mSet, paste("PCA_BiPlot_1_2_", job_name, "_", sep=''), forma
 
 
 ##############
-# Rename Output Files for Downstream Use
+# Rename Output Files and Add Appropriate Headers for Downstream Use
 ############## 
 # Change "fold_change.csv" filename
 file.rename("fold_change.csv", paste(job_name, "_fold_change.csv", sep=''))
+
+# import the fold_change.csv file as a pandas dataframe
+log2fc_data = read.csv(paste(job_name, "_fold_change.csv", sep=''))
+
+# Name the first column header 'MetaboAnalyst ID'
+colnames(log2fc_data)[1] = "MetaboAnalyst_ID"
+
+# Add a column with header 'shared name', where the values are the string prior to the '/' in the first column of log2fc_data
+log2fc_data$shared_name = sapply(strsplit(as.character(log2fc_data$MetaboAnalyst_ID), "/"), "[", 1)
+
+# Save dataframe
+write.csv(log2fc_data, paste(job_name, "_fold_change.csv", sep=''), row.names = FALSE)
+
+
 # Change "t_test.csv" filename
 file.rename("t_test.csv", paste(job_name, "_t_test.csv", sep=''))
+
+# import the fold_change.csv file as a pandas dataframe
+t_test_data = read.csv(paste(job_name, "_t_test.csv", sep=''))
+
+# Name the first column header 'MetaboAnalyst ID'
+colnames(t_test_data)[1] = "MetaboAnalyst_ID"
+
+# Add a column with header 'shared name', where the values are the string prior to the '/' in the first column of log2fc_data
+t_test_data$shared_name = sapply(strsplit(as.character(t_test_data$MetaboAnalyst_ID), "/"), "[", 1)
+
+# Save dataframe
+write.csv(t_test_data, paste(job_name, "_t_test.csv", sep=''), row.names = FALSE)
 
 # Reset wd to starting wd
 setwd(wd)
