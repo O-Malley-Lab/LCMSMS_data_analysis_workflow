@@ -78,11 +78,13 @@
 ##############
 # Values to Change
 ##############
+setwd("C:\\Users\\lazab\\Documents\\github\\LCMSMS_data_analysis_workflow")
 metadata_overall_filename = 'Overall_Running_Metadata_for_All_LCMSMS_Jobs.xlsx'
 metadata_job_tab = 'Job to Run'
 metadata_job_column = 'Job Name'
 input_table_post_str = "_MetaboAnalyst_input.csv"
-cell_pellets_weights_post_str = ""
+# Example filename for cell pellet weights: "Anid_HE_TJGIp11_pos_20210511_cell_pellet_weights.xlsx", where job_name is "Anid_HE_TJGIp11_pos_20210511"
+cell_pellets_weights_post_str = "_cell_pellet_weights.xlsx"
 
 ##############
 # Set working directory
@@ -93,6 +95,7 @@ wd = getwd()
 # Get job_name from overall metadata
 input_dir = paste(wd, "input", sep = "\\")
 setwd(input_dir)
+wd_input = getwd()
 # Import metadata table excel. The excel is in the input folder
 metadata_overall = readxl::read_excel(metadata_overall_filename, sheet = metadata_job_tab)
 # Get job_name from metadata_overall first value in metadata_job_column
@@ -114,6 +117,7 @@ if (!dir.exists(output_dir)){
 file.remove(list.files(output_dir, full.names = TRUE))
 
 setwd(output_dir)
+wd_output = getwd()
 
 
 #############################################
@@ -156,6 +160,7 @@ mSet<-SanityCheckData(mSet);
 # Replace Missing Values
 ############## 
 # Use ReplaceMin to replace missing or 0 values in the metabolomics data with a small volume (default is half of the minimum positive value in the data)
+# note, the Github documentation 
 mSet<-ReplaceMin(mSet);
 
 ##############
@@ -200,12 +205,35 @@ mSet<-PreparePrenormData(mSet);
 # remove ref because default is NULL and I do not have a reference sample
 # rowNorm: "SumNorm" = normalization to constant sum
 # transNorm: "NULL" = no transformation
-# scaleNorm: "MeanCenter" = mean centering
+# scaleNorm: "MeanCenter" = mean centering; or use "None" for no scaling
 # ref: NULL = no reference sample (default)
 
-# If there is not cell pellet weights data to normalize to, use SumNorm.
-# Other factors to take into account: chemical standard levels, QC or BLANK samples (Q: how to handle?)
-mSet<-Normalization(mSet, "SumNorm", "NULL", "MeanCenter")
+mSet<-Normalization(mSet, "SumNorm", "NULL", "None")
+
+# Uncomment below code to do normalization to cell pellet weights:
+# cell_pellet_weights_filename = paste(job_name, cell_pellets_weights_post_str, sep='')
+# setwd(wd_input)
+# setwd(job_name)
+# if (!file.exists(cell_pellet_weights_filename)){
+#   mSet<-Normalization(mSet, "SumNorm", "NULL", "None")
+# } else {
+#   cell_pellet_weights_dir = paste(wd_input, "\\", job_name, "\\", cell_pellet_weights_filename, sep='')
+#     cell_pellet_data = readxl::read_excel(cell_pellet_weights_dir)
+#     # Double check that the cell_pellet_data rows are in the same order as ,Set$dataSet$url.smp.nms
+#     sample_cols <-mSet$dataSet$url.smp.nms
+#     cell_pellet_data_new = cell_pellet_data[match(sample_cols, cell_pellet_data$"Sample"),]
+
+#   # for value in cell_pellet_data_new$"Weight (mg)"
+#   norm.vec <- as.numeric(cell_pellet_data_new$"Weight (mg)")
+
+#   # Call function using rowNorm="SpecNorm"
+#   setwd(wd_output)
+#   # When using SpecNorm, norm.vec is used with no way to specify in the function
+#   mSet<-Normalization(mSet, "SpecNorm", "NULL", "None")
+# }
+# setwd(wd_output)
+
+write.csv(t(mSet$dataSet$norm), paste(job_name,"_normalized_data_transposed.csv", sep=''), row.names = TRUE)
 
 # Two plot summary plot: Feature View of before and after normalization:
 mSet<-PlotNormSummary(mSet, paste("Normalization_feature_", job_name, "_", sep=''), format ="png", dpi=300, width=NA);
@@ -216,8 +244,8 @@ mSet<-PlotSampleNormSummary(mSet, paste("Normalization_sample_", job_name, "_", 
 ##############
 # Fold-change Analysis
 ############## 
-# Perform fold-change analysis on uploaded data, unpaired. For tutorial, set fc.thresh to 2.0 fold-change threshold, and cmp.type set to 0 for group 1 minus group 2.
-mSet<-FC.Anal(mSet, 2.0, 0, FALSE)
+# Perform fold-change analysis on uploaded data, unpaired. For tutorial, set fc.thresh to 2.0 fold-change threshold, and cmp.type set to 1 for group 2 (CTRL) vs group 1 (EXP).
+mSet<-FC.Anal(mSet, 2.0, cmp.type=1, FALSE)
 
 # Plot fold-change analysis. "fc_0_" is the filename, so for custom script, set filename to a changeable variable, followed by "_log2FC_"
 mSet<-PlotFC(mSet, paste("Fold-change_",job_name, "_", sep=''), "png", 72, width=NA)
@@ -250,7 +278,8 @@ mSet<-PlotTT(mSet, imgName = paste("T-test_features_",job_name, "_", sep=''), fo
 # threshp: 0.05 = threshold p-value
 # equal.var: TRUE = evaluates if the group variance is equal, to inform which t-test to use
 # pval.type: "raw" = use raw p-values, instead of FDR-adjusted p-values (Q: why?)
-mSet<-Volcano.Anal(mSet, FALSE, 2.0, 0, F, 0.05, TRUE, "raw")
+# cmp.type=1 for group 2 (EXP) vs group 1 (CTRL)
+mSet<-Volcano.Anal(mSet, FALSE, 2.0, 1, F, 0.05, TRUE, "raw")
 
 # Create the volcano plot
 # plotLbl: 1 = show labels for significant features
@@ -318,3 +347,13 @@ mSet<-PlotPCABiplot(mSet, paste("PCA_BiPlot_1_2_", job_name, "_", sep=''), forma
 
 # Reset wd to starting wd
 setwd(wd)
+
+# For future analysis:
+# Example for generating violin plot for specific feature of interest (adjust feature name):
+# mSet<-UpdateLoadingCmpd(mSet, "760/497.192mz/4.16min")
+# mSet<-SetCmpdSummaryType(mSet, "violin")
+# mSet<-PlotCmpdSummary(mSet, "760/497.192mz/4.16min","NA","NA", 1, "png", 72)
+
+# Can generate heatmap:
+# mSet<-PlotHeatMap(mSet, paste("heatmap_1_", job_name, "_", sep=''), "png", 72, width=NA, "norm", "row", "euclidean", "ward.D","bwm", 8,8, 10.0,0.02,10, 10, T, T, NULL, T, F, T, T, T,T)
+
