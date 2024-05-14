@@ -323,6 +323,15 @@ mSet<-PlotPCABiplot(mSet, paste("PCA_BiPlot_1_2_", job_name, "_", sep=''), forma
 # mSet$imgSet$pca.3d
 # # ^ I was not able to get this 3d viewer to work
 
+
+##############
+# Rename Output Files for Downstream Use
+############## 
+# Change "fold_change.csv" filename
+file.rename("fold_change.csv", paste(job_name, "_fold_change.csv", sep=''))
+# Change "t_test.csv" filename
+file.rename("t_test.csv", paste(job_name, "_t_test.csv", sep=''))
+
 # Reset wd to starting wd
 setwd(wd)
 
