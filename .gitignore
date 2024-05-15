@@ -152,10 +152,13 @@ cython_debug/
 #.idea/
 
 # folders
-temp
+temp/
 
 # .env files
 .env
 
 # Input files
 input/
+
+# logs from R
+logs/
