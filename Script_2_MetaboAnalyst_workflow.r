@@ -213,8 +213,20 @@ mSet<-PreparePrenormData(mSet);
 
 mSet<-Normalization(mSet, "SumNorm", "NULL", "None")
 
-# Write the normalized data to a csv file
-write.csv(t(mSet$dataSet$norm), paste(job_name,"_normalized_data_transposed.csv", sep=''), row.names = TRUE)
+# Write the normalized data to a pandas dataframe
+norm_df = data.frame(t(mSet$dataSet$norm))
+# Write the row.names to a new column (shift all other columns over so that row.names are in the first column)
+norm_df$MetaboAnalyst_ID = rownames(norm_df)
+norm_df = norm_df[, c(ncol(norm_df), 1:(ncol(norm_df)-1))]
+
+# Create a shared_name column
+norm_df$shared_name = sapply(strsplit(as.character(norm_df$MetaboAnalyst_ID), "/"), "[", 1)
+
+# Remove the row.names column
+rownames(norm_df) = NULL
+
+# Write norm_df to csv
+write.csv(norm_df, paste(job_name,"_normalized_data_transposed.csv", sep=''), row.names = FALSE)
 
 # Two plot summary plot: Feature View of before and after normalization:
 mSet<-PlotNormSummary(mSet, paste("Normalization_feature_", job_name, "_", sep=''), format ="png", dpi=300, width=NA);
