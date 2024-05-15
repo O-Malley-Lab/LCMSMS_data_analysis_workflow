@@ -547,9 +547,9 @@ metaboanalyst_input_df = pd.DataFrame(columns = filename_row)
 # Create row 2 as a list of strings
 class_row = ['Class']
 for filename in mzml_filenames:
-    if 'CTRL' in filename:
+    if filename in ctrl_filenames:
         class_row.append('CTRL')
-    else:
+    elif filename in exp_filenames:
         class_row.append('EXP')
 # Make row 2 of metaboanalyst_input_df the class_row
 metaboanalyst_input_df.loc[0] = class_row
