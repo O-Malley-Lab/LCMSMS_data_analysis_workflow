@@ -36,6 +36,8 @@ metaboanalyst_norm_peak_area_filename_post_str = "_normalized_data_transposed.cs
 log2fc_cols_to_keep = ['shared_name', 'log2.FC.']
 t_test_cols_to_keep = ['shared_name', 'p.value']
 
+# Cytoscape column names to keep (and their order) in the exported node table (input for filtering script)
+cytoscape_cols_to_keep = ['shared name', 'precursor mass', 'RTMean', 'Best Ion', 'GNPSGROUP:EXP', 'GNPSGROUP:CTRL', 'log2.FC.', 'p.value', 'number of spectra', 'GNPSLibraryURL', 'Analog:MQScore', 'SpectrumID', 'Analog:SharedPeaks', 'Instrument', 'PI', 'MassDiff', 'GNPSLinkout_Network', 'GNPSLinkout_Cluster', 'cluster index', 'sum(precursor intensity)', 'NODE_TYPE', 'neutral M mass', 'Correlated Features Group ID', 'componentindex', 'Annotated Adduct Features ID', 'ATTRIBUTE_GROUP']
 
 """""""""""""""""""""""""""""""""""""""""""""
 Get Job Info
@@ -99,6 +101,9 @@ norm_peak_area_data = norm_peak_area_data.drop(columns=['MetaboAnalyst_ID'])
 
 # Rename normalized data columns (not shared_name) to end with '_normalized'
 norm_peak_area_data.columns = [col + '_normalized' if col != 'shared_name' else col for col in norm_peak_area_data.columns]
+norm_data_cols_to_keep = norm_peak_area_data.columns
+# Add norm_data_cols_to_keep to cytoscape_cols_to_keep
+cytoscape_cols_to_keep.extend(norm_data_cols_to_keep)
 
 # For all tables, change data type of 'shared_name' column to strings, in order to match the data type in the Cytoscape network
 log2fc_data['shared_name'] = log2fc_data['shared_name'].astype(str)
@@ -113,6 +118,17 @@ p4c.tables.load_table_data(norm_peak_area_data, data_key_column='shared_name',ne
 
 # print data type of values in log2fc_data column shared_name
 print(log2fc_data['shared_name'].dtype)
+
+"""""""""""""""""""""""""""""""""""""""""""""
+Export Entire Node Table
+"""""""""""""""""""""""""""""""""""""""""""""
+# Export the entire node table to an excel file
+node_table = p4c.tables.get_table_columns(network=network_suid, table='node')
+# Specify columns and their order to keep in the exported node table
+node_table = node_table[cytoscape_cols_to_keep]
+# Export the node table to an excel file
+node_table.to_excel(pjoin(temp_job_folder, job_name + '_Cytoscape_node_table.xlsx'), index=False)
+
 
 """""""""""""""""""""""""""""""""""""""""""""
 Set Visual Style
