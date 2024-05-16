@@ -3,6 +3,7 @@ from os.path import join as pjoin
 import xlsxwriter
 import pandas as pd
 import py4cytoscape as p4c
+import numpy as np
 """""""""""""""""""""""""""""""""""""""""""""
 !!! Prior to running, you need to manually open Cytoscape !!!
 """""""""""""""""""""""""""""""""""""""""""""
@@ -103,16 +104,19 @@ network_suid = p4c.networks.get_network_suid(job_name)
 """""""""""""""""""""""""""""""""""""""""""""
 Import GNPS Quant Data (raw Peak Area values)
 """""""""""""""""""""""""""""""""""""""""""""
-# # From temp folder, import the GNPS quant data (job_name + "_gnps_quant.csv")
-# gnps_quant_filename = job_name + '_gnps_quant.csv'
-# gnps_quant_data = pd.read_csv(pjoin(temp_job_folder, gnps_quant_filename))
-# # Identify peak area columns to keep (column name ends in Peak Area)
-# peak_area_cols_to_keep = ['row m/z', 'row retention time']
-# peak_area_cols_to_keep.extend([col for col in gnps_quant_data.columns if col.endswith('Peak Area')])
-# # Add peak_area_cols_to_keep to cytoscape_cols_to_keep
-# cytoscape_cols_to_keep.extend(peak_area_cols_to_keep)
-# # Load peak area data into the node table
-# node_table_add_columns(gnps_quant_data, peak_area_cols_to_keep, network_suid, 'row ID')
+# From temp folder, import the GNPS quant data (job_name + "_gnps_quant.csv")
+gnps_quant_filename = job_name + '_gnps_quant.csv'
+gnps_quant_data = pd.read_csv(pjoin(temp_job_folder, gnps_quant_filename))
+# Sort by 'row ID'
+gnps_quant_data = gnps_quant_data.sort_values(by='row ID')
+# Identify peak area columns to keep (column name ends in Peak area)
+peak_area_cols_to_keep = ['row ID']
+peak_area_cols_raw_data = [col for col in gnps_quant_data.columns if col.endswith('Peak area')]
+peak_area_cols_to_keep.extend(peak_area_cols_raw_data)
+# Add peak_area_cols_to_keep to cytoscape_cols_to_keep
+cytoscape_cols_to_keep.extend(peak_area_cols_to_keep)
+# Load peak area data into the node table
+node_table_add_columns(gnps_quant_data, peak_area_cols_to_keep, network_suid, 'row ID')
 
 
 """""""""""""""""""""""""""""""""""""""""""""
@@ -143,14 +147,71 @@ node_table_add_columns(norm_peak_area_data, norm_data_cols_to_keep, network_suid
 
 
 """""""""""""""""""""""""""""""""""""""""""""
+Generate log10 values of Peak Area and Average Peak Area Columns
+"""""""""""""""""""""""""""""""""""""""""""""
+# Generate log10 values of the peak area columns (peak_area_cols_raw_data). Label as the original column name with '_log10'
+log10_peak_area_cols = [col + '_log10' for col in peak_area_cols_raw_data]
+# Add data for log10 values
+for col in peak_area_cols_raw_data:
+    gnps_quant_data[col + '_log10'] = gnps_quant_data[col].apply(lambda x: None if x == 0 else np.log10(x))
+
+# Add log10_peak_area_cols to cytoscape_cols_to_keep
+cytoscape_cols_to_keep.extend(log10_peak_area_cols)
+
+# Add the key column (row ID) to the log10 peak area columns
+log10_peak_area_cols.insert(0, 'row ID')
+
+# Load log10 peak area data into the node table
+node_table_add_columns(gnps_quant_data, log10_peak_area_cols, network_suid, 'row ID')
+
+# Average peak area columns: GNPSGROUP:CTRL and GNPSGROUP:EXP
+# Generate log10 values for average peak area columns (GNPSGROUP:CTRL and GNPSGROUP:EXP). Label as the original column name with '_log10'
+avg_peak_area_cols = ['GNPSGROUP:CTRL', 'GNPSGROUP:EXP']
+# Get the node table as a dataframe
+node_table_temp = p4c.tables.get_table_columns(network=network_suid, table='node')
+# Add data for log10 average peak area columns. GNPSGROUP:CTRL and GNPSGROUP:EXP are from the node table, not the gnps_quant_data
+avg_peak_area_cols_log10 = []
+for col in avg_peak_area_cols:
+    new_col = col + '_log10'
+    avg_peak_area_cols_log10.append(new_col)
+    node_table_temp[new_col] = node_table_temp[col].apply(lambda x: None if x == 0 else np.log10(x))
+
+avg_peak_area_cols_log10.insert(0, 'name')
+
+# Add avg_peak_area_cols with _log10 to cytoscape_cols_to_keep
+cytoscape_cols_to_keep.extend(avg_peak_area_cols_log10)
+
+# Load log10 average peak area data into the node table
+node_table_add_columns(node_table_temp, avg_peak_area_cols_log10, network_suid, 'name')
+
+
+"""""""""""""""""""""""""""""""""""""""""""""
 Export Entire Node Table
 """""""""""""""""""""""""""""""""""""""""""""
 # Export the entire node table to an excel file
 node_table = p4c.tables.get_table_columns(network=network_suid, table='node')
 # Specify columns and their order to keep in the exported node table
-node_table = node_table[cytoscape_cols_to_keep]
+node_table_simplified = node_table.copy()
+node_table_simplified = node_table_simplified[cytoscape_cols_to_keep]
 # Export the node table to an excel file
-node_table.to_excel(pjoin(temp_job_folder, job_name + '_Cytoscape_node_table.xlsx'), index=False)
+node_table_simplified.to_excel(pjoin(temp_job_folder, job_name + '_Cytoscape_node_table.xlsx'), index=False)
+
+
+"""""""""""""""""""""""""""""""""""""""""""""
+Reload the Simplified Node Table into Cytoscape to Replace the Current Node Table
+"""""""""""""""""""""""""""""""""""""""""""""
+# Delete all columns of the current node table except for 'name', 'SUID', 'shared name', 'selected', which are immutable
+node_table_cols_complex = p4c.tables.get_table_column_names(network=network_suid, table='node')
+node_table_cols_complex.remove('name')
+node_table_cols_complex.remove('SUID')
+node_table_cols_complex.remove('shared name')
+node_table_cols_complex.remove('selected')
+
+for col in node_table_cols_complex:
+    p4c.tables.delete_table_column(col, table='node', network=network_suid)
+
+# Load the simplified node table into Cytoscape
+p4c.tables.load_table_data(node_table_simplified, data_key_column='name', table_key_column='name', network=network_suid)
 
 
 """""""""""""""""""""""""""""""""""""""""""""
@@ -164,9 +225,3 @@ cytoscape_style_name = cytoscape_style_filename.split('.')[0]
 
 # Set the visual style to cystocape_style_filename, without the file extension in the cytoscape_style_filename
 p4c.set_visual_style(cytoscape_style_name)
-
-
-
-
-
-
