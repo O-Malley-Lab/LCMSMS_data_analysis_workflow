@@ -7,6 +7,28 @@ import py4cytoscape as p4c
 !!! Prior to running, you need to manually open Cytoscape !!!
 """""""""""""""""""""""""""""""""""""""""""""
 
+"""""""""""""""""""""""""""""""""""""""""""""
+Functions
+"""""""""""""""""""""""""""""""""""""""""""""
+def node_table_add_columns(df, cols_to_keep, network_suid, key_col_df, key_col_node='name'):
+    """
+    df: pandas dataframe
+        Data table with new data columns to add
+    key_col: str
+    network_suid: int
+        Cytoscape network SUID to add the columns to
+
+    return: None
+    """
+    # Change data type of key_col column of df to string, to match shared name of node table
+    df[key_col_df] = df[key_col_df].astype(str)
+
+    # Specify columns to keep
+    df = df[cols_to_keep]
+
+    # Load data into the node table
+    p4c.tables.load_table_data(df, data_key_column=key_col_df, table_key_column=key_col_node, network=network_suid)
+    return
 
 """""""""""""""""""""""""""""""""""""""""""""
 Values
@@ -79,45 +101,46 @@ network_suid = p4c.networks.get_network_suid(job_name)
 
 
 """""""""""""""""""""""""""""""""""""""""""""
+Import GNPS Quant Data (raw Peak Area values)
+"""""""""""""""""""""""""""""""""""""""""""""
+# # From temp folder, import the GNPS quant data (job_name + "_gnps_quant.csv")
+# gnps_quant_filename = job_name + '_gnps_quant.csv'
+# gnps_quant_data = pd.read_csv(pjoin(temp_job_folder, gnps_quant_filename))
+# # Identify peak area columns to keep (column name ends in Peak Area)
+# peak_area_cols_to_keep = ['row m/z', 'row retention time']
+# peak_area_cols_to_keep.extend([col for col in gnps_quant_data.columns if col.endswith('Peak Area')])
+# # Add peak_area_cols_to_keep to cytoscape_cols_to_keep
+# cytoscape_cols_to_keep.extend(peak_area_cols_to_keep)
+# # Load peak area data into the node table
+# node_table_add_columns(gnps_quant_data, peak_area_cols_to_keep, network_suid, 'row ID')
+
+
+"""""""""""""""""""""""""""""""""""""""""""""
 Import MetaboAnalyst Data
 """""""""""""""""""""""""""""""""""""""""""""
-# Import log2fc data. Values >0 are upregulated in EXP.
+# Import and load log2fc data. Values >0 are upregulated in EXP.
 log2fc_filename = job_name + metaboanalyst_log2FC_filename_post_str
 log2fc_data = pd.read_csv(pjoin(temp_job_folder, metaboanalyst_output_folder_name, log2fc_filename))
+node_table_add_columns(log2fc_data, log2fc_cols_to_keep, network_suid, 'shared_name')
 
-# Import t-test data. Values <0.05 are significant.
+# Import and load t-test data. Values <0.05 are significant.
 t_test_filename = job_name + metaboanalyst_ttest_filename_post_str
 t_test_data = pd.read_csv(pjoin(temp_job_folder, metaboanalyst_output_folder_name, t_test_filename))
+node_table_add_columns(t_test_data, t_test_cols_to_keep, network_suid, 'shared_name')
 
 # Import normalized peak area data
 norm_peak_area_filename = job_name + metaboanalyst_norm_peak_area_filename_post_str
 norm_peak_area_data = pd.read_csv(pjoin(temp_job_folder, metaboanalyst_output_folder_name, norm_peak_area_filename))
-
-# Indicate which columns to keep in the imported MetaboAnalyst data
-log2fc_data = log2fc_data[log2fc_cols_to_keep]
-t_test_data = t_test_data[t_test_cols_to_keep]
 # Keep all normalized peak area columns except for MetaboAnalyst_ID
 norm_peak_area_data = norm_peak_area_data.drop(columns=['MetaboAnalyst_ID'])
-
 # Rename normalized data columns (not shared_name) to end with '_normalized'
 norm_peak_area_data.columns = [col + '_normalized' if col != 'shared_name' else col for col in norm_peak_area_data.columns]
 norm_data_cols_to_keep = norm_peak_area_data.columns
 # Add norm_data_cols_to_keep to cytoscape_cols_to_keep
 cytoscape_cols_to_keep.extend(norm_data_cols_to_keep)
+# Load normalized peak area data into the node table
+node_table_add_columns(norm_peak_area_data, norm_data_cols_to_keep, network_suid, 'shared_name')
 
-# For all tables, change data type of 'shared_name' column to strings, in order to match the data type in the Cytoscape network
-log2fc_data['shared_name'] = log2fc_data['shared_name'].astype(str)
-t_test_data['shared_name'] = t_test_data['shared_name'].astype(str)
-norm_peak_area_data['shared_name'] = norm_peak_area_data['shared_name'].astype(str)
-
-# Line up the data against the nodes in the network
-# 'shared name' is the key column that we will use to align the data. table='node' by default. table_key_column='name' by default, and 'name' is the same as 'shared name'
-p4c.tables.load_table_data(log2fc_data, data_key_column='shared_name',network=network_suid)
-p4c.tables.load_table_data(t_test_data, data_key_column='shared_name',network=network_suid)
-p4c.tables.load_table_data(norm_peak_area_data, data_key_column='shared_name',network=network_suid)
-
-# print data type of values in log2fc_data column shared_name
-print(log2fc_data['shared_name'].dtype)
 
 """""""""""""""""""""""""""""""""""""""""""""
 Export Entire Node Table
