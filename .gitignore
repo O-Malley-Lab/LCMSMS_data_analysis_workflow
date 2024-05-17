@@ -162,3 +162,6 @@ input/
 
 # logs from R
 logs/
+
+# GNPS_output
+GNPS_output/
