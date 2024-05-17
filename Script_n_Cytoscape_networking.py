@@ -1,6 +1,5 @@
 import os
 from os.path import join as pjoin
-import xlsxwriter
 import pandas as pd
 import py4cytoscape as p4c
 import numpy as np
@@ -47,7 +46,7 @@ gnps_output_folder = pjoin(TEMP_OVERALL_FOLDER, 'Anid_HE_TJGIp11_pos_20210511_ma
 cytoscape_inputs_folder_name = 'Cytoscape_inputs'
 
 # Cytoscape style .xml filename (located in cytoscape_inputs_folder)
-cytoscape_style_filename = 'styles_6.xml'
+cytoscape_style_filename = 'styles_7.xml'
 
 # MetaboAnalyst Outputs of Interest
 metaboanalyst_output_folder_name = 'MetaboAnalystR_Output'
@@ -60,7 +59,9 @@ log2fc_cols_to_keep = ['shared_name', 'log2.FC.']
 t_test_cols_to_keep = ['shared_name', 'p.value']
 
 # Cytoscape column names to keep (and their order) in the exported node table (input for filtering script)
-cytoscape_cols_to_keep = ['shared name', 'precursor mass', 'RTMean', 'Best Ion', 'GNPSGROUP:EXP', 'GNPSGROUP:CTRL', 'log2.FC.', 'p.value', 'number of spectra', 'GNPSLibraryURL', 'Analog:MQScore', 'SpectrumID', 'Analog:SharedPeaks', 'Instrument', 'PI', 'MassDiff', 'GNPSLinkout_Network', 'GNPSLinkout_Cluster', 'cluster index', 'sum(precursor intensity)', 'NODE_TYPE', 'neutral M mass', 'Correlated Features Group ID', 'componentindex', 'Annotated Adduct Features ID', 'ATTRIBUTE_GROUP']
+cytoscape_cols_to_keep = [
+    'shared name', 'precursor mass', 'RTMean', 'Best Ion', 'GNPSGROUP:EXP', 'GNPSGROUP:CTRL', 'log2.FC.', 'p.value', 'number of spectra', 'Compound_Name', 'GNPSLibraryURL', 'Analog:MQScore', 'SpectrumID', 'Analog:SharedPeaks', 'Instrument', 'PI', 'MassDiff', 'GNPSLinkout_Network', 'GNPSLinkout_Cluster', 'cluster index', 'sum(precursor intensity)', 'NODE_TYPE', 'neutral M mass', 'Correlated Features Group ID', 'componentindex', 'Annotated Adduct Features ID', 'ATTRIBUTE_GROUP'
+    ]
 
 """""""""""""""""""""""""""""""""""""""""""""
 Get Job Info
@@ -225,3 +226,7 @@ cytoscape_style_name = cytoscape_style_filename.split('.')[0]
 
 # Set the visual style to cystocape_style_filename, without the file extension in the cytoscape_style_filename
 p4c.set_visual_style(cytoscape_style_name)
+
+# For each job folder in input folder, print the job name
+for job_folder in os.listdir(INPUT_FOLDER):
+    print(job_folder)
