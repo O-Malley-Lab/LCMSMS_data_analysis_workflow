@@ -311,7 +311,14 @@ mSet<-PlotFC(mSet, paste("Fold-change_",job_name, "_", sep=''), "png", 72, width
 mSet<-Ttests.Anal(mSet, nonpar=F, threshp=0.05, paired=FALSE, equal.var=TRUE, "fdr", FALSE)
 
 # Plot of the T-test results
-mSet<-PlotTT(mSet, imgName = paste("T-test_features_",job_name, "_", sep=''), format = "png", dpi=300, width=NA)
+# If there are 0 significant features reported, plotting will give an error
+# To avoid this, check if there are any significant features before plotting
+# Else, print a message that there are no significant features
+if (mSet$analSet$ttest$cmpd.sig > 0){
+  mSet<-PlotTtest(mSet, paste("T_test_", job_name, "_", sep=''), "png", 72, width=NA)
+} else {
+  print("No significant features found in T-test analysis.")
+}
 
 
 ##############
