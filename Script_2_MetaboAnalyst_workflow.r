@@ -122,6 +122,20 @@ metadata_overall = readxl::read_excel(metadata_overall_filename, sheet = metadat
 # Get job_name from metadata_overall first value in metadata_job_column
 job_name = metadata_overall[[1,metadata_job_column]]
 
+# For copy-pasting GNPS downloaded output for Cytoscape script, first create the GNPS_output folder in the working directory, if it does not exist already
+GNPS_output_dir = paste(wd, "GNPS_output", sep = "\\")
+if (!dir.exists(GNPS_output_dir)){
+  dir.create(GNPS_output_dir)
+}
+# Create a job_name folder in the GNPS_output folder
+job_dir_GNPS = paste(GNPS_output_dir, job_name, sep = "\\")
+# First delete the job_name folder if it already exists
+if (dir.exists(job_dir_GNPS)){
+  unlink(job_dir_GNPS, recursive = TRUE)
+}
+dir.create(job_dir_GNPS)
+# ^ note: by the end of the code, this folder will be empty; you will manually place the GNPS downloaded results (Run GNPS job manually, Go to finished GNPS job, select "View All Library Hits", download all, copy-paste that into this folder, then unzip the folder)
+
 # Set the working directory to the job_name folder in the temp folder. This is also where output images will go
 job_dir = paste(wd, "temp", job_name, sep = "\\")
 # If the folder doesn't exist yet in temp, print an error and end the script
