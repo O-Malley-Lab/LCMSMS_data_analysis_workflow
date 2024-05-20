@@ -131,9 +131,24 @@ if (!dir.exists(GNPS_output_dir)){
 job_dir_GNPS = paste(GNPS_output_dir, job_name, sep = "\\")
 # First delete the job_name folder if it already exists
 if (dir.exists(job_dir_GNPS)){
-  unlink(job_dir_GNPS, recursive = TRUE)
+  # First prompt the user asking if they want to delete the folder (y/n)
+  delete_folder = readline(prompt = paste("The folder for this job already exists in the GNPS_output folder. Do you want to delete the folder and its contents? (y/n)"))
+  # If the user says yes, delete the folder
+  if (delete_folder == "y"){
+    # Delete the folder and its contents
+    unlink(job_dir_GNPS, recursive = TRUE)
+    print("The GNPS_output folder was emptied")
+    # Create the job_name folder in the GNPS_output folder
+    dir.create(job_dir_GNPS)
+  } else if (delete_folder == "n"){
+    # If the user says no, print a message and continue with the script
+    print("The GNPS_output folder was not deleted.")
+  }
+} else {
+  # If the job_name folder does not exist, create it
+  dir.create(job_dir_GNPS)
+  print("The GNPS_output folder did not previously exist, so it was created")
 }
-dir.create(job_dir_GNPS)
 # ^ note: by the end of the code, this folder will be empty; you will manually place the GNPS downloaded results (Run GNPS job manually, Go to finished GNPS job, select "View All Library Hits", download all, copy-paste that into this folder, then unzip the folder)
 
 # Set the working directory to the job_name folder in the temp folder. This is also where output images will go
