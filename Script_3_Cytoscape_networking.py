@@ -40,7 +40,7 @@ TEMP_OVERALL_FOLDER = r'temp'
 METADATA_OVERALL_FILENAME = 'Overall_Running_Metadata_for_All_LCMSMS_Jobs.xlsx'
 METADATA_JOB_TAB = 'Job to Run'
 
-# GNPS Output folder (later, change this to be just the job_name in TEMP_OVERALL_FOLDER (=temp_job_folder), rather than a testing folder)
+# GNPS Output folder (later, change this to be just the job_name in TEMP_OVERALL_FOLDER, rather than a testing folder)
 gnps_output_folder = pjoin(TEMP_OVERALL_FOLDER, 'Anid_HE_TJGIp11_pos_20210511_manual_GNPS_output_download')
 
 cytoscape_inputs_folder_name = 'Cytoscape_inputs'
@@ -76,9 +76,6 @@ ionization = metadata['Ionization'][0]
 exp_rep_num = metadata['EXP num replicates'][0]
 ctrl_rep_num = metadata['CTRL num replicates'][0]
 
-# Define temp_folder (job_name folder in TEMP_OVERALL_FOLDER)
-temp_job_folder = pjoin(TEMP_OVERALL_FOLDER, job_name)
-
 # Define cytoscape inputs folder 
 cytoscape_inputs_folder = pjoin(INPUT_FOLDER, 'Cytoscape_inputs')
 
@@ -107,7 +104,7 @@ Import GNPS Quant Data (raw Peak Area values)
 """""""""""""""""""""""""""""""""""""""""""""
 # From temp folder, import the GNPS quant data (job_name + "_gnps_quant.csv")
 gnps_quant_filename = job_name + '_gnps_quant.csv'
-gnps_quant_data = pd.read_csv(pjoin(temp_job_folder, gnps_quant_filename))
+gnps_quant_data = pd.read_csv(pjoin(TEMP_OVERALL_FOLDER, job_name, gnps_quant_filename))
 # Sort by 'row ID'
 gnps_quant_data = gnps_quant_data.sort_values(by='row ID')
 # Identify peak area columns to keep (column name ends in Peak area)
@@ -125,17 +122,17 @@ Import MetaboAnalyst Data
 """""""""""""""""""""""""""""""""""""""""""""
 # Import and load log2fc data. Values >0 are upregulated in EXP.
 log2fc_filename = job_name + metaboanalyst_log2FC_filename_post_str
-log2fc_data = pd.read_csv(pjoin(temp_job_folder, metaboanalyst_output_folder_name, log2fc_filename))
+log2fc_data = pd.read_csv(pjoin(TEMP_OVERALL_FOLDER, job_name, metaboanalyst_output_folder_name, log2fc_filename))
 node_table_add_columns(log2fc_data, log2fc_cols_to_keep, network_suid, 'shared_name')
 
 # Import and load t-test data. Values <0.05 are significant.
 t_test_filename = job_name + metaboanalyst_ttest_filename_post_str
-t_test_data = pd.read_csv(pjoin(temp_job_folder, metaboanalyst_output_folder_name, t_test_filename))
+t_test_data = pd.read_csv(pjoin(TEMP_OVERALL_FOLDER, job_name, metaboanalyst_output_folder_name, t_test_filename))
 node_table_add_columns(t_test_data, t_test_cols_to_keep, network_suid, 'shared_name')
 
 # Import normalized peak area data
 norm_peak_area_filename = job_name + metaboanalyst_norm_peak_area_filename_post_str
-norm_peak_area_data = pd.read_csv(pjoin(temp_job_folder, metaboanalyst_output_folder_name, norm_peak_area_filename))
+norm_peak_area_data = pd.read_csv(pjoin(TEMP_OVERALL_FOLDER, job_name, metaboanalyst_output_folder_name, norm_peak_area_filename))
 # Keep all normalized peak area columns except for MetaboAnalyst_ID
 norm_peak_area_data = norm_peak_area_data.drop(columns=['MetaboAnalyst_ID'])
 # Rename normalized data columns (not shared_name) to end with '_normalized'
@@ -195,7 +192,7 @@ node_table = p4c.tables.get_table_columns(network=network_suid, table='node')
 node_table_simplified = node_table.copy()
 node_table_simplified = node_table_simplified[cytoscape_cols_to_keep]
 # Export the node table to an excel file
-node_table_simplified.to_excel(pjoin(temp_job_folder, job_name + '_Cytoscape_node_table.xlsx'), index=False)
+node_table_simplified.to_excel(pjoin(TEMP_OVERALL_FOLDER, job_name, job_name + '_Cytoscape_node_table.xlsx'), index=False)
 
 
 """""""""""""""""""""""""""""""""""""""""""""
