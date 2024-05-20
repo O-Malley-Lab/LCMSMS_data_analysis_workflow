@@ -182,6 +182,16 @@ cytoscape_cols_to_keep.extend(avg_peak_area_cols_log10)
 # Load log10 average peak area data into the node table
 node_table_add_columns(node_table_temp, avg_peak_area_cols_log10, network_suid, 'name')
 
+# Generate a EXP:CTRL_ratio column
+node_table_temp['EXP:CTRL_ratio'] = node_table_temp['GNPSGROUP:EXP'] / node_table_temp['GNPSGROUP:CTRL']
+# Round to 2 decimal places
+node_table_temp['EXP:CTRL_ratio'] = node_table_temp['EXP:CTRL_ratio'].apply(lambda x: round(x, 2))
+# Replace inf values with string 'INF'
+node_table_temp['EXP:CTRL_ratio'] = node_table_temp['EXP:CTRL_ratio'].replace([np.inf, -np.inf], 'INF')
+# Add EXP:CTRL_ratio to cytoscape_cols_to_keep
+cytoscape_cols_to_keep.append('EXP:CTRL_ratio')
+# Load EXP:CTRL_ratio data into the node table
+node_table_add_columns(node_table_temp, ['name', 'EXP:CTRL_ratio'], network_suid, 'name')
 
 """""""""""""""""""""""""""""""""""""""""""""
 Export Entire Node Table
