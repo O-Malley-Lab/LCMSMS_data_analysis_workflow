@@ -210,7 +210,7 @@ config = dotenv_values(".env")
 # Get USERNAME and PASSWD from .env file
 USERNAME = config['USERNAME']
 PASSWD = config['PASSWD']
-RUN_FTP = False
+RUN_FTP = True
 
 # PRIOR to running script, you need to manually create/generate the batch parameters .xml file for your jobs (filename specified in METADATA_OVERALL_FILENAME column 'MZmine3 batch template'). You should manually look at the parameters settings in the MZmine3 GUI to ensure they are correct for your job. This script will edit the .xml file to input the correct filenames and metadata for the job. Parameters to particularly consider:
 # - Instrument-specific parameters (MZmine3 allows you to specify a setup, and you will get some default paramets)
