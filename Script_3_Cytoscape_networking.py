@@ -184,14 +184,16 @@ node_table_add_columns(node_table_temp, avg_peak_area_cols_log10, network_suid, 
 
 # Generate a EXP:CTRL_ratio column
 node_table_temp['EXP:CTRL_ratio'] = node_table_temp['GNPSGROUP:EXP'] / node_table_temp['GNPSGROUP:CTRL']
+# Replace inf values with a large number [np.inf, -np.inf], np.finfo(np.float64).max
+node_table_temp['EXP:CTRL_ratio'] = node_table_temp['EXP:CTRL_ratio'].replace([np.inf, -np.inf], np.finfo(np.float64).max)
 # Round to 2 decimal places
 node_table_temp['EXP:CTRL_ratio'] = node_table_temp['EXP:CTRL_ratio'].apply(lambda x: round(x, 2))
-# Replace inf values with string 'INF'
-node_table_temp['EXP:CTRL_ratio'] = node_table_temp['EXP:CTRL_ratio'].replace([np.inf, -np.inf], 'INF')
 # Add EXP:CTRL_ratio to cytoscape_cols_to_keep
 cytoscape_cols_to_keep.append('EXP:CTRL_ratio')
 # Load EXP:CTRL_ratio data into the node table
 node_table_add_columns(node_table_temp, ['name', 'EXP:CTRL_ratio'], network_suid, 'name')
+# Reset index
+node_table_temp = node_table_temp.reset_index(drop=True)
 
 """""""""""""""""""""""""""""""""""""""""""""
 Export Entire Node Table
@@ -203,6 +205,7 @@ node_table_simplified = node_table.copy()
 node_table_simplified = node_table_simplified[cytoscape_cols_to_keep]
 # Export the node table to an excel file
 node_table_simplified.to_excel(pjoin(TEMP_OVERALL_FOLDER, job_name, job_name + '_Cytoscape_node_table.xlsx'), index=False)
+
 
 
 """""""""""""""""""""""""""""""""""""""""""""
