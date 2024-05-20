@@ -226,7 +226,3 @@ cytoscape_style_name = cytoscape_style_filename.split('.')[0]
 
 # Set the visual style to cystocape_style_filename, without the file extension in the cytoscape_style_filename
 p4c.set_visual_style(cytoscape_style_name)
-
-# For each job folder in input folder, print the job name
-for job_folder in os.listdir(INPUT_FOLDER):
-    print(job_folder)
