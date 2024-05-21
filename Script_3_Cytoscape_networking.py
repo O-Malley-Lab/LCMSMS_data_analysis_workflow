@@ -207,14 +207,12 @@ Values
 """""""""""""""""""""""""""""""""""""""""""""
 INPUT_FOLDER = r'input' 
 TEMP_OVERALL_FOLDER = r'temp'
+GNPS_OUTPUT_FOLDER = r'GNPS_output'
 OUTPUT_FOLDER = r'output'
 
 # Use "Overall_Running_Metadata_for_All_LCMSMS_Jobs.xlsx" from INPUT_FOLDER to get relevant parameters for job to run. Use the excel tab "Job to Run"
 METADATA_OVERALL_FILENAME = 'Overall_Running_Metadata_for_All_LCMSMS_Jobs.xlsx'
 METADATA_JOB_TAB = 'Job to Run'
-
-# GNPS Output folder (later, change this to be just the job_name in TEMP_OVERALL_FOLDER, rather than a testing folder)
-gnps_output_folder = pjoin(TEMP_OVERALL_FOLDER, 'Anid_HE_TJGIp11_pos_20210511_manual_GNPS_output_download')
 
 cytoscape_inputs_folder_name = 'Cytoscape_inputs'
 
@@ -285,15 +283,18 @@ cytoscape_inputs_folder = pjoin(INPUT_FOLDER, 'Cytoscape_inputs')
 """""""""""""""""""""""""""""""""""""""""""""
 Open Cytoscape network from GNPS output .graphml
 """""""""""""""""""""""""""""""""""""""""""""
+# GNPS Output folder (later, change this to be just the job_name in TEMP_OVERALL_FOLDER, rather than a testing folder)
+gnps_output_job_folder = pjoin(GNPS_OUTPUT_FOLDER, job_name)
+
 # Destroy any networks already in the Cytsocape session
 p4c.networks.delete_all_networks()
 
 # GNPS Outputs are located in temp_folder
 # Find the .graphml file in the GNPS output folder. Upload into Cytoscape
-gnps_graphml_file = [f for f in os.listdir(gnps_output_folder) if f.endswith('.graphml')][0]
+gnps_graphml_file = [f for f in os.listdir(gnps_output_job_folder) if f.endswith('.graphml')][0]
 
 # Import the GNPS output into Cytoscape
-p4c.import_network_from_file(pjoin(gnps_output_folder, gnps_graphml_file))
+p4c.import_network_from_file(pjoin(gnps_output_job_folder, gnps_graphml_file))
 
 # Get the SUID of the current network
 suid_main_network = p4c.get_network_suid()
