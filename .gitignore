@@ -165,3 +165,6 @@ logs/
 
 # GNPS_output
 GNPS_output/
+
+# output folder
+output/
