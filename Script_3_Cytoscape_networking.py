@@ -179,9 +179,22 @@ def p4c_network_add_filter_columns(filter_name, node_table, nodes_to_keep, netwo
 
 def p4c_import_and_apply_cytoscape_style(dir, cytoscape_style_filename, suid, network_rename):
     """
+    Import and apply a Cytoscape style to the network. Additionally, name the network.
+
+    Inputs
+    dir: str
+        Directory of the Cytoscape style file
+    cytoscape_style_filename: str
+        Filename of the Cytoscape style file
+        
+    Outputs
+    return None
+
     """
-    p4c.import_visual_styles(dir)
+    # If the style is not already in Cytoscape, import it
     cytoscape_style_filtered_name = cytoscape_style_filename.split('.')[0]
+    if cytoscape_style_filtered_name not in p4c.get_visual_style_names():
+        p4c.import_visual_styles(dir)
     p4c.set_visual_style(cytoscape_style_filtered_name)
     p4c.networks.rename_network(network_rename, suid)
     return
@@ -261,6 +274,7 @@ ctrl_rep_num = metadata['CTRL num replicates'][0]
 # Define cytoscape inputs folder 
 cytoscape_inputs_folder = pjoin(INPUT_FOLDER, 'Cytoscape_inputs')
 
+
 """""""""""""""""""""""""""""""""""""""""""""
 Open Cytoscape network from GNPS output .graphml
 """""""""""""""""""""""""""""""""""""""""""""
@@ -274,11 +288,14 @@ gnps_graphml_file = [f for f in os.listdir(gnps_output_folder) if f.endswith('.g
 # Import the GNPS output into Cytoscape
 p4c.import_network_from_file(pjoin(gnps_output_folder, gnps_graphml_file))
 
-# Assuming 'network_suid' is the SUID of the network you want to rename
-p4c.networks.rename_network(job_name)
+# Get the SUID of the current network
+suid_main_network = p4c.get_network_suid()
 
-# Get the SUID of the network
-network_suid = p4c.networks.get_network_suid(job_name)
+
+"""""""""""""""""""""""""""""""""""""""""""""
+Set Visual Style
+"""""""""""""""""""""""""""""""""""""""""""""
+p4c_import_and_apply_cytoscape_style(pjoin(cytoscape_inputs_folder, cytoscape_style_filename), cytoscape_style_filename, suid_main_network, job_name)
 
 
 """""""""""""""""""""""""""""""""""""""""""""
@@ -296,7 +313,7 @@ peak_area_cols_to_keep.extend(peak_area_cols_raw_data)
 # Add peak_area_cols_to_keep to cytoscape_cols_to_keep
 cytoscape_cols_to_keep.extend(peak_area_cols_to_keep)
 # Load peak area data into the node table
-node_table_add_columns(gnps_quant_data, peak_area_cols_to_keep, network_suid, 'row ID')
+node_table_add_columns(gnps_quant_data, peak_area_cols_to_keep, suid_main_network, 'row ID')
 
 
 """""""""""""""""""""""""""""""""""""""""""""
@@ -305,12 +322,12 @@ Import MetaboAnalyst Data
 # Import and load log2fc data. Values >0 are upregulated in EXP.
 log2fc_filename = job_name + metaboanalyst_log2FC_filename_post_str
 log2fc_data = pd.read_csv(pjoin(TEMP_OVERALL_FOLDER, job_name, metaboanalyst_output_folder_name, log2fc_filename))
-node_table_add_columns(log2fc_data, log2fc_cols_to_keep, network_suid, 'shared_name')
+node_table_add_columns(log2fc_data, log2fc_cols_to_keep, suid_main_network, 'shared_name')
 
 # Import and load t-test data. Values <0.05 are significant.
 t_test_filename = job_name + metaboanalyst_ttest_filename_post_str
 t_test_data = pd.read_csv(pjoin(TEMP_OVERALL_FOLDER, job_name, metaboanalyst_output_folder_name, t_test_filename))
-node_table_add_columns(t_test_data, t_test_cols_to_keep, network_suid, 'shared_name')
+node_table_add_columns(t_test_data, t_test_cols_to_keep, suid_main_network, 'shared_name')
 
 # Import normalized peak area data
 norm_peak_area_filename = job_name + metaboanalyst_norm_peak_area_filename_post_str
@@ -323,7 +340,7 @@ norm_data_cols_to_keep = norm_peak_area_data.columns
 # Add norm_data_cols_to_keep to cytoscape_cols_to_keep
 cytoscape_cols_to_keep.extend(norm_data_cols_to_keep)
 # Load normalized peak area data into the node table
-node_table_add_columns(norm_peak_area_data, norm_data_cols_to_keep, network_suid, 'shared_name')
+node_table_add_columns(norm_peak_area_data, norm_data_cols_to_keep, suid_main_network, 'shared_name')
 
 
 """""""""""""""""""""""""""""""""""""""""""""
@@ -342,13 +359,13 @@ cytoscape_cols_to_keep.extend(log10_peak_area_cols)
 log10_peak_area_cols.insert(0, 'row ID')
 
 # Load log10 peak area data into the node table
-node_table_add_columns(gnps_quant_data, log10_peak_area_cols, network_suid, 'row ID')
+node_table_add_columns(gnps_quant_data, log10_peak_area_cols, suid_main_network, 'row ID')
 
 # Average peak area columns: GNPSGROUP:CTRL and GNPSGROUP:EXP
 # Generate log10 values for average peak area columns (GNPSGROUP:CTRL and GNPSGROUP:EXP). Label as the original column name with '_log10'
 avg_peak_area_cols = ['GNPSGROUP:CTRL', 'GNPSGROUP:EXP']
 # Get the node table as a dataframe
-node_table_temp = p4c.tables.get_table_columns(network=network_suid, table='node')
+node_table_temp = p4c.tables.get_table_columns(network=suid_main_network, table='node')
 # Add data for log10 average peak area columns. GNPSGROUP:CTRL and GNPSGROUP:EXP are from the node table, not the gnps_quant_data
 avg_peak_area_cols_log10 = []
 for col in avg_peak_area_cols:
@@ -362,7 +379,7 @@ avg_peak_area_cols_log10.insert(0, 'name')
 cytoscape_cols_to_keep.extend(avg_peak_area_cols_log10)
 
 # Load log10 average peak area data into the node table
-node_table_add_columns(node_table_temp, avg_peak_area_cols_log10, network_suid, 'name')
+node_table_add_columns(node_table_temp, avg_peak_area_cols_log10, suid_main_network, 'name')
 
 # Generate a EXP:CTRL_ratio column
 node_table_temp['EXP:CTRL_ratio'] = node_table_temp['GNPSGROUP:EXP'] / node_table_temp['GNPSGROUP:CTRL']
@@ -373,7 +390,7 @@ node_table_temp['EXP:CTRL_ratio'] = node_table_temp['EXP:CTRL_ratio'].apply(lamb
 # Add EXP:CTRL_ratio to cytoscape_cols_to_keep
 cytoscape_cols_to_keep.append('EXP:CTRL_ratio')
 # Load EXP:CTRL_ratio data into the node table
-node_table_add_columns(node_table_temp, ['name', 'EXP:CTRL_ratio'], network_suid, 'name')
+node_table_add_columns(node_table_temp, ['name', 'EXP:CTRL_ratio'], suid_main_network, 'name')
 # Reset index
 node_table_temp = node_table_temp.reset_index(drop=True)
 
@@ -401,18 +418,18 @@ for index, value in enumerate(suspect_compound_match_col_values):
 # Add 'Suspect_Compound_Match' to cytoscape_cols_to_keep
 cytoscape_cols_to_keep.append('Suspect_Compound_Match')
 # Load 'Suspect_Compound_Match' data into the node table
-node_table_add_columns(compound_name_df, ['name', 'Suspect_Compound_Match'], network_suid, 'name')
+node_table_add_columns(compound_name_df, ['name', 'Suspect_Compound_Match'], suid_main_network, 'name')
 # Delete the previous 'Compound_Name' column from the node table
-p4c.tables.delete_table_column('Compound_Name', table='node', network=network_suid)
+p4c.tables.delete_table_column('Compound_Name', table='node', network=suid_main_network)
 # Load 'Compound_Name' data from edited compound_name_df into the node table, replacing the previous 'Compound_Name' column.
-node_table_add_columns(compound_name_df, ['name', 'Compound_Name'], network_suid, 'name')
+node_table_add_columns(compound_name_df, ['name', 'Compound_Name'], suid_main_network, 'name')
 
 
 """""""""""""""""""""""""""""""""""""""""""""
 Export Entire Node Table
 """""""""""""""""""""""""""""""""""""""""""""
 # Export the entire node table to an excel file
-node_table = p4c.tables.get_table_columns(network=network_suid, table='node')
+node_table = p4c.tables.get_table_columns(network=suid_main_network, table='node')
 # Specify columns and their order to keep in the exported node table
 node_table_simplified = node_table.copy()
 node_table_simplified = node_table_simplified[cytoscape_cols_to_keep]
@@ -424,24 +441,17 @@ node_table_simplified.to_excel(pjoin(TEMP_OVERALL_FOLDER, job_name, job_name + '
 Reload the Simplified Node Table into Cytoscape to Replace the Current Node Table
 """""""""""""""""""""""""""""""""""""""""""""
 # Delete all columns of the current node table except for 'name', 'SUID', 'shared name', 'selected', which are immutable
-node_table_cols_complex = p4c.tables.get_table_column_names(network=network_suid, table='node')
+node_table_cols_complex = p4c.tables.get_table_column_names(network=suid_main_network, table='node')
 node_table_cols_complex.remove('name')
 node_table_cols_complex.remove('SUID')
 node_table_cols_complex.remove('shared name')
 node_table_cols_complex.remove('selected')
 
 for col in node_table_cols_complex:
-    p4c.tables.delete_table_column(col, table='node', network=network_suid)
+    p4c.tables.delete_table_column(col, table='node', network=suid_main_network)
 
 # Load the simplified node table into Cytoscape
-p4c.tables.load_table_data(node_table_simplified, data_key_column='name', table_key_column='name', network=network_suid)
-
-
-"""""""""""""""""""""""""""""""""""""""""""""
-Set Visual Style
-"""""""""""""""""""""""""""""""""""""""""""""
-cytoscape_style_filtered_filename
-p4c_import_and_apply_cytoscape_style(pjoin(cytoscape_inputs_folder, cytoscape_style_filename), cytoscape_style_filtered_filename, suid_test, job_name + '_test_filter')
+p4c.tables.load_table_data(node_table_simplified, data_key_column='name', table_key_column='name', network=suid_main_network)
 
 
 """""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""
@@ -590,13 +600,13 @@ writer.close()
 """""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""
 Main Part 3: Create Filtered Cytoscape Networks for Peaks of Interest
 """""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""
-"""""""""""""""""""""""""""""""""""""""""""""
-Run test Cytoscape filter first
-"""""""""""""""""""""""""""""""""""""""""""""
-# Create a pandas of TRUE and FALSE values for the nodes to keep, with keys of shared name. We will keep nodes that have a 'EXP:CTRL_ratio' greater than the RATIO_CUTOFF
-nodes_to_keep = node_table_temp['EXP:CTRL_ratio'] > RATIO_CUTOFF
-suid_test = p4c_network_add_filter_columns("test_filter", node_table_temp, nodes_to_keep, network_suid, key_col='shared name', componentindex_colname='componentindex')
-p4c_import_and_apply_cytoscape_style(pjoin(cytoscape_inputs_folder, cytoscape_style_filtered_filename), cytoscape_style_filtered_filename, suid_test, job_name + '_test_filter')
+# """""""""""""""""""""""""""""""""""""""""""""
+# Run test Cytoscape filter first
+# """""""""""""""""""""""""""""""""""""""""""""
+# # Create a pandas of TRUE and FALSE values for the nodes to keep, with keys of shared name. We will keep nodes that have a 'EXP:CTRL_ratio' greater than the RATIO_CUTOFF
+# nodes_to_keep = node_table_temp['EXP:CTRL_ratio'] > RATIO_CUTOFF
+# suid_test = p4c_network_add_filter_columns("test_filter", node_table_temp, nodes_to_keep, suid_main_network, key_col='shared name', componentindex_colname='componentindex')
+# p4c_import_and_apply_cytoscape_style(pjoin(cytoscape_inputs_folder, cytoscape_style_filtered_filename), cytoscape_style_filtered_filename, suid_test, job_name + '_test_filter')
 
 """""""""""""""""""""""""""""""""""""""""""""
 Create filtered network for Filtered Peaks of Interest
@@ -609,8 +619,12 @@ nodes_to_keep = node_table_temp['GNPSGROUP:CTRL_log10'] < CTRL_LOG10_CUTOFF
 nodes_to_keep = nodes_to_keep & (node_table_temp['GNPSGROUP:EXP_log10'] > EXP_LOG10_CUTOFF)
 nodes_to_keep = nodes_to_keep & (node_table_temp['EXP:CTRL_ratio'] > RATIO_CUTOFF)
 
-suid_target = p4c_network_add_filter_columns("Filtered_Peaks_of_Interest", node_table_temp, nodes_to_keep, network_suid, key_col='shared name', componentindex_colname='componentindex')
+suid_target = p4c_network_add_filter_columns("Filtered_Peaks_of_Interest", node_table_temp, nodes_to_keep, suid_main_network, key_col='shared name', componentindex_colname='componentindex')
 p4c_import_and_apply_cytoscape_style(pjoin(cytoscape_inputs_folder, cytoscape_style_filtered_filename), cytoscape_style_filtered_filename, suid_target, job_name + '_Filtered_Peaks_of_Interest')
+# Unfortunately, I do not think there is a good way to ensure node labels appear in front of the nodes; sometimes they appear behind.
+
+
+
 
 
 
