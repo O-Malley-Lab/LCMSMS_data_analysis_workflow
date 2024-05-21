@@ -453,9 +453,9 @@ p4c.set_visual_style(cytoscape_style_name)
 """""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""
 Main Part 2: Filtering Script for Output Excel
 """""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""
-"""
+"""""""""""""""""""""""""""""""""""""""""""""
 Copy the node table to filter for peaks of interest
-"""
+"""""""""""""""""""""""""""""""""""""""""""""
 table_filtered = node_table.copy()
 
 # First, filter for peaks that have a GNPSGROUP:CTRL_log10 less than the cutoff
@@ -473,9 +473,9 @@ table_filtered = table_filtered.sort_values(by = 'GNPSGROUP:EXP_log10', ascendin
 table_filtered = table_filtered.reset_index(drop = True)
 
 
-"""
+"""""""""""""""""""""""""""""""""""""""""""""
 Create new dataframe of upregulated likely host metabolites
-"""
+"""""""""""""""""""""""""""""""""""""""""""""
 table_host_upreg = node_table.copy()
 
 # First, filter for peaks that have a GNPSGROUP:CTRL_log10 greater than the cutoff
@@ -490,9 +490,9 @@ table_host_upreg = table_host_upreg.sort_values(by = 'GNPSGROUP:EXP_log10', asce
 table_host_upreg = table_host_upreg.reset_index(drop = True)
 
 
-"""
+"""""""""""""""""""""""""""""""""""""""""""""
 Write a table listing potential ABMBA standard peaks
-"""
+"""""""""""""""""""""""""""""""""""""""""""""
 table_ABMBA = node_table.copy()
 
 # First, filter for peaks that have a m/z ('precursor mass') within the deviation of the ABMBA standard m/z
@@ -507,9 +507,9 @@ table_ABMBA = table_ABMBA.sort_values(by = 'name', ascending = True)
 table_ABMBA = table_ABMBA.reset_index(drop = True)
 
 
-"""
+"""""""""""""""""""""""""""""""""""""""""""""
 Write a table with all peaks with compound matches to databases. This includes potential primary metabolites. Have a version without suspect compounds and a version with suspect compounds.
-"""
+"""""""""""""""""""""""""""""""""""""""""""""
 table_all_matched_cmpds= node_table.copy()
 
 # First, filter for peaks that have a 'Compound_Name' that is not NaN
@@ -520,9 +520,9 @@ table_matched_cmpds_no_suspect = table_all_matched_cmpds.copy()
 table_matched_cmpds_no_suspect = table_all_matched_cmpds[~table_all_matched_cmpds['Compound_Name'].str.contains('Suspect', na = False)]
 
 
-"""
+"""""""""""""""""""""""""""""""""""""""""""""
 Formatted Simplest Table
-"""
+"""""""""""""""""""""""""""""""""""""""""""""
 # Make an easy-to-read formatted table with all peaks
 columns_of_interest = ['shared name', 'precursor mass', 'RTMean', 'log2.FC.', 'p.value', 'GNPSGROUP:EXP','GNPSGROUP:CTRL', 'GNPSGROUP:EXP_log10','GNPSGROUP:CTRL_log10', 'EXP:CTRL_ratio', 'Best Ion', 'GNPSLinkout_Cluster','Compound_Name','Analog:MQScore'] 
 
@@ -538,15 +538,15 @@ columns_to_round = ['log2.FC.','GNPSGROUP:EXP_log10','GNPSGROUP:CTRL_log10']
 table_formatted[columns_to_round] = table_formatted[columns_to_round].applymap(lambda x: round(x, 2))
 
 
-"""
+"""""""""""""""""""""""""""""""""""""""""""""
 Make a table of the parameters used in this script
-"""
+"""""""""""""""""""""""""""""""""""""""""""""
 parameters = pd.DataFrame({'Parameter': ['CTRL_LOG10_CUTOFF', 'RATIO_CUTOFF', 'EXP_LOG10_CUTOFF', 'HOST_CTRL_LOG10_CUTOFF', 'HOST_RATIO_CUTOFF', 'MZ_DEV', 'RT_DEV','ABMBA_MZ_POS','ABMBA_RT_POS'], 'Value': [CTRL_LOG10_CUTOFF, RATIO_CUTOFF, EXP_LOG10_CUTOFF, HOST_CTRL_LOG10_CUTOFF, HOST_RATIO_CUTOFF, MZ_DEV, RT_DEV, ABMBA_MZ_POS, ABMBA_RT_POS]})
 
 
-"""
+"""""""""""""""""""""""""""""""""""""""""""""
 Write each dataframe to a different sheet in output excel
-"""
+"""""""""""""""""""""""""""""""""""""""""""""
 output_filename = job_name + '_Filtered_Peaks_of_Interest.xlsx'
 # If it does not exist already, create a folder for job_name in the output folder
 if not os.path.exists(pjoin(OUTPUT_FOLDER, job_name)):
@@ -596,39 +596,12 @@ writer.close()
 """""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""
 Main Part 3: Create Filtered Cytoscape Networks for Peaks of Interest
 """""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""
-# Copy the network to a new network for the following filtered tables: table_filtered, table_host_upreg, table_matched_cmpds_no_suspect
-
-# Create a new network for each filtered table
-# Filtered Peaks of Interest
-# p4c.networks.create_from(network=network_suid, base_network_name=job_name + '_Filtered_Peaks_of_Interest')
-# # Upregulated Likely Host Metabolites
-# p4c.networks.create_from(network=network_suid, base_network_name=job_name + '_Upreg_Likely_Host_Metabolites')
-# # All Compound Matches
-# p4c.networks.create_from(network=network_suid, base_network_name=job_name + '_All_Cmpd_Matches')
-# # Compound Matches without Suspect
-# p4c.networks.create_from(network=network_suid, base_network_name=job_name + '_Cmpd_Matches_No_Suspect')
-
-
-
-# Get the SUID of the new networks
-# network_filtered_suid = p4c.networks.get_network_suid(job_name + '_Filtered_Peaks_of_Interest')
-# network_host_upreg_suid = p4c.networks.get_network_suid(job_name + '_Upreg_Likely_Host_Metabolites')
-# network_all_cmpd_suid = p4c.networks.get_network_suid(job_name + '_All_Cmpd_Matches')
-# network_cmpd_no_sus_suid = p4c.networks.get_network_suid(job_name + '_Cmpd_Matches_No_Suspect')
-
-# # Filter the new networks based on the filtered tables. Keep 'componentindex' values that appear in the corresponding table
-# # Filtered Peaks of Interest
-# componentindex_to_keep = table_filtered['componentindex'].tolist()
-# # If there are repeats of the same componentindex, remove duplicates
-# componentindex_to_keep = list(set(componentindex_to_keep))
-# # Filter the network for the componentindex in componentindex_to_keep
-# # p4c.filter.create('componentindex', 'in', componentindex_to_keep, network=network_filtered_suid)
-
-"""
+"""""""""""""""""""""""""""""""""""""""""""""
 Run test Cytoscape filter first
-"""
+"""""""""""""""""""""""""""""""""""""""""""""
 # Create a pandas of TRUE and FALSE values for the nodes to keep, with keys of shared name. We will keep nodes that have a 'EXP:CTRL_ratio' greater than the RATIO_CUTOFF
 nodes_to_keep = node_table_temp['EXP:CTRL_ratio'] > RATIO_CUTOFF
 
 test_suid = p4c_network_add_filter_columns("test_filter", node_table_temp, nodes_to_keep, network_suid, key_col='shared name', componentindex_colname='componentindex')
 p4c_import_and_apply_cytoscape_style(pjoin(cytoscape_inputs_folder, cytoscape_style_filtered_filename), cytoscape_style_filtered_filename, test_suid, job_name + '_test_filter')
+
