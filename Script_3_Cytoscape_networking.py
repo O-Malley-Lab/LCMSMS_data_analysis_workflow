@@ -93,7 +93,7 @@ t_test_cols_to_keep = ['shared_name', 'p.value']
 
 # Cytoscape column names to keep (and their order) in the exported node table (input for filtering script)
 cytoscape_cols_to_keep = [
-    'shared name', 'precursor mass', 'RTMean', 'Best Ion', 'GNPSGROUP:EXP', 'GNPSGROUP:CTRL', 'log2.FC.', 'p.value', 'number of spectra', 'Compound_Name', 'GNPSLibraryURL', 'Analog:MQScore', 'SpectrumID', 'Analog:SharedPeaks', 'Instrument', 'PI', 'MassDiff', 'GNPSLinkout_Network', 'GNPSLinkout_Cluster', 'cluster index', 'sum(precursor intensity)', 'NODE_TYPE', 'neutral M mass', 'Correlated Features Group ID', 'componentindex', 'Annotated Adduct Features ID', 'ATTRIBUTE_GROUP'
+    'shared name', 'precursor mass', 'RTMean', 'Best Ion', 'GNPSGROUP:EXP', 'GNPSGROUP:CTRL', 'log2.FC.', 'p.value', 'number of spectra', 'Compound_Name', 'GNPSLibraryURL', 'Analog:MQScore', 'SpectrumID', 'Analog:SharedPeaks', 'Instrument', 'PI', 'MassDiff', 'GNPSLinkout_Network', 'GNPSLinkout_Cluster', 'componentindex', 'sum(precursor intensity)', 'NODE_TYPE', 'neutral M mass', 'Correlated Features Group ID', 'componentindex', 'Annotated Adduct Features ID', 'ATTRIBUTE_GROUP'
     ]
 
 # Filtering Parameters
@@ -435,3 +435,82 @@ for sheet_name in writer.sheets:
 
 # Close the Pandas Excel writer and output the Excel file. XlsxWriter object has no attribute 'save'. Use 'close' instead
 writer.close()
+
+
+"""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""
+Main Part 3: Create Filtered Cytoscape Networks for Peaks of Interest
+"""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""
+# Copy the network to a new network for the following filtered tables: table_filtered, table_host_upreg, table_matched_cmpds_no_suspect
+
+# Create a new network for each filtered table
+# Filtered Peaks of Interest
+# p4c.networks.create_from(network=network_suid, base_network_name=job_name + '_Filtered_Peaks_of_Interest')
+# # Upregulated Likely Host Metabolites
+# p4c.networks.create_from(network=network_suid, base_network_name=job_name + '_Upreg_Likely_Host_Metabolites')
+# # All Compound Matches
+# p4c.networks.create_from(network=network_suid, base_network_name=job_name + '_All_Cmpd_Matches')
+# # Compound Matches without Suspect
+# p4c.networks.create_from(network=network_suid, base_network_name=job_name + '_Cmpd_Matches_No_Suspect')
+
+
+
+# Get the SUID of the new networks
+# network_filtered_suid = p4c.networks.get_network_suid(job_name + '_Filtered_Peaks_of_Interest')
+# network_host_upreg_suid = p4c.networks.get_network_suid(job_name + '_Upreg_Likely_Host_Metabolites')
+# network_all_cmpd_suid = p4c.networks.get_network_suid(job_name + '_All_Cmpd_Matches')
+# network_cmpd_no_sus_suid = p4c.networks.get_network_suid(job_name + '_Cmpd_Matches_No_Suspect')
+
+# # Filter the new networks based on the filtered tables. Keep 'componentindex' values that appear in the corresponding table
+# # Filtered Peaks of Interest
+# componentindex_to_keep = table_filtered['componentindex'].tolist()
+# # If there are repeats of the same componentindex, remove duplicates
+# componentindex_to_keep = list(set(componentindex_to_keep))
+# # Filter the network for the componentindex in componentindex_to_keep
+# # p4c.filter.create('componentindex', 'in', componentindex_to_keep, network=network_filtered_suid)
+
+"""
+Run test Cytoscape filter first
+"""
+# Copy the original network to a new network for the test filter. clone_network returns new SUID.
+network_test_filter_suid = p4c.clone_network()
+
+# Create a list of TRUE and FALSE values for the nodes to keep. Keep nodes that have a 'EXP:CTRL_ratio' greater than the RATIO_CUTOFF
+nodes_to_keep = node_table_temp['EXP:CTRL_ratio'] > RATIO_CUTOFF
+
+# Get the list of componentindex values to keep
+componentindex_to_keep = node_table_temp[nodes_to_keep]['componentindex'].tolist()
+# If there are repeats of the same componentindex, remove duplicates
+componentindex_to_keep = list(set(componentindex_to_keep))
+# Make a list of true and false values for the nodes to keep
+nodes_to_keep_componentindex = node_table_temp['componentindex'].isin(componentindex_to_keep)
+
+# Adjust nodes_to_keep to be a list of TRUE and FALSE values for the nodes to keep
+nodes_to_keep = nodes_to_keep.tolist()
+
+# Create filter dataframe with one column of shared namem, and two columns of TRUE and FALSE values, one column for nodes to keep and one column for componentindex to keep
+filter_df = pd.DataFrame({'shared name': node_table_temp['name'], 'keep_node': nodes_to_keep, 'keep_componentindex': nodes_to_keep_componentindex})
+
+# Add the 2 lists (nodes and componentindex) of TRUE and FALSE values to the network, using function node_table_add_columns
+node_table_add_columns(filter_df, ['shared name', 'keep_componentindex'], network_test_filter_suid, 'shared name')
+node_table_add_columns(filter_df, ['shared name', 'keep_node'], network_test_filter_suid, 'shared name')
+
+# Create and apply the filter to the network. Select the nodes to delete.
+# https://py4cytoscape.readthedocs.io/en/latest/reference/generated/py4cytoscape.filters.create_column_filter.html#py4cytoscape.filters.create_column_filter
+# p4c.create_column_filter(filter_name = 'test_filter', column = 'EXP:CTRL_ratio', criterion = RATIO_CUTOFF, predicate = 'LESS_THAN_OR_EQUAL', type = 'nodes', network = network_test_filter_suid)
+p4c.create_column_filter(filter_name = 'test_filter', column = 'keep_componentindex', criterion = False, predicate = 'IS', type = 'nodes', network = network_test_filter_suid)
+
+# The above step only selects nodes that meet the filter criteria. To remove the unselected nodes, use the following command
+# https://py4cytoscape.readthedocs.io/en/0.0.10/reference/generated/py4cytoscape.network_selection.delete_selected_nodes.html
+p4c.network_selection.delete_selected_nodes(network = network_test_filter_suid)
+
+# Reorganize network to remove gaps
+p4c.layout_network('force-directed', network_test_filter_suid)
+
+# For nodes that are in nodes_to_keep, indicate in the network by increasing the node size
+# https://py4cytoscape.readthedocs.io/en/latest/reference/generated/py4cytoscape.style_mappings.set_node_size_mapping.html#py4cytoscape.style_mappings.set_node_size_mapping
+p4c.style_mappings.set_node_border_width_mapping('keep_node', table_column_values = [True, False], sizes = [75, 50], mapping_type = 'd', style_name = 'test', network = network_test_filter_suid)
+
+
+# Rename network
+p4c.networks.rename_network(job_name + '_test_filter', network_test_filter_suid)
+
