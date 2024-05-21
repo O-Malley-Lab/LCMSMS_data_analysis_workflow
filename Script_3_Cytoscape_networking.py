@@ -78,8 +78,9 @@ gnps_output_folder = pjoin(TEMP_OVERALL_FOLDER, 'Anid_HE_TJGIp11_pos_20210511_ma
 
 cytoscape_inputs_folder_name = 'Cytoscape_inputs'
 
-# Cytoscape style .xml filename (located in cytoscape_inputs_folder)
+# Cytoscape style .xml filenames (located in cytoscape_inputs_folder)
 cytoscape_style_filename = 'styles_7.xml'
+cytoscape_style_filtered_filename = 'styles_7_filter_node_emphasis.xml'
 
 # MetaboAnalyst Outputs of Interest
 metaboanalyst_output_folder_name = 'MetaboAnalystR_Output'
@@ -93,7 +94,7 @@ t_test_cols_to_keep = ['shared_name', 'p.value']
 
 # Cytoscape column names to keep (and their order) in the exported node table (input for filtering script)
 cytoscape_cols_to_keep = [
-    'shared name', 'precursor mass', 'RTMean', 'Best Ion', 'GNPSGROUP:EXP', 'GNPSGROUP:CTRL', 'log2.FC.', 'p.value', 'number of spectra', 'Compound_Name', 'GNPSLibraryURL', 'Analog:MQScore', 'SpectrumID', 'Analog:SharedPeaks', 'Instrument', 'PI', 'MassDiff', 'GNPSLinkout_Network', 'GNPSLinkout_Cluster', 'componentindex', 'sum(precursor intensity)', 'NODE_TYPE', 'neutral M mass', 'Correlated Features Group ID', 'componentindex', 'Annotated Adduct Features ID', 'ATTRIBUTE_GROUP'
+    'shared name', 'precursor mass', 'RTMean', 'Best Ion', 'GNPSGROUP:EXP', 'GNPSGROUP:CTRL', 'log2.FC.', 'p.value', 'number of spectra', 'Compound_Name', 'GNPSLibraryURL', 'Analog:MQScore', 'SpectrumID', 'Analog:SharedPeaks', 'Instrument', 'PI', 'MassDiff', 'GNPSLinkout_Network', 'GNPSLinkout_Cluster', 'componentindex', 'sum(precursor intensity)', 'NODE_TYPE', 'neutral M mass', 'Correlated Features Group ID', 'Annotated Adduct Features ID', 'ATTRIBUTE_GROUP'
     ]
 
 # Filtering Parameters
@@ -474,21 +475,31 @@ Run test Cytoscape filter first
 # Copy the original network to a new network for the test filter. clone_network returns new SUID.
 network_test_filter_suid = p4c.clone_network()
 
-# Create a list of TRUE and FALSE values for the nodes to keep. Keep nodes that have a 'EXP:CTRL_ratio' greater than the RATIO_CUTOFF
+# Create a pandas of TRUE and FALSE values for the nodes to keep, with keys of shared name. We will keep nodes that have a 'EXP:CTRL_ratio' greater than the RATIO_CUTOFF
 nodes_to_keep = node_table_temp['EXP:CTRL_ratio'] > RATIO_CUTOFF
 
 # Get the list of componentindex values to keep
 componentindex_to_keep = node_table_temp[nodes_to_keep]['componentindex'].tolist()
 # If there are repeats of the same componentindex, remove duplicates
 componentindex_to_keep = list(set(componentindex_to_keep))
-# Make a list of true and false values for the nodes to keep
+# Make a pandas of true and false values for the nodes to keep, with keys of shared name.
 nodes_to_keep_componentindex = node_table_temp['componentindex'].isin(componentindex_to_keep)
 
-# Adjust nodes_to_keep to be a list of TRUE and FALSE values for the nodes to keep
-nodes_to_keep = nodes_to_keep.tolist()
+# Create list of nodes_to_keep and nodes_to_keep_componentindex to be lists of TRUE and FALSE values for the nodes/clusters to keep.
+nodes_to_keep_list = nodes_to_keep.tolist()
+nodes_to_keep_componentindex = nodes_to_keep_componentindex.tolist()
 
-# Create filter dataframe with one column of shared namem, and two columns of TRUE and FALSE values, one column for nodes to keep and one column for componentindex to keep
-filter_df = pd.DataFrame({'shared name': node_table_temp['name'], 'keep_node': nodes_to_keep, 'keep_componentindex': nodes_to_keep_componentindex})
+# Fetch list of componentindex values
+componentindex_list = node_table_temp['componentindex'].tolist()
+
+# Create filter dataframe with one column of shared name, and two columns of TRUE and FALSE values, one column for nodes to keep and one column for componentindex to keep.
+filter_df = pd.DataFrame({'shared name': node_table_temp['name'], 'componentindex': componentindex_list, 'keep_node': nodes_to_keep_list, 'keep_componentindex': nodes_to_keep_componentindex})
+
+# Convert data type of componentindex column to int
+filter_df['componentindex'] = filter_df['componentindex'].astype(int)
+
+# For rows with componentindex of -1 AND keep_node of false, set keep_componentindex to false
+filter_df.loc[(filter_df['componentindex'] == -1) & (filter_df['keep_node'] == False), 'keep_componentindex'] = False
 
 # Add the 2 lists (nodes and componentindex) of TRUE and FALSE values to the network, using function node_table_add_columns
 node_table_add_columns(filter_df, ['shared name', 'keep_componentindex'], network_test_filter_suid, 'shared name')
@@ -508,8 +519,22 @@ p4c.layout_network('force-directed', network_test_filter_suid)
 
 # For nodes that are in nodes_to_keep, indicate in the network by increasing the node size
 # https://py4cytoscape.readthedocs.io/en/latest/reference/generated/py4cytoscape.style_mappings.set_node_size_mapping.html#py4cytoscape.style_mappings.set_node_size_mapping
-p4c.style_mappings.set_node_border_width_mapping('keep_node', table_column_values = [True, False], sizes = [75, 50], mapping_type = 'd', style_name = 'test', network = network_test_filter_suid)
+# p4c.style_mappings.set_node_size_mapping('keep_node', table_column_values = [True, False], sizes = [75, 50], mapping_type = 'd', style_name = cytoscape_style_name, network = network_test_filter_suid)
 
+# # Import style for filtered network
+# p4c.import_visual_styles(pjoin(cytoscape_inputs_folder, cytoscape_style_filtered_filename))
+# cytoscape_style_name_filtered = cytoscape_style_filtered_filename.split('.')[0]
+# # Set new suid to the filtered network style
+# p4c.set_visual_style(cytoscape_style_name_filtered, network_test_filter_suid)
+
+# Import the style from the cytoscape_inputs_folder
+p4c.import_visual_styles(pjoin(cytoscape_inputs_folder, cytoscape_style_filtered_filename))
+
+# identify the file extension in cytoscape_style_filename and remove to generate cytoscape_style_name
+cytoscape_style_filtered_name = cytoscape_style_filtered_filename.split('.')[0]
+
+# Set the visual style to cystocape_style_filename, without the file extension in the cytoscape_style_filename
+p4c.set_visual_style(cytoscape_style_filtered_name)
 
 # Rename network
 p4c.networks.rename_network(job_name + '_test_filter', network_test_filter_suid)
