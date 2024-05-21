@@ -177,11 +177,11 @@ def p4c_network_add_filter_columns(filter_name, node_table, nodes_to_keep, netwo
     p4c.layout_network('force-directed', network_filter_suid)
     return network_filter_suid
 
-def p4c_import_and_apply_cytoscape_style(dir, cytoscape_style_filtered_filename, suid, network_rename):
+def p4c_import_and_apply_cytoscape_style(dir, cytoscape_style_filename, suid, network_rename):
     """
     """
     p4c.import_visual_styles(dir)
-    cytoscape_style_filtered_name = cytoscape_style_filtered_filename.split('.')[0]
+    cytoscape_style_filtered_name = cytoscape_style_filename.split('.')[0]
     p4c.set_visual_style(cytoscape_style_filtered_name)
     p4c.networks.rename_network(network_rename, suid)
     return
@@ -440,14 +440,8 @@ p4c.tables.load_table_data(node_table_simplified, data_key_column='name', table_
 """""""""""""""""""""""""""""""""""""""""""""
 Set Visual Style
 """""""""""""""""""""""""""""""""""""""""""""
-# Import the style from the cytoscape_inputs_folder
-p4c.import_visual_styles(pjoin(cytoscape_inputs_folder, cytoscape_style_filename))
-
-# identify the file extension in cytoscape_style_filename and remove to generate cytoscape_style_name
-cytoscape_style_name = cytoscape_style_filename.split('.')[0]
-
-# Set the visual style to cystocape_style_filename, without the file extension in the cytoscape_style_filename
-p4c.set_visual_style(cytoscape_style_name)
+cytoscape_style_filtered_filename
+p4c_import_and_apply_cytoscape_style(pjoin(cytoscape_inputs_folder, cytoscape_style_filename), cytoscape_style_filtered_filename, suid_test, job_name + '_test_filter')
 
 
 """""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""
@@ -601,7 +595,23 @@ Run test Cytoscape filter first
 """""""""""""""""""""""""""""""""""""""""""""
 # Create a pandas of TRUE and FALSE values for the nodes to keep, with keys of shared name. We will keep nodes that have a 'EXP:CTRL_ratio' greater than the RATIO_CUTOFF
 nodes_to_keep = node_table_temp['EXP:CTRL_ratio'] > RATIO_CUTOFF
+suid_test = p4c_network_add_filter_columns("test_filter", node_table_temp, nodes_to_keep, network_suid, key_col='shared name', componentindex_colname='componentindex')
+p4c_import_and_apply_cytoscape_style(pjoin(cytoscape_inputs_folder, cytoscape_style_filtered_filename), cytoscape_style_filtered_filename, suid_test, job_name + '_test_filter')
 
-test_suid = p4c_network_add_filter_columns("test_filter", node_table_temp, nodes_to_keep, network_suid, key_col='shared name', componentindex_colname='componentindex')
-p4c_import_and_apply_cytoscape_style(pjoin(cytoscape_inputs_folder, cytoscape_style_filtered_filename), cytoscape_style_filtered_filename, test_suid, job_name + '_test_filter')
+"""""""""""""""""""""""""""""""""""""""""""""
+Create filtered network for Filtered Peaks of Interest
+"""""""""""""""""""""""""""""""""""""""""""""
+# Create a pandas of TRUE and FALSE values for the nodes to keep, with keys of shared name. We will keep nodes that satisfy the following:
+# First, filter for peaks that have a GNPSGROUP:CTRL_log10 less than the cutoff
+# Second, filter for peaks that have a GNPSGROUP:EXP_log10 greater than the cutoff
+# Third, filter for peaks that have a EXP:CTRL_ratio greater than the cutoff
+nodes_to_keep = node_table_temp['GNPSGROUP:CTRL_log10'] < CTRL_LOG10_CUTOFF
+nodes_to_keep = nodes_to_keep & (node_table_temp['GNPSGROUP:EXP_log10'] > EXP_LOG10_CUTOFF)
+nodes_to_keep = nodes_to_keep & (node_table_temp['EXP:CTRL_ratio'] > RATIO_CUTOFF)
+
+suid_target = p4c_network_add_filter_columns("Filtered_Peaks_of_Interest", node_table_temp, nodes_to_keep, network_suid, key_col='shared name', componentindex_colname='componentindex')
+p4c_import_and_apply_cytoscape_style(pjoin(cytoscape_inputs_folder, cytoscape_style_filtered_filename), cytoscape_style_filtered_filename, suid_target, job_name + '_Filtered_Peaks_of_Interest')
+
+
+
 
