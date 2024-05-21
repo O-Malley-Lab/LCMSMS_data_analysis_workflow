@@ -3,6 +3,8 @@ from os.path import join as pjoin
 import pandas as pd
 import py4cytoscape as p4c
 import numpy as np
+import time
+start = time.time()
 """""""""""""""""""""""""""""""""""""""""""""
 !!! Prior to running, you need to manually open Cytoscape !!!
 """""""""""""""""""""""""""""""""""""""""""""
@@ -240,6 +242,11 @@ CTRL_LOG10_CUTOFF = 5 # Log10 of CTRL must be less than this value
 RATIO_CUTOFF = 3 # Ratio of EXP to CTRL must be greater than this value
 EXP_LOG10_CUTOFF = 5 # Log10 of EXP must be greater than this value
 
+# Stringent Filtering Parameters
+CTRL_LOG10_CUTOFF_STRINGENT = 6
+RATIO_CUTOFF_STRINGENT = 10
+EXP_LOG10_CUTOFF_STRINGENT = 5
+
 # Filters for upregulated likely host metabolites
 HOST_CTRL_LOG10_CUTOFF = 3 # Log10 of CTRL must be greater than this value
 HOST_RATIO_CUTOFF = 10 # Ratio of EXP to CTRL must be greater than this value
@@ -453,12 +460,13 @@ for col in node_table_cols_complex:
 # Load the simplified node table into Cytoscape
 p4c.tables.load_table_data(node_table_simplified, data_key_column='name', table_key_column='name', network=suid_main_network)
 
-
+print('Finished main Cytoscape network for ' + job_name + ', took %.2f seconds' % (time.time() - start))
+start = time.time()
 """""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""
 Main Part 2: Filtering Script for Output Excel
 """""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""
 """""""""""""""""""""""""""""""""""""""""""""
-Copy the node table to filter for peaks of interest
+Create new dataframe of node_table to filter for peaks of interest
 """""""""""""""""""""""""""""""""""""""""""""
 table_filtered = node_table.copy()
 
@@ -476,6 +484,25 @@ table_filtered = table_filtered.sort_values(by = 'GNPSGROUP:EXP_log10', ascendin
 # Reset index
 table_filtered = table_filtered.reset_index(drop = True)
 
+
+"""""""""""""""""""""""""""""""""""""""""""""
+Create new dataframe of node_table to filter for peaks of interest, stringent cutoffs
+"""""""""""""""""""""""""""""""""""""""""""""
+table_filtered_stringent = node_table.copy()
+
+# First, filter for peaks that have a GNPSGROUP:CTRL_log10 less than the cutoff
+table_filtered_stringent = table_filtered_stringent[table_filtered_stringent['GNPSGROUP:CTRL_log10'] < CTRL_LOG10_CUTOFF_STRINGENT]
+
+# Second, filter for peaks that have a GNPSGROUP:EXP_log10 greater than the cutoff
+table_filtered_stringent = table_filtered_stringent[table_filtered_stringent['GNPSGROUP:EXP_log10'] > EXP_LOG10_CUTOFF_STRINGENT]
+
+# Third, filter for peaks that have a EXP:CTRL_ratio greater than the cutoff
+table_filtered_stringent = table_filtered_stringent[table_filtered_stringent['EXP:CTRL_ratio'] > RATIO_CUTOFF_STRINGENT]
+
+# Sort table_filtered_stringent in descending order by GNPSGROUP:EXP_log10
+table_filtered_stringent = table_filtered_stringent.sort_values(by = 'GNPSGROUP:EXP_log10', ascending = False)
+# Reset index
+table_filtered_stringent = table_filtered_stringent.reset_index(drop = True)
 
 """""""""""""""""""""""""""""""""""""""""""""
 Create new dataframe of upregulated likely host metabolites
@@ -563,6 +590,7 @@ writer = pd.ExcelWriter(pjoin(OUTPUT_FOLDER, job_name, output_filename), engine=
 table_formatted.to_excel(writer, sheet_name = 'All Peaks Simple', index = False)
 node_table.to_excel(writer, sheet_name = 'All', index = False)
 table_filtered.to_excel(writer, sheet_name = 'Filtered Peaks of Interest', index = False)
+table_filtered_stringent.to_excel(writer, sheet_name = 'Filtered Stringent', index = False)
 table_host_upreg.to_excel(writer, sheet_name = 'Upreg Likely Host Metabolites', index = False)
 table_all_matched_cmpds.to_excel(writer, sheet_name = 'All Cmpd Matches', index = False)
 table_matched_cmpds_no_suspect.to_excel(writer, sheet_name = 'Cmpd Matches No Sus', index = False)
@@ -580,6 +608,8 @@ for sheet_name in writer.sheets:
         format_column(worksheet, node_table)
     elif sheet_name == 'Filtered Peaks of Interest':
         format_column(worksheet, table_filtered)
+    elif sheet_name == 'Filtered Stringent':
+        format_column(worksheet, table_filtered_stringent)
     elif sheet_name == 'Upreg Likely Host Metabolites':
         format_column(worksheet, table_host_upreg)
     elif sheet_name == 'All Cmpd Matches':
@@ -615,17 +645,31 @@ Create filtered network for Filtered Peaks of Interest
 # First, filter for peaks that have a GNPSGROUP:CTRL_log10 less than the cutoff
 # Second, filter for peaks that have a GNPSGROUP:EXP_log10 greater than the cutoff
 # Third, filter for peaks that have a EXP:CTRL_ratio greater than the cutoff
-nodes_to_keep = node_table_temp['GNPSGROUP:CTRL_log10'] < CTRL_LOG10_CUTOFF
-nodes_to_keep = nodes_to_keep & (node_table_temp['GNPSGROUP:EXP_log10'] > EXP_LOG10_CUTOFF)
-nodes_to_keep = nodes_to_keep & (node_table_temp['EXP:CTRL_ratio'] > RATIO_CUTOFF)
+nodes_to_keep_1 = node_table_temp['GNPSGROUP:CTRL_log10'] < CTRL_LOG10_CUTOFF
+nodes_to_keep_1 = nodes_to_keep_1 & (node_table_temp['GNPSGROUP:EXP_log10'] > EXP_LOG10_CUTOFF)
+nodes_to_keep_1 = nodes_to_keep_1 & (node_table_temp['EXP:CTRL_ratio'] > RATIO_CUTOFF)
 
-suid_target = p4c_network_add_filter_columns("Filtered_Peaks_of_Interest", node_table_temp, nodes_to_keep, suid_main_network, key_col='shared name', componentindex_colname='componentindex')
+suid_target = p4c_network_add_filter_columns("Filtered_Peaks_of_Interest", node_table_temp, nodes_to_keep_1, suid_main_network, key_col='shared name', componentindex_colname='componentindex')
 p4c_import_and_apply_cytoscape_style(pjoin(cytoscape_inputs_folder, cytoscape_style_filtered_filename), cytoscape_style_filtered_filename, suid_target, job_name + '_Filtered_Peaks_of_Interest')
 # Unfortunately, I do not think there is a good way to ensure node labels appear in front of the nodes; sometimes they appear behind.
 
 
+"""""""""""""""""""""""""""""""""""""""""""""
+Create filtered network for Filtered Peaks of Interest, More Stringent
+"""""""""""""""""""""""""""""""""""""""""""""
+nodes_to_keep_stringent = node_table_temp['GNPSGROUP:CTRL_log10'] < CTRL_LOG10_CUTOFF_STRINGENT
+nodes_to_keep_stringent = nodes_to_keep_stringent & (node_table_temp['GNPSGROUP:EXP_log10'] > EXP_LOG10_CUTOFF_STRINGENT)
+nodes_to_keep_stringent = nodes_to_keep_stringent & (node_table_temp['EXP:CTRL_ratio'] > RATIO_CUTOFF_STRINGENT)
+
+suid_target = p4c_network_add_filter_columns("Filtered_Peaks_of_Interest_Stringent", node_table_temp, nodes_to_keep_stringent, suid_main_network, key_col='shared name', componentindex_colname='componentindex')
+p4c_import_and_apply_cytoscape_style(pjoin(cytoscape_inputs_folder, cytoscape_style_filtered_filename), cytoscape_style_filtered_filename, suid_target, job_name + '_Filtered_Peaks_of_Interest_Stringent')
 
 
+"""""""""""""""""""""""""""""""""""""""""""""
+Save Cytoscape Session in Output Folder, Job Name folder
+"""""""""""""""""""""""""""""""""""""""""""""
+# Save the Cytoscape session
+p4c.session.save_session(filename=pjoin(OUTPUT_FOLDER, job_name, job_name + '_Cytoscape_session.cys'), overwrite_file=True)
 
-
-
+print('Session saved and finished filtered Cytoscape networks for ' + job_name + ', took %.2f seconds' % (time.time() - start))
+start = time.time()
