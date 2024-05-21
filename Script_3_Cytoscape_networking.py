@@ -17,9 +17,14 @@ def node_table_add_columns(df, cols_to_keep, network_suid, key_col_df, key_col_n
     Inputs
     df: pandas dataframe
         Data table with new data columns to add
-    key_col: str
+    cols_to_keep: list of str
+        List of column names to keep in the node table
     network_suid: int
         Cytoscape network SUID to add the columns to
+    key_col_df: str
+        Column name of the key column in the dataframe
+    key_col_node: str
+        Column name of the key column in the node table
 
     Outputs
     return: None
@@ -371,6 +376,36 @@ cytoscape_cols_to_keep.append('EXP:CTRL_ratio')
 node_table_add_columns(node_table_temp, ['name', 'EXP:CTRL_ratio'], network_suid, 'name')
 # Reset index
 node_table_temp = node_table_temp.reset_index(drop=True)
+
+
+"""""""""""""""""""""""""""""""""""""""""""""
+In Compound_Name column, cut-paste values with "Suspect" to a new column "Suspect_Compound_Match"
+"""""""""""""""""""""""""""""""""""""""""""""
+# Get Compound_Name column values in a dataframe with 'name' as the key column
+compound_name_df = node_table_temp.copy()
+compound_name_df = compound_name_df[['name', 'Compound_Name']]
+suspect_compound_match_col_values = []
+for index, row in compound_name_df.iterrows():
+    # First, determine if the value is none. This would cause a TypeError if trying to search for 'Suspect' in the value
+    if pd.isnull(row['Compound_Name']):
+        suspect_compound_match_col_values.append(None)
+    elif 'Suspect' in row['Compound_Name']:
+        suspect_compound_match_col_values.append(row['Compound_Name'])
+        # Replace the value in 'Compound_Name' with None
+        compound_name_df.at[index, 'Compound_Name'] = None
+    else:
+        suspect_compound_match_col_values.append(None)
+# Add the new values suspect_compound_match_col_values to column 'Suspect_Compound_Match' in the compound_name_df dataframe. Use .loc to avoid SettingWithCopyWarning
+for index, value in enumerate(suspect_compound_match_col_values):
+    compound_name_df.loc[index, 'Suspect_Compound_Match'] = value
+# Add 'Suspect_Compound_Match' to cytoscape_cols_to_keep
+cytoscape_cols_to_keep.append('Suspect_Compound_Match')
+# Load 'Suspect_Compound_Match' data into the node table
+node_table_add_columns(compound_name_df, ['name', 'Suspect_Compound_Match'], network_suid, 'name')
+# Delete the previous 'Compound_Name' column from the node table
+p4c.tables.delete_table_column('Compound_Name', table='node', network=network_suid)
+# Load 'Compound_Name' data from edited compound_name_df into the node table, replacing the previous 'Compound_Name' column.
+node_table_add_columns(compound_name_df, ['name', 'Compound_Name'], network_suid, 'name')
 
 
 """""""""""""""""""""""""""""""""""""""""""""
