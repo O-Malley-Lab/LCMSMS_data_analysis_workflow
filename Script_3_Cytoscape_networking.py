@@ -30,11 +30,44 @@ def node_table_add_columns(df, cols_to_keep, network_suid, key_col_df, key_col_n
     p4c.tables.load_table_data(df, data_key_column=key_col_df, table_key_column=key_col_node, network=network_suid)
     return
 
+def write_table_to_excel(writer, df, sheet_name):
+    """
+    Write a dataframe to an excel sheet. The column width will be set to the size of the header text.
+
+    Inputs:
+    writer: ExcelWriter object
+    df: DataFrame to write to the sheet
+    sheet_name: Name of the sheet to write to
+
+    return: None
+    """
+    df.to_excel(writer, sheet_name = sheet_name, index = False)
+    # Format the excel sheets so that the column width matches the size of the header text
+    workbook = writer.book
+    worksheet = writer.sheets[sheet_name]
+    for idx, col in enumerate(df):  # loop through all columns
+        series = df[col]
+        # Set max_len to the length of only the header text
+        max_len = len(str(series.name)) + 1
+        worksheet.set_column(idx, idx, max_len)  # set column width
+    return
+   
+def format_column(worksheet, df):
+    for idx, col in enumerate(df):  # loop through all columns
+        series = df[col]
+        # Set max_len to the length of only the header text
+        max_len = len(str(series.name)) + 1
+        worksheet.set_column(idx, idx, max_len)  # set column width
+        # Make the top header "sticky" so that it is always visible
+        worksheet.freeze_panes(1, 0)
+    return
+
 """""""""""""""""""""""""""""""""""""""""""""
 Values
 """""""""""""""""""""""""""""""""""""""""""""
 INPUT_FOLDER = r'input' 
 TEMP_OVERALL_FOLDER = r'temp'
+OUTPUT_FOLDER = r'output'
 
 # Use "Overall_Running_Metadata_for_All_LCMSMS_Jobs.xlsx" from INPUT_FOLDER to get relevant parameters for job to run. Use the excel tab "Job to Run"
 METADATA_OVERALL_FILENAME = 'Overall_Running_Metadata_for_All_LCMSMS_Jobs.xlsx'
@@ -63,6 +96,29 @@ cytoscape_cols_to_keep = [
     'shared name', 'precursor mass', 'RTMean', 'Best Ion', 'GNPSGROUP:EXP', 'GNPSGROUP:CTRL', 'log2.FC.', 'p.value', 'number of spectra', 'Compound_Name', 'GNPSLibraryURL', 'Analog:MQScore', 'SpectrumID', 'Analog:SharedPeaks', 'Instrument', 'PI', 'MassDiff', 'GNPSLinkout_Network', 'GNPSLinkout_Cluster', 'cluster index', 'sum(precursor intensity)', 'NODE_TYPE', 'neutral M mass', 'Correlated Features Group ID', 'componentindex', 'Annotated Adduct Features ID', 'ATTRIBUTE_GROUP'
     ]
 
+# Filtering Parameters
+CTRL_LOG10_CUTOFF = 5 # Log10 of CTRL must be less than this value
+RATIO_CUTOFF = 3 # Ratio of EXP to CTRL must be greater than this value
+EXP_LOG10_CUTOFF = 5 # Log10 of EXP must be greater than this value
+
+# Filters for upregulated likely host metabolites
+HOST_CTRL_LOG10_CUTOFF = 3 # Log10 of CTRL must be greater than this value
+HOST_RATIO_CUTOFF = 10 # Ratio of EXP to CTRL must be greater than this value
+
+# Set deviation amounts for RT and m/z (for identifying specific peaks, such as standards)
+MZ_DEV = 0.1
+RT_DEV = 0.5
+
+# Standard Peaks
+# ABMBA standard peak
+ABMBA_MZ_POS  = 229.9811 #m/z 229.9811
+ABMBA_RT_POS = 4.685 #4.685 minutes
+# ABMBA_MZ_NEG = 227.9655 #m/z 227.9655
+# ABMBA_RT_NEG = 4.8 #4.8 min
+
+"""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""
+Main Part 1: Prepare Cytoscape Network and Format Node Table
+"""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""
 """""""""""""""""""""""""""""""""""""""""""""
 Get Job Info
 """""""""""""""""""""""""""""""""""""""""""""
@@ -184,8 +240,8 @@ node_table_add_columns(node_table_temp, avg_peak_area_cols_log10, network_suid, 
 
 # Generate a EXP:CTRL_ratio column
 node_table_temp['EXP:CTRL_ratio'] = node_table_temp['GNPSGROUP:EXP'] / node_table_temp['GNPSGROUP:CTRL']
-# Replace inf values with a large number [np.inf, -np.inf], np.finfo(np.float64).max
-node_table_temp['EXP:CTRL_ratio'] = node_table_temp['EXP:CTRL_ratio'].replace([np.inf, -np.inf], np.finfo(np.float64).max)
+# Replace inf values with a large number [np.inf, -np.inf], 10000000000 (E10)
+node_table_temp['EXP:CTRL_ratio'] = node_table_temp['EXP:CTRL_ratio'].replace([np.inf, -np.inf], 10000000000)
 # Round to 2 decimal places
 node_table_temp['EXP:CTRL_ratio'] = node_table_temp['EXP:CTRL_ratio'].apply(lambda x: round(x, 2))
 # Add EXP:CTRL_ratio to cytoscape_cols_to_keep
@@ -194,6 +250,7 @@ cytoscape_cols_to_keep.append('EXP:CTRL_ratio')
 node_table_add_columns(node_table_temp, ['name', 'EXP:CTRL_ratio'], network_suid, 'name')
 # Reset index
 node_table_temp = node_table_temp.reset_index(drop=True)
+
 
 """""""""""""""""""""""""""""""""""""""""""""
 Export Entire Node Table
@@ -205,7 +262,6 @@ node_table_simplified = node_table.copy()
 node_table_simplified = node_table_simplified[cytoscape_cols_to_keep]
 # Export the node table to an excel file
 node_table_simplified.to_excel(pjoin(TEMP_OVERALL_FOLDER, job_name, job_name + '_Cytoscape_node_table.xlsx'), index=False)
-
 
 
 """""""""""""""""""""""""""""""""""""""""""""
@@ -236,3 +292,146 @@ cytoscape_style_name = cytoscape_style_filename.split('.')[0]
 
 # Set the visual style to cystocape_style_filename, without the file extension in the cytoscape_style_filename
 p4c.set_visual_style(cytoscape_style_name)
+
+
+"""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""
+Main Part 2: Filtering Script for Output Excel
+"""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""
+"""
+Copy the node table to filter for peaks of interest
+"""
+table_filtered = node_table.copy()
+
+# First, filter for peaks that have a GNPSGROUP:CTRL_log10 less than the cutoff
+table_filtered = table_filtered[table_filtered['GNPSGROUP:CTRL_log10'] < CTRL_LOG10_CUTOFF]
+
+# Second, filter for peaks that have a GNPSGROUP:EXP_log10 greater than the cutoff
+table_filtered = table_filtered[table_filtered['GNPSGROUP:EXP_log10'] > EXP_LOG10_CUTOFF]
+
+# Third, filter for peaks that have a EXP:CTRL_ratio greater than the cutoff
+table_filtered = table_filtered[table_filtered['EXP:CTRL_ratio'] > RATIO_CUTOFF]
+
+# Sort table_filtered in descending order by GNPSGROUP:EXP_log10
+table_filtered = table_filtered.sort_values(by = 'GNPSGROUP:EXP_log10', ascending = False)
+# Reset index
+table_filtered = table_filtered.reset_index(drop = True)
+
+
+"""
+Create new dataframe of upregulated likely host metabolites
+"""
+table_host_upreg = node_table.copy()
+
+# First, filter for peaks that have a GNPSGROUP:CTRL_log10 greater than the cutoff
+table_host_upreg = table_host_upreg[table_host_upreg['GNPSGROUP:CTRL_log10'] > HOST_CTRL_LOG10_CUTOFF]
+
+# Second, filter for peaks that have a EXP:CTRL_ratio greater than the HOST_RATIO_CUTOFF
+table_host_upreg = table_host_upreg[table_host_upreg['EXP:CTRL_ratio'] > HOST_RATIO_CUTOFF]
+
+# Sort table_host_upreg in descending order by GNPSGROUP:EXP_log10
+table_host_upreg = table_host_upreg.sort_values(by = 'GNPSGROUP:EXP_log10', ascending = False)
+# Reset index
+table_host_upreg = table_host_upreg.reset_index(drop = True)
+
+
+"""
+Write a table listing potential ABMBA standard peaks
+"""
+table_ABMBA = node_table.copy()
+
+# First, filter for peaks that have a m/z ('precursor mass') within the deviation of the ABMBA standard m/z
+table_ABMBA = table_ABMBA[(table_ABMBA['precursor mass'] > ABMBA_MZ_POS - MZ_DEV) & (table_ABMBA['precursor mass'] < ABMBA_MZ_POS + MZ_DEV)]
+
+# Second, filter for peaks that have a RT ('RTMean') within the deviation of the ABMBA standard RT
+table_ABMBA = table_ABMBA[(table_ABMBA['RTMean'] > ABMBA_RT_POS - RT_DEV) & (table_ABMBA['RTMean'] < ABMBA_RT_POS + RT_DEV)]
+
+# Sort table_ABMBA in ascending order by name
+table_ABMBA = table_ABMBA.sort_values(by = 'name', ascending = True)
+# Reset index
+table_ABMBA = table_ABMBA.reset_index(drop = True)
+
+
+"""
+Write a table with all peaks with compound matches to databases. This includes potential primary metabolites. Have a version without suspect compounds and a version with suspect compounds.
+"""
+table_all_matched_cmpds= node_table.copy()
+
+# First, filter for peaks that have a 'Compound_Name' that is not NaN
+table_all_matched_cmpds = table_all_matched_cmpds[table_all_matched_cmpds['Compound_Name'].notna()]
+
+# table_matched_cmpds_no_suspect is table_all_matched_cmpds with any 'Compound_Name' that contains string 'Suspect' removed
+table_matched_cmpds_no_suspect = table_all_matched_cmpds.copy()
+table_matched_cmpds_no_suspect = table_all_matched_cmpds[~table_all_matched_cmpds['Compound_Name'].str.contains('Suspect', na = False)]
+
+
+"""
+Formatted Simplest Table
+"""
+# Make an easy-to-read formatted table with all peaks
+columns_of_interest = ['shared name', 'precursor mass', 'RTMean', 'log2.FC.', 'p.value', 'GNPSGROUP:EXP','GNPSGROUP:CTRL', 'GNPSGROUP:EXP_log10','GNPSGROUP:CTRL_log10', 'EXP:CTRL_ratio', 'Best Ion', 'GNPSLinkout_Cluster','Compound_Name','Analog:MQScore'] 
+
+table_formatted = node_table[columns_of_interest].copy()
+
+# Make the values in "GNPSGROUP:EXP","GNPSGROUP:CTRL", "GNPSGROUP:EXP_log10","GNPSGROUP:CTRL_log10", 'EXP:CTRL_ratio' be in scientific notation and rounded to 2 decimal places
+columns_sci_notation = ['GNPSGROUP:EXP','GNPSGROUP:CTRL', 'p.value']
+# Make in scientific notation and round to 2 decimal places
+table_formatted[columns_sci_notation] = table_formatted[columns_sci_notation].applymap(lambda x: '{:.2e}'.format(x))
+
+columns_to_round = ['log2.FC.','GNPSGROUP:EXP_log10','GNPSGROUP:CTRL_log10']
+# Round to 2 decimal places
+table_formatted[columns_to_round] = table_formatted[columns_to_round].applymap(lambda x: round(x, 2))
+
+
+"""
+Make a table of the parameters used in this script
+"""
+parameters = pd.DataFrame({'Parameter': ['CTRL_LOG10_CUTOFF', 'RATIO_CUTOFF', 'EXP_LOG10_CUTOFF', 'HOST_CTRL_LOG10_CUTOFF', 'HOST_RATIO_CUTOFF', 'MZ_DEV', 'RT_DEV','ABMBA_MZ_POS','ABMBA_RT_POS'], 'Value': [CTRL_LOG10_CUTOFF, RATIO_CUTOFF, EXP_LOG10_CUTOFF, HOST_CTRL_LOG10_CUTOFF, HOST_RATIO_CUTOFF, MZ_DEV, RT_DEV, ABMBA_MZ_POS, ABMBA_RT_POS]})
+
+
+"""
+Write each dataframe to a different sheet in output excel
+"""
+output_filename = job_name + '_Filtered_Peaks_of_Interest.xlsx'
+# If it does not exist already, create a folder for job_name in the output folder
+if not os.path.exists(pjoin(OUTPUT_FOLDER, job_name)):
+    os.makedirs(pjoin(OUTPUT_FOLDER, job_name))
+
+# https://xlsxwriter.readthedocs.io/example_pandas_multiple.html
+writer = pd.ExcelWriter(pjoin(OUTPUT_FOLDER, job_name, output_filename), engine='xlsxwriter')
+
+# Write each dataframe to a different sheet (with no index column)
+table_formatted.to_excel(writer, sheet_name = 'All Peaks Simple', index = False)
+node_table.to_excel(writer, sheet_name = 'All', index = False)
+table_filtered.to_excel(writer, sheet_name = 'Filtered Peaks of Interest', index = False)
+table_host_upreg.to_excel(writer, sheet_name = 'Upreg Likely Host Metabolites', index = False)
+table_all_matched_cmpds.to_excel(writer, sheet_name = 'All Cmpd Matches', index = False)
+table_matched_cmpds_no_suspect.to_excel(writer, sheet_name = 'Cmpd Matches No Sus', index = False)
+table_ABMBA.to_excel(writer, sheet_name = 'ABMBA Standard', index = False)
+parameters.to_excel(writer, sheet_name = 'Filter Parameters', index = False)
+
+# Format the excel sheets so that the column width matches the size of the header text
+workbook = writer.book
+# For each table and corresponding excel tab, format width
+for sheet_name in writer.sheets:
+    worksheet = writer.sheets[sheet_name]
+    if sheet_name == 'All Peaks Simple':
+        format_column(worksheet, table_formatted)
+    elif sheet_name == 'All':
+        format_column(worksheet, node_table)
+    elif sheet_name == 'Filtered Peaks of Interest':
+        format_column(worksheet, table_filtered)
+    elif sheet_name == 'Upreg Likely Host Metabolites':
+        format_column(worksheet, table_host_upreg)
+    elif sheet_name == 'All Cmpd Matches':
+        format_column(worksheet, table_all_matched_cmpds)
+    elif sheet_name == 'Cmpd Matches No Sus':
+        format_column(worksheet, table_matched_cmpds_no_suspect)
+    elif sheet_name == 'ABMBA Standard':
+        format_column(worksheet, table_ABMBA)
+    elif sheet_name == 'Filter Parameters':
+        format_column(worksheet, parameters)
+    else:
+        print('Error: sheet name ' + sheet_name + ' not recognized; column width not formatted. Consider adjusting script to include target sheet.')
+
+# Close the Pandas Excel writer and output the Excel file. XlsxWriter object has no attribute 'save'. Use 'close' instead
+writer.close()

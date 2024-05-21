@@ -25,7 +25,6 @@ view of your data.
 """
 
 import pandas as pd
-import numpy as np
 import os
 from os.path import join as pjoin
 
@@ -121,20 +120,20 @@ Import GNPS nodes table
 nodes_filename = job_name + '_Cytoscape_node_table.xlsx'
 # Import the nodes table as a pandas dataframe
 # Note, the nodes table already includes relevent MetaboAnalyst and Peak Area data (See Script 3 Cytoscape file for details). 
-nodes_table = pd.read_excel(pjoin(TEMP_OVERALL_FOLDER, job_name, nodes_filename))
+node_table = pd.read_excel(pjoin(TEMP_OVERALL_FOLDER, job_name, nodes_filename))
 # Note that some values in EXP:CTRL_ratio were originally inf but set to E10 for Cytoscape (error raised when inf in value)
 
 # Sort table by name (default ID name in GNPS Cytoscape)
-nodes_table = nodes_table.sort_values(by = 'name')
+node_table = node_table.sort_values(by = 'name')
 
 # Reset index
-nodes_table = nodes_table.reset_index(drop = True)
+node_table = node_table.reset_index(drop = True)
 
 
 """
 Copy the node table to filter for peaks of interest
 """
-table_filtered = nodes_table.copy()
+table_filtered = node_table.copy()
 
 # First, filter for peaks that have a GNPSGROUP:CTRL_log10 less than the cutoff
 table_filtered = table_filtered[table_filtered['GNPSGROUP:CTRL_log10'] < CTRL_LOG10_CUTOFF]
@@ -154,7 +153,7 @@ table_filtered = table_filtered.reset_index(drop = True)
 """
 Create new dataframe of upregulated likely host metabolites
 """
-table_host_upreg = nodes_table.copy()
+table_host_upreg = node_table.copy()
 
 # First, filter for peaks that have a GNPSGROUP:CTRL_log10 greater than the cutoff
 table_host_upreg = table_host_upreg[table_host_upreg['GNPSGROUP:CTRL_log10'] > HOST_CTRL_LOG10_CUTOFF]
@@ -171,7 +170,7 @@ table_host_upreg = table_host_upreg.reset_index(drop = True)
 """
 Write a table listing potential ABMBA standard peaks
 """
-table_ABMBA = nodes_table.copy()
+table_ABMBA = node_table.copy()
 
 # First, filter for peaks that have a m/z ('precursor mass') within the deviation of the ABMBA standard m/z
 table_ABMBA = table_ABMBA[(table_ABMBA['precursor mass'] > ABMBA_MZ_POS - MZ_DEV) & (table_ABMBA['precursor mass'] < ABMBA_MZ_POS + MZ_DEV)]
@@ -188,7 +187,7 @@ table_ABMBA = table_ABMBA.reset_index(drop = True)
 """
 Write a table with all peaks with compound matches to databases. This includes potential primary metabolites. Have a version without suspect compounds and a version with suspect compounds.
 """
-table_all_matched_cmpds= nodes_table.copy()
+table_all_matched_cmpds= node_table.copy()
 
 # First, filter for peaks that have a 'Compound_Name' that is not NaN
 table_all_matched_cmpds = table_all_matched_cmpds[table_all_matched_cmpds['Compound_Name'].notna()]
@@ -204,7 +203,7 @@ Formatted Simplest Table
 # Make an easy-to-read formatted table with all peaks
 columns_of_interest = ['shared name', 'precursor mass', 'RTMean', 'log2.FC.', 'p.value', 'GNPSGROUP:EXP','GNPSGROUP:CTRL', 'GNPSGROUP:EXP_log10','GNPSGROUP:CTRL_log10', 'EXP:CTRL_ratio', 'Best Ion', 'GNPSLinkout_Cluster','Compound_Name','Analog:MQScore'] 
 
-table_formatted = nodes_table[columns_of_interest].copy()
+table_formatted = node_table[columns_of_interest].copy()
 
 # Make the values in "GNPSGROUP:EXP","GNPSGROUP:CTRL", "GNPSGROUP:EXP_log10","GNPSGROUP:CTRL_log10", 'EXP:CTRL_ratio' be in scientific notation and rounded to 2 decimal places
 columns_sci_notation = ['GNPSGROUP:EXP','GNPSGROUP:CTRL', 'p.value']
@@ -235,7 +234,7 @@ writer = pd.ExcelWriter(pjoin(OUTPUT_FOLDER, job_name, output_filename), engine=
 
 # Write each dataframe to a different sheet (with no index column)
 table_formatted.to_excel(writer, sheet_name = 'All Peaks Simple', index = False)
-nodes_table.to_excel(writer, sheet_name = 'All', index = False)
+node_table.to_excel(writer, sheet_name = 'All', index = False)
 table_filtered.to_excel(writer, sheet_name = 'Filtered Peaks of Interest', index = False)
 table_host_upreg.to_excel(writer, sheet_name = 'Upreg Likely Host Metabolites', index = False)
 table_all_matched_cmpds.to_excel(writer, sheet_name = 'All Cmpd Matches', index = False)
@@ -251,7 +250,7 @@ for sheet_name in writer.sheets:
     if sheet_name == 'All Peaks Simple':
         format_column(worksheet, table_formatted)
     elif sheet_name == 'All':
-        format_column(worksheet, nodes_table)
+        format_column(worksheet, node_table)
     elif sheet_name == 'Filtered Peaks of Interest':
         format_column(worksheet, table_filtered)
     elif sheet_name == 'Upreg Likely Host Metabolites':
@@ -266,8 +265,6 @@ for sheet_name in writer.sheets:
         format_column(worksheet, parameters)
     else:
         print('Error: sheet name ' + sheet_name + ' not recognized; column width not formatted. Consider adjusting script to include target sheet.')
-
-
 
 
 # Close the Pandas Excel writer and output the Excel file. XlsxWriter object has no attribute 'save'. Use 'close' instead
