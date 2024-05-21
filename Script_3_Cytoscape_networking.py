@@ -12,12 +12,16 @@ Functions
 """""""""""""""""""""""""""""""""""""""""""""
 def node_table_add_columns(df, cols_to_keep, network_suid, key_col_df, key_col_node='name'):
     """
+    Add new columns to the node table in Cytoscape. The key column values of the dataframe must match up with the key column values of the node table.
+
+    Inputs
     df: pandas dataframe
         Data table with new data columns to add
     key_col: str
     network_suid: int
         Cytoscape network SUID to add the columns to
 
+    Outputs
     return: None
     """
     # Change data type of key_col column of df to string, to match shared name of node table
@@ -34,11 +38,12 @@ def write_table_to_excel(writer, df, sheet_name):
     """
     Write a dataframe to an excel sheet. The column width will be set to the size of the header text.
 
-    Inputs:
+    Inputs
     writer: ExcelWriter object
     df: DataFrame to write to the sheet
     sheet_name: Name of the sheet to write to
 
+    Outputs
     return: None
     """
     df.to_excel(writer, sheet_name = sheet_name, index = False)
@@ -53,6 +58,16 @@ def write_table_to_excel(writer, df, sheet_name):
     return
    
 def format_column(worksheet, df):
+    """
+    Format excel sheet column width to match the size of the header text.
+
+    Inputs
+    worksheet: ExcelWriter worksheet object
+    df: DataFrame to format
+
+    Outputs
+    return: None
+    """
     for idx, col in enumerate(df):  # loop through all columns
         series = df[col]
         # Set max_len to the length of only the header text
@@ -62,10 +77,50 @@ def format_column(worksheet, df):
         worksheet.freeze_panes(1, 0)
     return
 
-def p4c_apply_filter(filter_name, node_table, nodes_to_keep, network_to_clone_suid, key_col='shared name', componentindex_colname='componentindex'):
+def generate_filter_df(nodes_to_keep_list, nodes_to_keep_componentindex, componentindex_list, key_col):
     """
+    Generate a dataframe to filter the Cytoscape network based on the nodes to keep. See p4c_get_filtered_nodes_and_clusters for more information.
+
+    Inputs
+    nodes_to_keep_list: list of bool
+        List of TRUE and FALSE values for the nodes to keep
+    nodes_to_keep_componentindex: list of bool
+        List of TRUE and FALSE values for the nodes to keep based on componentindex
+    componentindex_list: list of int
+        List of componentindex values (necessary for determining which singleton nodes (componentindex of -1) to keep)
+    key_col: str
+        Column name of the key column (shared name)
+
+    Outputs
+    return: DataFrame
+        Dataframe with columns 'shared name', 'componentindex', 'keep_node', 'keep_componentindex'
     """
-    network_filter_suid = p4c.clone_network(network=network_to_clone_suid)
+    filter_df = pd.DataFrame({key_col: node_table[key_col], 'componentindex': componentindex_list, 'keep_node': nodes_to_keep_list, 'keep_componentindex': nodes_to_keep_componentindex})
+    # Convert data type of componentindex column to int
+    filter_df['componentindex'] = filter_df['componentindex'].astype(int)
+    # For rows with componentindex of -1 AND keep_node of false, set keep_componentindex to false
+    filter_df.loc[(filter_df['componentindex'] == -1) & (filter_df['keep_node'] == False), 'keep_componentindex'] = False
+    return filter_df
+
+def p4c_get_filtered_nodes_and_clusters(node_table, nodes_to_keep, key_col, componentindex_colname):
+    """
+    Generate a dataframe to filter the Cytoscape network based on the nodes to keep. Based on those nodes, also keep nodes that are clustered (ie: connected by edges); determine this based on the componentindex value. Note that componentindex of -1 just indicates singleton nodes; only keep singleton nodes that are in the nodes_to_keep_list (ie: satisfy the original filtering criteria).
+    This function uses the generate_filter_df function.
+
+    Inputs
+    node_table: DataFrame
+        Node table of the Cytoscape network
+    nodes_to_keep: list of bool
+        List of TRUE and FALSE values for the nodes to keep
+    key_col: str
+        Column name of the key column (shared name)
+    componentindex_colname: str
+        Column name of the componentindex
+
+    Outputs
+    return: DataFrame
+        Dataframe with columns 'shared name', 'componentindex', 'keep_node', 'keep_componentindex'
+    """
     # Get the list of componentindex values to keep
     componentindex_to_keep = node_table[nodes_to_keep][componentindex_colname].tolist()
     # remove duplicates
@@ -77,12 +132,34 @@ def p4c_apply_filter(filter_name, node_table, nodes_to_keep, network_to_clone_su
     nodes_to_keep_componentindex = nodes_to_keep_componentindex.tolist()
     # Fetch list of componentindex values (use this to determine with singletons to remove)
     componentindex_list = node_table['componentindex'].tolist()
-    filter_df = pd.DataFrame({key_col: node_table[key_col], 'componentindex': componentindex_list, 'keep_node': nodes_to_keep_list, 'keep_componentindex': nodes_to_keep_componentindex})
-    # Convert data type of componentindex column to int
-    filter_df['componentindex'] = filter_df['componentindex'].astype(int)
-    # For rows with componentindex of -1 AND keep_node of false, set keep_componentindex to false
-    filter_df.loc[(filter_df['componentindex'] == -1) & (filter_df['keep_node'] == False), 'keep_componentindex'] = False
+    # Generate the dataframe to filter the network
+    filter_df = generate_filter_df(nodes_to_keep_list, nodes_to_keep_componentindex, componentindex_list, key_col)
+    return filter_df
 
+def p4c_network_add_filter_columns(filter_name, node_table, nodes_to_keep, network_to_clone_suid, key_col='shared name', componentindex_colname='componentindex'):
+    """
+    Add columns to the node table of the network to filter based on the nodes to keep. This function uses the p4c_get_filtered_nodes_and_clusters function.
+
+    Inputs
+    filter_name: str
+        Name of the filter to create
+    node_table: DataFrame
+        Node table of the Cytoscape network
+    nodes_to_keep: list of bool
+        List of TRUE and FALSE values for the nodes to keep
+    network_to_clone_suid: int  
+        SUID of the network to clone
+    key_col: str
+        Column name of the key column (shared name)
+
+    Outputs
+    return: int
+        SUID of the filtered network
+    """
+    # Create the filtered network
+    network_filter_suid = p4c.clone_network(network=network_to_clone_suid)
+    # Generate the dataframe filter_df to filter the network
+    filter_df = p4c_get_filtered_nodes_and_clusters(node_table, nodes_to_keep, key_col, componentindex_colname)
     # Add the 2 lists (nodes and componentindex) of TRUE and FALSE values to the network, using function node_table_add_columns
     node_table_add_columns(filter_df, ['shared name', 'keep_componentindex'], network_filter_suid, 'shared name')
     node_table_add_columns(filter_df, ['shared name', 'keep_node'], network_filter_suid, 'shared name')
@@ -95,7 +172,7 @@ def p4c_apply_filter(filter_name, node_table, nodes_to_keep, network_to_clone_su
     p4c.layout_network('force-directed', network_filter_suid)
     return network_filter_suid
 
-def import_and_apply_cytoscape_style(dir, cytoscape_style_filtered_filename, suid, network_rename):
+def p4c_import_and_apply_cytoscape_style(dir, cytoscape_style_filtered_filename, suid, network_rename):
     """
     """
     p4c.import_visual_styles(dir)
@@ -518,72 +595,5 @@ Run test Cytoscape filter first
 # Create a pandas of TRUE and FALSE values for the nodes to keep, with keys of shared name. We will keep nodes that have a 'EXP:CTRL_ratio' greater than the RATIO_CUTOFF
 nodes_to_keep = node_table_temp['EXP:CTRL_ratio'] > RATIO_CUTOFF
 
-test_suid = p4c_apply_filter("test_filter", node_table_temp, nodes_to_keep, network_suid, key_col='shared name', componentindex_colname='componentindex')
-import_and_apply_cytoscape_style(pjoin(cytoscape_inputs_folder, cytoscape_style_filtered_filename), cytoscape_style_filtered_filename, test_suid, job_name + '_test_filter')
-
-
-
-# # Copy the original network to a new network for the test filter. clone_network returns new SUID.
-# network_test_filter_suid = p4c.clone_network(network=network_suid)
-
-# # Get the list of componentindex values to keep
-# componentindex_to_keep = node_table_temp[nodes_to_keep]['componentindex'].tolist()
-# # If there are repeats of the same componentindex, remove duplicates
-# componentindex_to_keep = list(set(componentindex_to_keep))
-# # Make a pandas of true and false values for the nodes to keep, with keys of shared name.
-# nodes_to_keep_componentindex = node_table_temp['componentindex'].isin(componentindex_to_keep)
-
-# # Create list of nodes_to_keep and nodes_to_keep_componentindex to be lists of TRUE and FALSE values for the nodes/clusters to keep.
-# nodes_to_keep_list = nodes_to_keep.tolist()
-# nodes_to_keep_componentindex = nodes_to_keep_componentindex.tolist()
-
-# # Fetch list of componentindex values
-# componentindex_list = node_table_temp['componentindex'].tolist()
-
-# # Create filter dataframe with one column of shared name, and two columns of TRUE and FALSE values, one column for nodes to keep and one column for componentindex to keep.
-# filter_df = pd.DataFrame({'shared name': node_table_temp['name'], 'componentindex': componentindex_list, 'keep_node': nodes_to_keep_list, 'keep_componentindex': nodes_to_keep_componentindex})
-
-# # Convert data type of componentindex column to int
-# filter_df['componentindex'] = filter_df['componentindex'].astype(int)
-
-# # For rows with componentindex of -1 AND keep_node of false, set keep_componentindex to false
-# filter_df.loc[(filter_df['componentindex'] == -1) & (filter_df['keep_node'] == False), 'keep_componentindex'] = False
-
-# # Add the 2 lists (nodes and componentindex) of TRUE and FALSE values to the network, using function node_table_add_columns
-# node_table_add_columns(filter_df, ['shared name', 'keep_componentindex'], network_test_filter_suid, 'shared name')
-# node_table_add_columns(filter_df, ['shared name', 'keep_node'], network_test_filter_suid, 'shared name')
-
-# # Create and apply the filter to the network. Select the nodes to delete.
-# # https://py4cytoscape.readthedocs.io/en/latest/reference/generated/py4cytoscape.filters.create_column_filter.html#py4cytoscape.filters.create_column_filter
-# # p4c.create_column_filter(filter_name = 'test_filter', column = 'EXP:CTRL_ratio', criterion = RATIO_CUTOFF, predicate = 'LESS_THAN_OR_EQUAL', type = 'nodes', network = network_test_filter_suid)
-# p4c.create_column_filter(filter_name = 'test_filter', column = 'keep_componentindex', criterion = False, predicate = 'IS', type = 'nodes', network = network_test_filter_suid)
-
-# # The above step only selects nodes that meet the filter criteria. To remove the unselected nodes, use the following command
-# # https://py4cytoscape.readthedocs.io/en/0.0.10/reference/generated/py4cytoscape.network_selection.delete_selected_nodes.html
-# p4c.network_selection.delete_selected_nodes(network = network_test_filter_suid)
-
-# # Reorganize network to remove gaps
-# p4c.layout_network('force-directed', network_test_filter_suid)
-
-# # For nodes that are in nodes_to_keep, indicate in the network by increasing the node size
-# # https://py4cytoscape.readthedocs.io/en/latest/reference/generated/py4cytoscape.style_mappings.set_node_size_mapping.html#py4cytoscape.style_mappings.set_node_size_mapping
-# # p4c.style_mappings.set_node_size_mapping('keep_node', table_column_values = [True, False], sizes = [75, 50], mapping_type = 'd', style_name = cytoscape_style_name, network = network_test_filter_suid)
-
-# # # Import style for filtered network
-# # p4c.import_visual_styles(pjoin(cytoscape_inputs_folder, cytoscape_style_filtered_filename))
-# # cytoscape_style_name_filtered = cytoscape_style_filtered_filename.split('.')[0]
-# # # Set new suid to the filtered network style
-# # p4c.set_visual_style(cytoscape_style_name_filtered, network_test_filter_suid)
-
-# # Import the style from the cytoscape_inputs_folder
-# p4c.import_visual_styles(pjoin(cytoscape_inputs_folder, cytoscape_style_filtered_filename))
-
-# # identify the file extension in cytoscape_style_filename and remove to generate cytoscape_style_name
-# cytoscape_style_filtered_name = cytoscape_style_filtered_filename.split('.')[0]
-
-# # Set the visual style to cystocape_style_filename, without the file extension in the cytoscape_style_filename
-# p4c.set_visual_style(cytoscape_style_filtered_name)
-
-# # Rename network
-# p4c.networks.rename_network(job_name + '_test_filter', network_test_filter_suid)
-
+test_suid = p4c_network_add_filter_columns("test_filter", node_table_temp, nodes_to_keep, network_suid, key_col='shared name', componentindex_colname='componentindex')
+p4c_import_and_apply_cytoscape_style(pjoin(cytoscape_inputs_folder, cytoscape_style_filtered_filename), cytoscape_style_filtered_filename, test_suid, job_name + '_test_filter')
