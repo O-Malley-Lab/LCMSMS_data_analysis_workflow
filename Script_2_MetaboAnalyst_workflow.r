@@ -332,7 +332,7 @@ tryCatch({
   mSet<-PlotTT(mSet, paste("T_test_", job_name, "_", sep=''), "png", 72, width=NA)
 }, error = function(e){
   plotTT_error_occurred = TRUE
-  print("Error occurred in PlotTT function. Skipping this step.")
+  print("Error occurred in PlotTT function, likely due to low number of significant features. Skipping this step.")
 })
 
 
