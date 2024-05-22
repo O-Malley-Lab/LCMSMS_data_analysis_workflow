@@ -240,6 +240,10 @@ CTRL_LOG10_CUTOFF_STRINGENT = 6
 RATIO_CUTOFF_STRINGENT = 10
 EXP_LOG10_CUTOFF_STRINGENT = 5
 
+# MetaboAnalystR filters
+METABOANALYSTR_LOG2FC_CUTOFF = 2
+METABOANALYSTR_PVAL_CUTOFF = 0.05
+
 # Filters for upregulated likely host metabolites
 HOST_CTRL_LOG10_CUTOFF = 3 # Log10 of CTRL must be greater than this value
 HOST_RATIO_CUTOFF = 10 # Ratio of EXP to CTRL must be greater than this value
@@ -673,6 +677,16 @@ for job_index, job in enumerate(metadata['Job Name']):
 
     suid_target = p4c_network_add_filter_columns("Filtered_Peaks_of_Interest_Stringent", node_table_temp, nodes_to_keep_stringent, suid_main_network, key_col='shared name', componentindex_colname='componentindex')
     p4c_import_and_apply_cytoscape_style(pjoin(cytoscape_inputs_folder, cytoscape_style_filtered_filename), cytoscape_style_filtered_filename, suid_target, job_name + '_Filtered_Peaks_of_Interest_Stringent')
+
+
+    """""""""""""""""""""""""""""""""""""""""""""
+    Create filtered network for MetaboAnalystR filters
+    """""""""""""""""""""""""""""""""""""""""""""
+    nodes_to_keep_metaboanalystr = node_table_temp['log2.FC.'] > METABOANALYSTR_LOG2FC_CUTOFF
+    nodes_to_keep_metaboanalystr = nodes_to_keep_metaboanalystr & (node_table_temp['p.value'] < METABOANALYSTR_PVAL_CUTOFF)
+
+    suid_target = p4c_network_add_filter_columns("MetaboAnalystR_Filter", node_table_temp, nodes_to_keep_metaboanalystr, suid_main_network, key_col='shared name', componentindex_colname='componentindex')
+    p4c_import_and_apply_cytoscape_style(pjoin(cytoscape_inputs_folder, cytoscape_style_filtered_filename), cytoscape_style_filtered_filename, suid_target, job_name + '_MetaboAnalystR_Filter')
 
 
     """""""""""""""""""""""""""""""""""""""""""""
