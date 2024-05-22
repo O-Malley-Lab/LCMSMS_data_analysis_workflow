@@ -168,3 +168,6 @@ GNPS_output/
 
 # output folder
 output/
+
+# obsolete scripts folder
+obsolete_scripts/
