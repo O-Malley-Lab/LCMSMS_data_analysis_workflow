@@ -215,7 +215,7 @@ OUTPUT_FOLDER = r'output'
 
 # Use "Overall_Running_Metadata_for_All_LCMSMS_Jobs.xlsx" from INPUT_FOLDER to get relevant parameters for job to run. Use the excel tab "Job to Run"
 METADATA_OVERALL_FILENAME = 'Overall_Running_Metadata_for_All_LCMSMS_Jobs.xlsx'
-METADATA_JOB_TAB = 'Multi-jobs Cytoscape'
+METADATA_JOB_TAB = 'Multi-jobs'
 
 cytoscape_inputs_folder_name = 'Cytoscape_inputs'
 
