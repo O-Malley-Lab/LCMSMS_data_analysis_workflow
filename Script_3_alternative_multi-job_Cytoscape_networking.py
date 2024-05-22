@@ -129,16 +129,19 @@ def p4c_get_filtered_nodes_and_clusters(node_table, nodes_to_keep, key_col, comp
         Dataframe with columns 'shared name', 'componentindex', 'keep_node', 'keep_componentindex'
     """
     # Get the list of componentindex values to keep
-    componentindex_to_keep = node_table[nodes_to_keep][componentindex_colname].tolist()
+    componentindex_to_keep = node_table.copy()
+    componentindex_to_keep = componentindex_to_keep[nodes_to_keep][componentindex_colname].tolist()
     # remove duplicates
     componentindex_to_keep = list(set(componentindex_to_keep))
     # Make a pandas of true and false values for the nodes to keep, with keys of shared name.
-    nodes_to_keep_componentindex = node_table[componentindex_colname].isin(componentindex_to_keep)
+    nodes_to_keep_componentindex = node_table.copy()
+    nodes_to_keep_componentindex = nodes_to_keep_componentindex[componentindex_colname].isin(componentindex_to_keep)
     # Create list of nodes_to_keep and nodes_to_keep_componentindex to be lists of TRUE and FALSE values for the nodes/clusters to keep.
     nodes_to_keep_list = nodes_to_keep.tolist()
     nodes_to_keep_componentindex = nodes_to_keep_componentindex.tolist()
     # Fetch list of componentindex values (use this to determine with singletons to remove)
-    componentindex_list = node_table['componentindex'].tolist()
+    componentindex_list = node_table.copy()
+    componentindex_list = componentindex_list['componentindex'].tolist()
     # Generate the dataframe to filter the network
     filter_df = generate_filter_df(nodes_to_keep_list, nodes_to_keep_componentindex, componentindex_list, key_col)
     return filter_df
@@ -480,6 +483,10 @@ for job_index, job in enumerate(metadata['Job Name']):
     table_filtered = node_table.copy()
 
     # First, filter for peaks that have a GNPSGROUP:CTRL_log10 less than the cutoff. Set table_filtered['GNPSGROUP:CTRL_log10'] to float type (not str) to avoid error in filtering
+    # For each value in table_filtered['GNPSGROUP:CTRL_log10'], print if not a float
+    for value in table_filtered['GNPSGROUP:CTRL_log10']:
+        if not isinstance(value, float):
+            print(value)
     table_filtered['GNPSGROUP:CTRL_log10'] = table_filtered['GNPSGROUP:CTRL_log10'].astype(float)
     table_filtered = table_filtered[table_filtered['GNPSGROUP:CTRL_log10'] < CTRL_LOG10_CUTOFF]
 
@@ -659,6 +666,7 @@ for job_index, job in enumerate(metadata['Job Name']):
     # First, filter for peaks that have a GNPSGROUP:CTRL_log10 less than the cutoff
     # Second, filter for peaks that have a GNPSGROUP:EXP_log10 greater than the cutoff
     # Third, filter for peaks that have a EXP:CTRL_ratio greater than the cutoff
+    # copy the node_table_temp
     nodes_to_keep_1 = node_table_temp['GNPSGROUP:CTRL_log10'] < CTRL_LOG10_CUTOFF
     nodes_to_keep_1 = nodes_to_keep_1 & (node_table_temp['GNPSGROUP:EXP_log10'] > EXP_LOG10_CUTOFF)
     nodes_to_keep_1 = nodes_to_keep_1 & (node_table_temp['EXP:CTRL_ratio'] > RATIO_CUTOFF)
