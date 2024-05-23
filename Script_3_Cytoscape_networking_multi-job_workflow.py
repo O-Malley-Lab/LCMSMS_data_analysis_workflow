@@ -483,16 +483,16 @@ for job_index, job in enumerate(metadata['Job Name']):
 
     # Third, filter for peaks that have a GNPSGROUP:CTRL_log10 less than the cutoff. Set table_filtered['GNPSGROUP:CTRL_log10'] to float type (not str) to avoid error in filtering
     # For each value in table_filtered['GNPSGROUP:CTRL_log10'], print if not a float
-    for value in table_filtered['GNPSGROUP:CTRL_log10']:
-        if not isinstance(value, float):
-            print(value)
+    # for value in table_filtered['GNPSGROUP:CTRL_log10']:
+    #     if not isinstance(value, float):
+    #         print(value)
     table_filtered['GNPSGROUP:CTRL_log10'] = table_filtered['GNPSGROUP:CTRL_log10'].astype(float)
     table_filtered = table_filtered[table_filtered['GNPSGROUP:CTRL_log10'] < CTRL_LOG10_CUTOFF]
 
     # Fourth, filter for peaks that have a GNPSGROUP:EXP_log10 greater than the cutoff. Set table_filtered['GNPSGROUP:EXP_log10'] to float type (not str) to avoid error in filtering
-    for value in table_filtered['GNPSGROUP:EXP_log10']:
-        if not isinstance(value, float):
-            print(value)
+    # for value in table_filtered['GNPSGROUP:EXP_log10']:
+    #     if not isinstance(value, float):
+    #         print(value)
     table_filtered['GNPSGROUP:EXP_log10'] = table_filtered['GNPSGROUP:EXP_log10'].astype(float)
     table_filtered = table_filtered[table_filtered['GNPSGROUP:EXP_log10'] > EXP_LOG10_CUTOFF]
 
@@ -566,6 +566,10 @@ for job_index, job in enumerate(metadata['Job Name']):
     columns_to_round = ['log2.FC.','GNPSGROUP:EXP_log10','GNPSGROUP:CTRL_log10']
     # Round to 2 decimal places
     table_formatted[columns_to_round] = table_formatted[columns_to_round].applymap(lambda x: round(x, 2))
+    # print row for each row in table_formatted with NoneType in log2.FC. column
+    # for index, row in table_formatted.iterrows():
+    #     if pd.isnull(row['log2.FC.']):
+    #         print(row)
 
 
     """""""""""""""""""""""""""""""""""""""""""""
