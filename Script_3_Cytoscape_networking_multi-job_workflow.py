@@ -235,14 +235,7 @@ t_test_cols_to_keep = ['shared_name', 'p.value']
 
 # Filtering Parameters
 CTRL_LOG10_CUTOFF = 5 # Log10 of CTRL must be less than this value
-RATIO_CUTOFF = 3 # Ratio of EXP to CTRL must be greater than this value
 EXP_LOG10_CUTOFF = 5 # Log10 of EXP must be greater than this value
-
-# Stringent Filtering Parameters
-CTRL_LOG10_CUTOFF_STRINGENT = 6
-RATIO_CUTOFF_STRINGENT = 10
-EXP_LOG10_CUTOFF_STRINGENT = 5
-
 # MetaboAnalystR filters
 METABOANALYSTR_LOG2FC_CUTOFF = 2
 METABOANALYSTR_PVAL_CUTOFF = 0.05
@@ -272,7 +265,7 @@ for job_index, job in enumerate(metadata['Job Name']):
 
     # Cytoscape column names to keep (and their order) in the exported node table (input for filtering script)
     cytoscape_cols_to_keep = [
-    'shared name', 'precursor mass', 'RTMean', 'Best Ion', 'GNPSGROUP:EXP', 'GNPSGROUP:CTRL', 'log2.FC.', 'p.value', 'number of spectra', 'Compound_Name', 'GNPSLibraryURL', 'Analog:MQScore', 'SpectrumID', 'Analog:SharedPeaks', 'Instrument', 'PI', 'MassDiff', 'GNPSLinkout_Network', 'GNPSLinkout_Cluster', 'componentindex', 'sum(precursor intensity)', 'NODE_TYPE', 'neutral M mass', 'Correlated Features Group ID', 'Annotated Adduct Features ID', 'ATTRIBUTE_GROUP'
+    'shared name', 'precursor mass', 'RTMean', 'Best Ion', 'GNPSGROUP:EXP', 'GNPSGROUP:CTRL', 'componentindex', 'sum(precursor intensity)', 'NODE_TYPE','number of spectra',  'MassDiff', 'GNPSLinkout_Network', 'GNPSLinkout_Cluster', 'Instrument', 'PI', 'GNPSLibraryURL', 'Analog:MQScore', 'SpectrumID', 'Analog:SharedPeaks','Compound_Name','log2.FC.', 'p.value',
     ]
     """""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""
     Main Part 1: Prepare Cytoscape Network and Format Node Table
@@ -329,8 +322,8 @@ for job_index, job in enumerate(metadata['Job Name']):
     peak_area_cols_to_keep = ['row ID']
     peak_area_cols_raw_data = [col for col in gnps_quant_data.columns if col.endswith('Peak area')]
     peak_area_cols_to_keep.extend(peak_area_cols_raw_data)
-    # Add peak_area_cols_to_keep to cytoscape_cols_to_keep
-    cytoscape_cols_to_keep.extend(peak_area_cols_to_keep)
+    # # Add peak_area_cols_to_keep to cytoscape_cols_to_keep <- comment out to not include raw peak area values in the simplified node table
+    # cytoscape_cols_to_keep.extend(peak_area_cols_to_keep)
     # Load peak area data into the node table
     node_table_add_columns(gnps_quant_data, peak_area_cols_to_keep, suid_main_network, 'row ID')
 
@@ -356,8 +349,8 @@ for job_index, job in enumerate(metadata['Job Name']):
     # Rename normalized data columns (not shared_name) to end with '_normalized'
     norm_peak_area_data.columns = [col + '_normalized' if col != 'shared_name' else col for col in norm_peak_area_data.columns]
     norm_data_cols_to_keep = norm_peak_area_data.columns
-    # Add norm_data_cols_to_keep to cytoscape_cols_to_keep
-    cytoscape_cols_to_keep.extend(norm_data_cols_to_keep)
+    # # Add norm_data_cols_to_keep to cytoscape_cols_to_keep <- comment out to not include normalized peak area values in the simplified node table
+    # cytoscape_cols_to_keep.extend(norm_data_cols_to_keep)
     # Load normalized peak area data into the node table
     node_table_add_columns(norm_peak_area_data, norm_data_cols_to_keep, suid_main_network, 'shared_name')
 
@@ -371,8 +364,8 @@ for job_index, job in enumerate(metadata['Job Name']):
     for col in peak_area_cols_raw_data:
         gnps_quant_data[col + '_log10'] = gnps_quant_data[col].apply(lambda x: None if x == 0 else np.log10(x))
 
-    # Add log10_peak_area_cols to cytoscape_cols_to_keep
-    cytoscape_cols_to_keep.extend(log10_peak_area_cols)
+    # # Add log10_peak_area_cols to cytoscape_cols_to_keep <- comment out to not include log10 peak area values in the simplified node table
+    # cytoscape_cols_to_keep.extend(log10_peak_area_cols)
 
     # Add the key column (row ID) to the log10 peak area columns
     log10_peak_area_cols.insert(0, 'row ID')
@@ -478,11 +471,17 @@ for job_index, job in enumerate(metadata['Job Name']):
     Main Part 2: Filtering Script for Output Excel
     """""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""
     """""""""""""""""""""""""""""""""""""""""""""
-    Create new dataframe of node_table to filter for peaks of interest
+    Create new dataframe of node_table to filter for peaks of interest, using MetaobanalystR stats
     """""""""""""""""""""""""""""""""""""""""""""
     table_filtered = node_table.copy()
 
-    # First, filter for peaks that have a GNPSGROUP:CTRL_log10 less than the cutoff. Set table_filtered['GNPSGROUP:CTRL_log10'] to float type (not str) to avoid error in filtering
+    # First, filter for peaks that have a log2.FC. value greater than LOG2FC_CUTOFF
+    table_filtered = table_filtered[table_filtered['log2.FC.'] > METABOANALYSTR_LOG2FC_CUTOFF]
+
+    # Second, filter for peaks that have a p.value less than PVAL_CUTOFF
+    table_filtered = table_filtered[table_filtered['p.value'] < METABOANALYSTR_PVAL_CUTOFF]
+
+    # Third, filter for peaks that have a GNPSGROUP:CTRL_log10 less than the cutoff. Set table_filtered['GNPSGROUP:CTRL_log10'] to float type (not str) to avoid error in filtering
     # For each value in table_filtered['GNPSGROUP:CTRL_log10'], print if not a float
     for value in table_filtered['GNPSGROUP:CTRL_log10']:
         if not isinstance(value, float):
@@ -490,39 +489,18 @@ for job_index, job in enumerate(metadata['Job Name']):
     table_filtered['GNPSGROUP:CTRL_log10'] = table_filtered['GNPSGROUP:CTRL_log10'].astype(float)
     table_filtered = table_filtered[table_filtered['GNPSGROUP:CTRL_log10'] < CTRL_LOG10_CUTOFF]
 
-    # Second, filter for peaks that have a GNPSGROUP:EXP_log10 greater than the cutoff. Set table_filtered['GNPSGROUP:EXP_log10'] to float type (not str) to avoid error in filtering
+    # Fourth, filter for peaks that have a GNPSGROUP:EXP_log10 greater than the cutoff. Set table_filtered['GNPSGROUP:EXP_log10'] to float type (not str) to avoid error in filtering
+    for value in table_filtered['GNPSGROUP:EXP_log10']:
+        if not isinstance(value, float):
+            print(value)
     table_filtered['GNPSGROUP:EXP_log10'] = table_filtered['GNPSGROUP:EXP_log10'].astype(float)
     table_filtered = table_filtered[table_filtered['GNPSGROUP:EXP_log10'] > EXP_LOG10_CUTOFF]
-
-    # Third, filter for peaks that have a EXP:CTRL_ratio greater than the cutoff
-    table_filtered = table_filtered[table_filtered['EXP:CTRL_ratio'] > RATIO_CUTOFF]
 
     # Sort table_filtered in descending order by GNPSGROUP:EXP_log10
     table_filtered = table_filtered.sort_values(by = 'GNPSGROUP:EXP_log10', ascending = False)
     # Reset index
     table_filtered = table_filtered.reset_index(drop = True)
 
-
-    """""""""""""""""""""""""""""""""""""""""""""
-    Create new dataframe of node_table to filter for peaks of interest, stringent cutoffs
-    """""""""""""""""""""""""""""""""""""""""""""
-    table_filtered_stringent = node_table.copy()
-
-    # First, filter for peaks that have a GNPSGROUP:CTRL_log10 less than the cutoff. Set table_filtered_stringent['GNPSGROUP:CTRL_log10'] to float type (not str) to avoid error in filtering
-    table_filtered_stringent['GNPSGROUP:CTRL_log10'] = table_filtered_stringent['GNPSGROUP:CTRL_log10'].astype(float)
-    table_filtered_stringent = table_filtered_stringent[table_filtered_stringent['GNPSGROUP:CTRL_log10'] < CTRL_LOG10_CUTOFF_STRINGENT]
-
-    # Second, filter for peaks that have a GNPSGROUP:EXP_log10 greater than the cutoff. Set table_filtered_stringent['GNPSGROUP:EXP_log10'] to float type (not str) to avoid error in filtering
-    table_filtered_stringent['GNPSGROUP:EXP_log10'] = table_filtered_stringent['GNPSGROUP:EXP_log10'].astype(float)
-    table_filtered_stringent = table_filtered_stringent[table_filtered_stringent['GNPSGROUP:EXP_log10'] > EXP_LOG10_CUTOFF_STRINGENT]
-
-    # Third, filter for peaks that have a EXP:CTRL_ratio greater than the cutoff
-    table_filtered_stringent = table_filtered_stringent[table_filtered_stringent['EXP:CTRL_ratio'] > RATIO_CUTOFF_STRINGENT]
-
-    # Sort table_filtered_stringent in descending order by GNPSGROUP:EXP_log10
-    table_filtered_stringent = table_filtered_stringent.sort_values(by = 'GNPSGROUP:EXP_log10', ascending = False)
-    # Reset index
-    table_filtered_stringent = table_filtered_stringent.reset_index(drop = True)
 
     """""""""""""""""""""""""""""""""""""""""""""
     Create new dataframe of upregulated likely host metabolites
@@ -593,7 +571,7 @@ for job_index, job in enumerate(metadata['Job Name']):
     """""""""""""""""""""""""""""""""""""""""""""
     Make a table of the parameters used in this script
     """""""""""""""""""""""""""""""""""""""""""""
-    parameters = pd.DataFrame({'Parameter': ['CTRL_LOG10_CUTOFF', 'RATIO_CUTOFF', 'EXP_LOG10_CUTOFF', 'HOST_CTRL_LOG10_CUTOFF', 'HOST_RATIO_CUTOFF', 'MZ_DEV', 'RT_DEV','ABMBA_MZ_POS','ABMBA_RT_POS'], 'Value': [CTRL_LOG10_CUTOFF, RATIO_CUTOFF, EXP_LOG10_CUTOFF, HOST_CTRL_LOG10_CUTOFF, HOST_RATIO_CUTOFF, MZ_DEV, RT_DEV, ABMBA_MZ_POS, ABMBA_RT_POS]})
+    parameters = pd.DataFrame({'Parameter': ['METABOANALYSTR_LOG2FC_CUTOFF', 'METABOANALYSTR_PVAL_CUTOFF', 'CTRL_LOG10_CUTOFF', 'EXP_LOG10_CUTOFF', 'HOST_CTRL_LOG10_CUTOFF', 'HOST_RATIO_CUTOFF', 'MZ_DEV', 'RT_DEV','ABMBA_MZ_POS','ABMBA_RT_POS'], 'Value': [METABOANALYSTR_LOG2FC_CUTOFF, METABOANALYSTR_PVAL_CUTOFF, CTRL_LOG10_CUTOFF, EXP_LOG10_CUTOFF, HOST_CTRL_LOG10_CUTOFF, HOST_RATIO_CUTOFF, MZ_DEV, RT_DEV, ABMBA_MZ_POS, ABMBA_RT_POS]})
 
 
     """""""""""""""""""""""""""""""""""""""""""""
@@ -611,7 +589,7 @@ for job_index, job in enumerate(metadata['Job Name']):
     table_formatted.to_excel(writer, sheet_name = 'All Peaks Simple', index = False)
     node_table.to_excel(writer, sheet_name = 'All', index = False)
     table_filtered.to_excel(writer, sheet_name = 'Filtered Peaks of Interest', index = False)
-    table_filtered_stringent.to_excel(writer, sheet_name = 'Filtered Stringent', index = False)
+    # table_filtered_stringent.to_excel(writer, sheet_name = 'Filtered Stringent', index = False)
     table_host_upreg.to_excel(writer, sheet_name = 'Upreg Likely Host Metabolites', index = False)
     table_all_matched_cmpds.to_excel(writer, sheet_name = 'All Cmpd Matches', index = False)
     table_matched_cmpds_no_suspect.to_excel(writer, sheet_name = 'Cmpd Matches No Sus', index = False)
@@ -629,8 +607,6 @@ for job_index, job in enumerate(metadata['Job Name']):
             format_column(worksheet, node_table)
         elif sheet_name == 'Filtered Peaks of Interest':
             format_column(worksheet, table_filtered)
-        elif sheet_name == 'Filtered Stringent':
-            format_column(worksheet, table_filtered_stringent)
         elif sheet_name == 'Upreg Likely Host Metabolites':
             format_column(worksheet, table_host_upreg)
         elif sheet_name == 'All Cmpd Matches':
@@ -659,32 +635,32 @@ for job_index, job in enumerate(metadata['Job Name']):
     # suid_test = p4c_network_add_filter_columns("test_filter", node_table_temp, nodes_to_keep, suid_main_network, key_col='shared name', componentindex_colname='componentindex')
     # p4c_import_and_apply_cytoscape_style(pjoin(cytoscape_inputs_folder, cytoscape_style_filtered_filename), cytoscape_style_filtered_filename, suid_test, job_name + '_test_filter')
 
-    """""""""""""""""""""""""""""""""""""""""""""
-    Create filtered network for Filtered Peaks of Interest
-    """""""""""""""""""""""""""""""""""""""""""""
-    # Create a pandas of TRUE and FALSE values for the nodes to keep, with keys of shared name. We will keep nodes that satisfy the following:
-    # First, filter for peaks that have a GNPSGROUP:CTRL_log10 less than the cutoff
-    # Second, filter for peaks that have a GNPSGROUP:EXP_log10 greater than the cutoff
-    # Third, filter for peaks that have a EXP:CTRL_ratio greater than the cutoff
-    # copy the node_table_temp
-    nodes_to_keep_1 = node_table_temp['GNPSGROUP:CTRL_log10'] < CTRL_LOG10_CUTOFF
-    nodes_to_keep_1 = nodes_to_keep_1 & (node_table_temp['GNPSGROUP:EXP_log10'] > EXP_LOG10_CUTOFF)
-    nodes_to_keep_1 = nodes_to_keep_1 & (node_table_temp['EXP:CTRL_ratio'] > RATIO_CUTOFF)
+    # """""""""""""""""""""""""""""""""""""""""""""
+    # Create filtered network for Filtered Peaks of Interest
+    # """""""""""""""""""""""""""""""""""""""""""""
+    # # Create a pandas of TRUE and FALSE values for the nodes to keep, with keys of shared name. We will keep nodes that satisfy the following:
+    # # First, filter for peaks that have a GNPSGROUP:CTRL_log10 less than the cutoff
+    # # Second, filter for peaks that have a GNPSGROUP:EXP_log10 greater than the cutoff
+    # # Third, filter for peaks that have a EXP:CTRL_ratio greater than the cutoff
+    # # copy the node_table_temp
+    # nodes_to_keep_1 = node_table_temp['GNPSGROUP:CTRL_log10'] < CTRL_LOG10_CUTOFF
+    # nodes_to_keep_1 = nodes_to_keep_1 & (node_table_temp['GNPSGROUP:EXP_log10'] > EXP_LOG10_CUTOFF)
+    # nodes_to_keep_1 = nodes_to_keep_1 & (node_table_temp['EXP:CTRL_ratio'] > RATIO_CUTOFF)
 
-    suid_target = p4c_network_add_filter_columns("Filtered_Peaks_of_Interest", node_table_temp, nodes_to_keep_1, suid_main_network, key_col='shared name', componentindex_colname='componentindex')
-    p4c_import_and_apply_cytoscape_style(pjoin(cytoscape_inputs_folder, cytoscape_style_filtered_filename), cytoscape_style_filtered_filename, suid_target, job_name + '_Filtered_Peaks_of_Interest')
-    # Unfortunately, I do not think there is a good way to ensure node labels appear in front of the nodes; sometimes they appear behind.
+    # suid_target = p4c_network_add_filter_columns("Filtered_Peaks_of_Interest", node_table_temp, nodes_to_keep_1, suid_main_network, key_col='shared name', componentindex_colname='componentindex')
+    # p4c_import_and_apply_cytoscape_style(pjoin(cytoscape_inputs_folder, cytoscape_style_filtered_filename), cytoscape_style_filtered_filename, suid_target, job_name + '_Filtered_Peaks_of_Interest')
+    # # Unfortunately, I do not think there is a good way to ensure node labels appear in front of the nodes; sometimes they appear behind.
 
 
-    """""""""""""""""""""""""""""""""""""""""""""
-    Create filtered network for Filtered Peaks of Interest, More Stringent
-    """""""""""""""""""""""""""""""""""""""""""""
-    nodes_to_keep_stringent = node_table_temp['GNPSGROUP:CTRL_log10'] < CTRL_LOG10_CUTOFF_STRINGENT
-    nodes_to_keep_stringent = nodes_to_keep_stringent & (node_table_temp['GNPSGROUP:EXP_log10'] > EXP_LOG10_CUTOFF_STRINGENT)
-    nodes_to_keep_stringent = nodes_to_keep_stringent & (node_table_temp['EXP:CTRL_ratio'] > RATIO_CUTOFF_STRINGENT)
+    # """""""""""""""""""""""""""""""""""""""""""""
+    # Create filtered network for Filtered Peaks of Interest, More Stringent
+    # """""""""""""""""""""""""""""""""""""""""""""
+    # nodes_to_keep_stringent = node_table_temp['GNPSGROUP:CTRL_log10'] < CTRL_LOG10_CUTOFF_STRINGENT
+    # nodes_to_keep_stringent = nodes_to_keep_stringent & (node_table_temp['GNPSGROUP:EXP_log10'] > EXP_LOG10_CUTOFF_STRINGENT)
+    # nodes_to_keep_stringent = nodes_to_keep_stringent & (node_table_temp['EXP:CTRL_ratio'] > RATIO_CUTOFF_STRINGENT)
 
-    suid_target = p4c_network_add_filter_columns("Filtered_Peaks_of_Interest_Stringent", node_table_temp, nodes_to_keep_stringent, suid_main_network, key_col='shared name', componentindex_colname='componentindex')
-    p4c_import_and_apply_cytoscape_style(pjoin(cytoscape_inputs_folder, cytoscape_style_filtered_filename), cytoscape_style_filtered_filename, suid_target, job_name + '_Filtered_Peaks_of_Interest_Stringent')
+    # suid_target = p4c_network_add_filter_columns("Filtered_Peaks_of_Interest_Stringent", node_table_temp, nodes_to_keep_stringent, suid_main_network, key_col='shared name', componentindex_colname='componentindex')
+    # p4c_import_and_apply_cytoscape_style(pjoin(cytoscape_inputs_folder, cytoscape_style_filtered_filename), cytoscape_style_filtered_filename, suid_target, job_name + '_Filtered_Peaks_of_Interest_Stringent')
 
 
     """""""""""""""""""""""""""""""""""""""""""""
@@ -692,6 +668,8 @@ for job_index, job in enumerate(metadata['Job Name']):
     """""""""""""""""""""""""""""""""""""""""""""
     nodes_to_keep_metaboanalystr = node_table_temp['log2.FC.'] > METABOANALYSTR_LOG2FC_CUTOFF
     nodes_to_keep_metaboanalystr = nodes_to_keep_metaboanalystr & (node_table_temp['p.value'] < METABOANALYSTR_PVAL_CUTOFF)
+    nodes_to_keep_metaboanalystr = nodes_to_keep_metaboanalystr & (node_table_temp['GNPSGROUP:CTRL_log10'] < CTRL_LOG10_CUTOFF)
+    nodes_to_keep_metaboanalystr = nodes_to_keep_metaboanalystr & (node_table_temp['GNPSGROUP:EXP_log10'] > EXP_LOG10_CUTOFF)
 
     suid_target = p4c_network_add_filter_columns("MetaboAnalystR_Filter", node_table_temp, nodes_to_keep_metaboanalystr, suid_main_network, key_col='shared name', componentindex_colname='componentindex')
     p4c_import_and_apply_cytoscape_style(pjoin(cytoscape_inputs_folder, cytoscape_style_filtered_filename), cytoscape_style_filtered_filename, suid_target, job_name + '_MetaboAnalystR_Filter')
