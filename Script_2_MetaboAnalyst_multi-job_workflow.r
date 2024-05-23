@@ -445,3 +445,8 @@ for (job_index in seq_along(job_names)) {
   # mSet<-PlotHeatMap(mSet, paste("heatmap_1_", job_name, "_", sep=''), "png", 72, width=NA, "norm", "row", "euclidean", "ward.D","bwm", 8,8, 10.0,0.02,10, 10, T, T, NULL, T, F, T, T, T,T)
 
 }
+
+# If .Rhistory was created in the working directory, delete it
+if (file.exists(".Rhistory")){
+  file.remove(".Rhistory")
+}
