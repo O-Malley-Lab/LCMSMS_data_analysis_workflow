@@ -123,7 +123,8 @@ setwd(input_dir)
 wd_input = getwd()
 # Import metadata table excel. The excel is in the input folder
 metadata_overall = readxl::read_excel(metadata_overall_filename, sheet = metadata_job_tab)
-job_names = metadata_overall[,metadata_job_column]
+# job_names is a list of all the vlaues in the metadata_job_column of metadata_overall
+job_names = metadata_overall[[metadata_job_column]]
 
 
 ##############
@@ -131,7 +132,11 @@ job_names = metadata_overall[,metadata_job_column]
 ##############
 for (job_index in seq_along(job_names)) {
   # Get job_name from metadata_overall first value in metadata_job_column
-  job_name = metadata_overall[[job_index,metadata_job_column]]
+  job_name = job_names[job_index]
+
+  # Print the job_name
+  print('') # add empty line
+  print(paste('Starting job for ', job_name, '.', sep=''))
 
   # For copy-pasting GNPS downloaded output for Cytoscape script, first create the GNPS_output folder in the working directory, if it does not exist already
   GNPS_output_dir = paste(wd, "GNPS_output", sep = "\\")
