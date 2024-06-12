@@ -239,6 +239,12 @@ EXP_LOG10_CUTOFF = 5 # Log10 of EXP must be greater than this value
 # MetaboAnalystR filters
 METABOANALYSTR_LOG2FC_CUTOFF = 2
 METABOANALYSTR_PVAL_CUTOFF = 0.05
+# More stringent cutoffs for filtering
+CTRL_LOG10_CUTOFF_STRINGENT = 5
+EXP_LOG10_CUTOFF_STRINGENT = 6
+METABOANALYSTR_LOG2FC_CUTOFF_STRINGENT = 2
+METABOANALYSTR_PVAL_CUTOFF_STRINGENT = 0.05
+NODES_TO_KEEP_CUTOFF_FOR_STRINGENT_FILTER = 20
 
 # Filters for upregulated likely host metabolites
 HOST_CTRL_LOG10_CUTOFF = 3 # Log10 of CTRL must be greater than this value
@@ -397,8 +403,8 @@ for job_index, job in enumerate(metadata['Job Name']):
     node_table_temp['EXP:CTRL_ratio'] = node_table_temp['GNPSGROUP:EXP'] / node_table_temp['GNPSGROUP:CTRL']
     # Replace inf values with a large number [np.inf, -np.inf], 10000000000 (E10)
     node_table_temp['EXP:CTRL_ratio'] = node_table_temp['EXP:CTRL_ratio'].replace([np.inf, -np.inf], 10000000000)
-    # Round to 2 decimal places
-    node_table_temp['EXP:CTRL_ratio'] = node_table_temp['EXP:CTRL_ratio'].apply(lambda x: round(x, 2))
+    # Round to 2 decimal places. Skip if value is None.
+    node_table_temp['EXP:CTRL_ratio'] = node_table_temp['EXP:CTRL_ratio'].apply(lambda x: round(x, 2) if x is not None else None)
     # Add EXP:CTRL_ratio to cytoscape_cols_to_keep
     cytoscape_cols_to_keep.append('EXP:CTRL_ratio')
     # Load EXP:CTRL_ratio data into the node table
@@ -481,13 +487,12 @@ for job_index, job in enumerate(metadata['Job Name']):
     # Second, filter for peaks that have a p.value less than PVAL_CUTOFF
     table_filtered = table_filtered[table_filtered['p.value'] < METABOANALYSTR_PVAL_CUTOFF]
 
-    # Third, filter for peaks that have a GNPSGROUP:CTRL_log10 less than the cutoff. Set table_filtered['GNPSGROUP:CTRL_log10'] to float type (not str) to avoid error in filtering
+    # Third, filter for peaks that have a GNPSGROUP:CTRL_log10 less than the cutoff. Set table_filtered['GNPSGROUP:CTRL_log10'] to float type (not str) to avoid error in filtering. You should include rows that have a value of 'None' in the column, as these are peaks that were not detected in the control samples. Note that NaN is float type.
     # For each value in table_filtered['GNPSGROUP:CTRL_log10'], print if not a float
     # for value in table_filtered['GNPSGROUP:CTRL_log10']:
     #     if not isinstance(value, float):
     #         print(value)
-    table_filtered['GNPSGROUP:CTRL_log10'] = table_filtered['GNPSGROUP:CTRL_log10'].astype(float)
-    table_filtered = table_filtered[table_filtered['GNPSGROUP:CTRL_log10'] < CTRL_LOG10_CUTOFF]
+    table_filtered = table_filtered[(table_filtered['GNPSGROUP:CTRL_log10'] < CTRL_LOG10_CUTOFF) | (table_filtered['GNPSGROUP:CTRL_log10'].isnull())]
 
     # Fourth, filter for peaks that have a GNPSGROUP:EXP_log10 greater than the cutoff. Set table_filtered['GNPSGROUP:EXP_log10'] to float type (not str) to avoid error in filtering
     # for value in table_filtered['GNPSGROUP:EXP_log10']:
@@ -564,8 +569,8 @@ for job_index, job in enumerate(metadata['Job Name']):
     table_formatted[columns_sci_notation] = table_formatted[columns_sci_notation].applymap(lambda x: '{:.2e}'.format(x))
 
     columns_to_round = ['log2.FC.','GNPSGROUP:EXP_log10','GNPSGROUP:CTRL_log10']
-    # Round to 2 decimal places
-    table_formatted[columns_to_round] = table_formatted[columns_to_round].applymap(lambda x: round(x, 2))
+    # Round to 2 decimal places. Skip if value is None.
+    table_formatted[columns_to_round] = table_formatted[columns_to_round].applymap(lambda x: round(x, 2) if pd.notnull(x) else x)
     # print row for each row in table_formatted with NoneType in log2.FC. column
     # for index, row in table_formatted.iterrows():
     #     if pd.isnull(row['log2.FC.']):
@@ -672,11 +677,27 @@ for job_index, job in enumerate(metadata['Job Name']):
     """""""""""""""""""""""""""""""""""""""""""""
     nodes_to_keep_metaboanalystr = node_table_temp['log2.FC.'] > METABOANALYSTR_LOG2FC_CUTOFF
     nodes_to_keep_metaboanalystr = nodes_to_keep_metaboanalystr & (node_table_temp['p.value'] < METABOANALYSTR_PVAL_CUTOFF)
-    nodes_to_keep_metaboanalystr = nodes_to_keep_metaboanalystr & (node_table_temp['GNPSGROUP:CTRL_log10'] < CTRL_LOG10_CUTOFF)
+    # include rows that have a value of 'None' in the column, as these are peaks that were not detected in the control samples
+    nodes_to_keep_metaboanalystr = nodes_to_keep_metaboanalystr & ((node_table_temp['GNPSGROUP:CTRL_log10'] < CTRL_LOG10_CUTOFF) | (node_table_temp['GNPSGROUP:CTRL_log10'].isnull()))
     nodes_to_keep_metaboanalystr = nodes_to_keep_metaboanalystr & (node_table_temp['GNPSGROUP:EXP_log10'] > EXP_LOG10_CUTOFF)
 
     suid_target = p4c_network_add_filter_columns("MetaboAnalystR_Filter", node_table_temp, nodes_to_keep_metaboanalystr, suid_main_network, key_col='shared name', componentindex_colname='componentindex')
     p4c_import_and_apply_cytoscape_style(pjoin(cytoscape_inputs_folder, cytoscape_style_filtered_filename), cytoscape_style_filtered_filename, suid_target, job_name + '_MetaboAnalystR_Filter')
+
+
+    """""""""""""""""""""""""""""""""""""""""""""
+    Create more stringent filtered network for MetaboAnalystR filters, for sample groups with many nodes_to_keep
+    """""""""""""""""""""""""""""""""""""""""""""
+    # If the number of rows in nodes_to_keep_metaboanalystr has more than the value of NODES_TO_KEEP_CUTOFF_FOR_STRINGENT_FILTER, create a more stringently filtered network
+    len_nodes_to_keep_metaboanalystr = len(node_table_temp[nodes_to_keep_metaboanalystr])
+    if len_nodes_to_keep_metaboanalystr > NODES_TO_KEEP_CUTOFF_FOR_STRINGENT_FILTER:
+        nodes_to_keep_metaboanalystr_stringent = node_table_temp['log2.FC.'] > METABOANALYSTR_LOG2FC_CUTOFF_STRINGENT
+        nodes_to_keep_metaboanalystr_stringent = nodes_to_keep_metaboanalystr_stringent & (node_table_temp['p.value'] < METABOANALYSTR_PVAL_CUTOFF_STRINGENT)
+        nodes_to_keep_metaboanalystr_stringent = nodes_to_keep_metaboanalystr_stringent & ((node_table_temp['GNPSGROUP:CTRL_log10'] < CTRL_LOG10_CUTOFF_STRINGENT) | (node_table_temp['GNPSGROUP:CTRL_log10'].isnull()))
+        nodes_to_keep_metaboanalystr_stringent = nodes_to_keep_metaboanalystr_stringent & (node_table_temp['GNPSGROUP:EXP_log10'] > EXP_LOG10_CUTOFF_STRINGENT)
+
+        suid_target = p4c_network_add_filter_columns("MetaboAnalystR_Filter_Stringent", node_table_temp, nodes_to_keep_metaboanalystr_stringent, suid_main_network, key_col='shared name', componentindex_colname='componentindex')
+        p4c_import_and_apply_cytoscape_style(pjoin(cytoscape_inputs_folder, cytoscape_style_filtered_filename), cytoscape_style_filtered_filename, suid_target, job_name + '_MetaboAnalystR_Filter_Stringent')
 
 
     """""""""""""""""""""""""""""""""""""""""""""
