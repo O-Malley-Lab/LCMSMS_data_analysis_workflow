@@ -583,55 +583,6 @@ for job_index, job in enumerate(metadata['Job Name']):
     parameters = pd.DataFrame({'Parameter': ['METABOANALYSTR_LOG2FC_CUTOFF', 'METABOANALYSTR_PVAL_CUTOFF', 'CTRL_LOG10_CUTOFF', 'EXP_LOG10_CUTOFF', 'HOST_CTRL_LOG10_CUTOFF', 'HOST_RATIO_CUTOFF', 'MZ_DEV', 'RT_DEV','ABMBA_MZ_POS','ABMBA_RT_POS'], 'Value': [METABOANALYSTR_LOG2FC_CUTOFF, METABOANALYSTR_PVAL_CUTOFF, CTRL_LOG10_CUTOFF, EXP_LOG10_CUTOFF, HOST_CTRL_LOG10_CUTOFF, HOST_RATIO_CUTOFF, MZ_DEV, RT_DEV, ABMBA_MZ_POS, ABMBA_RT_POS]})
 
 
-    """""""""""""""""""""""""""""""""""""""""""""
-    Write each dataframe to a different sheet in output excel
-    """""""""""""""""""""""""""""""""""""""""""""
-    output_filename = job_name + '_Filtered_Peaks_of_Interest.xlsx'
-    # If it does not exist already, create a folder for job_name in the output folder
-    if not os.path.exists(pjoin(OUTPUT_FOLDER, job_name)):
-        os.makedirs(pjoin(OUTPUT_FOLDER, job_name))
-
-    # https://xlsxwriter.readthedocs.io/example_pandas_multiple.html
-    writer = pd.ExcelWriter(pjoin(OUTPUT_FOLDER, job_name, output_filename), engine='xlsxwriter')
-
-    # Write each dataframe to a different sheet (with no index column)
-    table_formatted.to_excel(writer, sheet_name = 'All Peaks Simple', index = False)
-    node_table.to_excel(writer, sheet_name = 'All', index = False)
-    table_filtered.to_excel(writer, sheet_name = 'Filtered Peaks of Interest', index = False)
-    # table_filtered_stringent.to_excel(writer, sheet_name = 'Filtered Stringent', index = False)
-    table_host_upreg.to_excel(writer, sheet_name = 'Upreg Likely Host Metabolites', index = False)
-    table_all_matched_cmpds.to_excel(writer, sheet_name = 'All Cmpd Matches', index = False)
-    table_matched_cmpds_no_suspect.to_excel(writer, sheet_name = 'Cmpd Matches No Sus', index = False)
-    table_ABMBA.to_excel(writer, sheet_name = 'ABMBA Standard', index = False)
-    parameters.to_excel(writer, sheet_name = 'Filter Parameters', index = False)
-
-    # Format the excel sheets so that the column width matches the size of the header text
-    workbook = writer.book
-    # For each table and corresponding excel tab, format width
-    for sheet_name in writer.sheets:
-        worksheet = writer.sheets[sheet_name]
-        if sheet_name == 'All Peaks Simple':
-            format_column(worksheet, table_formatted)
-        elif sheet_name == 'All':
-            format_column(worksheet, node_table)
-        elif sheet_name == 'Filtered Peaks of Interest':
-            format_column(worksheet, table_filtered)
-        elif sheet_name == 'Upreg Likely Host Metabolites':
-            format_column(worksheet, table_host_upreg)
-        elif sheet_name == 'All Cmpd Matches':
-            format_column(worksheet, table_all_matched_cmpds)
-        elif sheet_name == 'Cmpd Matches No Sus':
-            format_column(worksheet, table_matched_cmpds_no_suspect)
-        elif sheet_name == 'ABMBA Standard':
-            format_column(worksheet, table_ABMBA)
-        elif sheet_name == 'Filter Parameters':
-            format_column(worksheet, parameters)
-        else:
-            print('Error: sheet name ' + sheet_name + ' not recognized; column width not formatted. Consider adjusting script to include target sheet.')
-
-    # Close the Pandas Excel writer and output the Excel file. XlsxWriter object has no attribute 'save'. Use 'close' instead
-    writer.close()
-
 
     """""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""
     Main Part 3: Create Filtered Cytoscape Networks for Peaks of Interest
@@ -690,7 +641,8 @@ for job_index, job in enumerate(metadata['Job Name']):
     """""""""""""""""""""""""""""""""""""""""""""
     # If the number of rows in nodes_to_keep_metaboanalystr has more than the value of NODES_TO_KEEP_CUTOFF_FOR_STRINGENT_FILTER, create a more stringently filtered network
     len_nodes_to_keep_metaboanalystr = len(node_table_temp[nodes_to_keep_metaboanalystr])
-    if len_nodes_to_keep_metaboanalystr > NODES_TO_KEEP_CUTOFF_FOR_STRINGENT_FILTER:
+    run_stringent_filter = len_nodes_to_keep_metaboanalystr > NODES_TO_KEEP_CUTOFF_FOR_STRINGENT_FILTER
+    if run_stringent_filter:
         nodes_to_keep_metaboanalystr_stringent = node_table_temp['log2.FC.'] > METABOANALYSTR_LOG2FC_CUTOFF_STRINGENT
         nodes_to_keep_metaboanalystr_stringent = nodes_to_keep_metaboanalystr_stringent & (node_table_temp['p.value'] < METABOANALYSTR_PVAL_CUTOFF_STRINGENT)
         nodes_to_keep_metaboanalystr_stringent = nodes_to_keep_metaboanalystr_stringent & ((node_table_temp['GNPSGROUP:CTRL_log10'] < CTRL_LOG10_CUTOFF_STRINGENT) | (node_table_temp['GNPSGROUP:CTRL_log10'].isnull()))
@@ -708,3 +660,70 @@ for job_index, job in enumerate(metadata['Job Name']):
 
     print('Session saved and finished filtered Cytoscape networks for ' + job_name + ', took %.2f seconds' % (time.time() - start))
     start = time.time()
+
+    """""""""""""""""""""""""""""""""""""""""""""
+    Write a table for the stringently filtered peaks of interest, if it exists
+    """""""""""""""""""""""""""""""""""""""""""""
+    if run_stringent_filter:
+        table_stringent = node_table_temp.copy()
+
+        # For rows kept in nodes_to_keep_metaboanalystr_stringent, keep in table_stringent
+        table_stringent = table_stringent[nodes_to_keep_metaboanalystr_stringent]
+
+        # Order rows from highest to lowest 'GNPSGROUP:EXP_log10'
+        table_stringent = table_stringent.sort_values(by = 'GNPSGROUP:EXP_log10', ascending = False)
+
+    """""""""""""""""""""""""""""""""""""""""""""
+    Write each dataframe to a different sheet in output excel
+    """""""""""""""""""""""""""""""""""""""""""""
+    output_filename = job_name + '_Filtered_Peaks_of_Interest.xlsx'
+    # If it does not exist already, create a folder for job_name in the output folder
+    if not os.path.exists(pjoin(OUTPUT_FOLDER, job_name)):
+        os.makedirs(pjoin(OUTPUT_FOLDER, job_name))
+
+    # https://xlsxwriter.readthedocs.io/example_pandas_multiple.html
+    writer = pd.ExcelWriter(pjoin(OUTPUT_FOLDER, job_name, output_filename), engine='xlsxwriter')
+
+    # Write each dataframe to a different sheet (with no index column)
+    table_formatted.to_excel(writer, sheet_name = 'All Peaks Simple', index = False)
+    node_table.to_excel(writer, sheet_name = 'All', index = False)
+    if len_nodes_to_keep_metaboanalystr > NODES_TO_KEEP_CUTOFF_FOR_STRINGENT_FILTER:
+        table_stringent.to_excel(writer, sheet_name = 'Stringent hits ordered', index = False)
+    table_filtered.to_excel(writer, sheet_name = 'Filtered Peaks of Interest', index = False)
+    # table_filtered_stringent.to_excel(writer, sheet_name = 'Filtered Stringent', index = False)
+    table_host_upreg.to_excel(writer, sheet_name = 'Upreg Likely Host Metabolites', index = False)
+    table_all_matched_cmpds.to_excel(writer, sheet_name = 'All Cmpd Matches', index = False)
+    table_matched_cmpds_no_suspect.to_excel(writer, sheet_name = 'Cmpd Matches No Sus', index = False)
+    table_ABMBA.to_excel(writer, sheet_name = 'ABMBA Standard', index = False)
+    parameters.to_excel(writer, sheet_name = 'Filter Parameters', index = False)
+    
+
+    # Format the excel sheets so that the column width matches the size of the header text
+    workbook = writer.book
+    # For each table and corresponding excel tab, format width
+    for sheet_name in writer.sheets:
+        worksheet = writer.sheets[sheet_name]
+        if sheet_name == 'All Peaks Simple':
+            format_column(worksheet, table_formatted)
+        elif sheet_name == 'All':
+            format_column(worksheet, node_table)
+        elif sheet_name == 'Stringent hits ordered':
+            format_column(worksheet, table_stringent)  
+        elif sheet_name == 'Filtered Peaks of Interest':
+            format_column(worksheet, table_filtered)
+        elif sheet_name == 'Upreg Likely Host Metabolites':
+            format_column(worksheet, table_host_upreg)
+        elif sheet_name == 'All Cmpd Matches':
+            format_column(worksheet, table_all_matched_cmpds)
+        elif sheet_name == 'Cmpd Matches No Sus':
+            format_column(worksheet, table_matched_cmpds_no_suspect)
+        elif sheet_name == 'ABMBA Standard':
+            format_column(worksheet, table_ABMBA)
+        elif sheet_name == 'Filter Parameters':
+            format_column(worksheet, parameters)
+        
+        else:
+            print('Error: sheet name ' + sheet_name + ' not recognized; column width not formatted. Consider adjusting script to include target sheet.')
+
+    # Close the Pandas Excel writer and output the Excel file. XlsxWriter object has no attribute 'save'. Use 'close' instead
+    writer.close()
