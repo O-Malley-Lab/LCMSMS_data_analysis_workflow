@@ -492,6 +492,8 @@ for job_index, job in enumerate(metadata['Job Name']):
     # for value in table_filtered['GNPSGROUP:CTRL_log10']:
     #     if not isinstance(value, float):
     #         print(value)
+    # Ensure that the column is float type. Then filter.
+    table_filtered['GNPSGROUP:CTRL_log10'] = table_filtered['GNPSGROUP:CTRL_log10'].astype(float)
     table_filtered = table_filtered[(table_filtered['GNPSGROUP:CTRL_log10'] < CTRL_LOG10_CUTOFF) | (table_filtered['GNPSGROUP:CTRL_log10'].isnull())]
 
     # Fourth, filter for peaks that have a GNPSGROUP:EXP_log10 greater than the cutoff. Set table_filtered['GNPSGROUP:EXP_log10'] to float type (not str) to avoid error in filtering
@@ -665,10 +667,10 @@ for job_index, job in enumerate(metadata['Job Name']):
     Write a table for the stringently filtered peaks of interest, if it exists
     """""""""""""""""""""""""""""""""""""""""""""
     if run_stringent_filter:
-        table_stringent = node_table_temp.copy()
+        table_stringent = node_table[columns_of_interest].copy()
 
-        # For rows kept in nodes_to_keep_metaboanalystr_stringent, keep in table_stringent
-        table_stringent = table_stringent[nodes_to_keep_metaboanalystr_stringent]
+        # For rows kept in nodes_to_keep_metaboanalystr_stringent, keep in table_stringent. Determine this based on the shared name
+        table_stringent = table_stringent[table_stringent['shared name'].isin(node_table_temp[nodes_to_keep_metaboanalystr_stringent]['shared name'])]
 
         # Order rows from highest to lowest 'GNPSGROUP:EXP_log10'
         table_stringent = table_stringent.sort_values(by = 'GNPSGROUP:EXP_log10', ascending = False)
