@@ -4,7 +4,12 @@ LCMSMS Data Analysis Workflow, Script 1: Prepare Inputs for MZmine3
 @author: Lazarina Butkovich
 
 Features include:
-
+- Create GNPS and MetaboAnalyst Metadata .tsv files
+- Edit basic .xml parameters file for MZmine3
+- Run MZmine3 in commandline using the .xml file
+- Rearrange MZmine3 output files for easy GNPS input
+- Use FTP to upload GNPS_input_for_job_name folder to GNPS
+- Use the MZmine3 output for GNPS input to generate the MetaboAnalyst input
 
 """""""""""""""""""""""""""""""""""""""""""""
 import pandas as pd

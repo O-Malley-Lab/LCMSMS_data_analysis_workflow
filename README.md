@@ -4,6 +4,8 @@ LC-MS/MS Data Analysis Workflow Outline
 
 **************Part 1:**************
 
+Before running Script 1:
+
 ORGANIZE INPUT DATA FILES
 - Manual (one-time): convert data files to .mzML format
 
@@ -12,47 +14,40 @@ Example: "C:\Users\lazab\Desktop\python_scripts\workspace\LCMSMS_analysis_pipeli
 NEED: .mzML files
 Notes: create separate data file folder for EXP with base job name and CTRL samples
 
-- Manual: if necessary for GNPS job, upload data files with WinSCP for GNPS access
+- Manual: (one-time) create GNPS account and WinSCP connect to massive.ucsd.edu FTP (see GNPS documentation, use same username and password as GNPS account)
 
-- Script (one-time): run script to rename filenames from long original names to short, descriptive names
+- Manual (one-time): write custom code to rename filenames from long original names to shorter, descriptive names
 
+FILL OUT METADATA EXCEL FOR JOBS TO RUN
 - Manual: fill out a main metadata excel sheet with running account of job information for all jobs, as well as info for all changeable values
-Excel Columns: base job name, CTRL sample name, ionization mode, EXP replicate number, CTRL replicate number
+Excel Columns: base job name, CTRL sample name, ionization mode, EXP replicate number, CTRL replicate number, MZmine3 batch template
 
-Manual (one-time): if necessary, manually create a MZmine3 job for the data files to determine pre-processing parameters
+DETERMINE PARAMETERS FOR MZMINE3 TOOL TO RUN JOBS
+- Manual (one-time): if necessary, manually create a MZmine3 job for the data files to determine pre-processing parameters. Alternatively, use previously determined parameters
 
-- Script: prepare MZmine3 inputs in Python 
-*Use main metadata excel sheet to fetch relevant changeable values
-*Changeable values: base job name, CTRL sample name, ionization mode, EXP replicate number, CTRL replicate number, MZmine parameters, MetaboAnalyst parameters, GNPS parameters
-*Create metadata file for GNPS, MetaboAnalyst
-*NEED: base job name, CTRL sample name, ionization mode
+Script 1 features:
+- Create GNPS and MetaboAnalyst Metadata .tsv files
+- Edit basic .xml parameters file for MZmine3
+- Run MZmine3 in commandline using the .xml file
+- Rearrange MZmine3 output files for easy GNPS input
+- Use FTP to upload GNPS_input_for_job_name folder to GNPS
+- Use the MZmine3 output for GNPS input to generate the MetaboAnalyst input
 
-- Script: run MZmine3 in commandline (try GitHub CLI?) to pre-process data
-Outputs: Export for MetaboAnalyst, Export/submit to GNPS-FBMN, Export for SIRIUS 
-
-- Script: run MetaboAnalyst in R
-
+- Manual: run GNPS job and download GNPS output when complete
 
 **************Part 2:**************
 
-- Manual: download GNPS job output
+Script 2 features:
+- Run MetaboAnalyst tool
 
-- Script: Python filter script; align data analysis results from MZmine, MetaboAnalyst, and GNPS.
-Info to align:
-shared name
-mz (precursor mass)
-RT (RTMean)
-ionization
-Average Peak Area EXP
-Average Peak Area CTRL
-Area ratio
-log10 Average Peak Area EXP
-log10 Average Peak Area CTRL
-Compound match (from GNPS)
-GNPSLibraryURL
-MQScore (from GNPS)
-SharedPeaks
-MetaboAnalyst p-value 
+**************Part 3:**************
+
+Manual: determine style .xml settings for Cytoscape networks
+
+Script 3 features:
+- Python filter script
+- Align data analysis results from MZmine3, MetaboAnalyst, and GNPS.
+
 
 Output Excel Tabs: 
 "All Peaks": unfiltered list of all peaks
@@ -64,12 +59,10 @@ Output Excel Tabs:
 "Filter parameters": record what parameters were used for the job
 
 
-- Script: Adjust GNPS cytoscape network file in Python (py4cytoscape) or R (RCy3) or manually
+- Script: Adjust GNPS cytoscape network file in Python (py4cytoscape)
+
 Import node table with additional data, create pie charts, adjust style, label compound names
 
-Questions:
-- Is it fine to first use the same MZmine3 parameters for all jobs?
-- Is there a way to automatet running GNPS jobs?
-- Is there a way to automate running SIRIUS jobs?
-- For 2018 LCMSMS data and 2023 demo samples, I do not have data for cell pellet weights, so I cannot compare amounts of metabolites across samples. How should I report differences in metabolites? For example, should I not use the MetaboAnalyst p-value for how different the metabolite amounts are between 2 sample types?
-- Is shared name conserved across MZmine, MetaboAnalyst, and GNPS?
+
+**************Part 4:**************
+Manual: (optional) run SIRIUS tool using MZmine3 output for SIRIUS

@@ -219,7 +219,8 @@ METADATA_JOB_TAB = 'Multi-jobs'
 
 cytoscape_inputs_folder_name = 'Cytoscape_inputs'
 
-# Cytoscape style .xml filenames (located in cytoscape_inputs_folder)
+# Cytoscape style .xml filenames (located in cytoscape_inputs_folder).
+# Note, you need to manually edit the 'visualStyle name' in the .xml file to match the filename (without the .xml)
 cytoscape_style_filename = 'styles_7.xml'
 cytoscape_style_filtered_filename = 'styles_7_filter_node_emphasis.xml'
 
@@ -401,8 +402,8 @@ for job_index, job in enumerate(metadata['Job Name']):
 
     # Generate a EXP:CTRL_ratio column
     node_table_temp['EXP:CTRL_ratio'] = node_table_temp['GNPSGROUP:EXP'] / node_table_temp['GNPSGROUP:CTRL']
-    # Replace inf values with a large number [np.inf, -np.inf], 10000000000 (E10)
-    node_table_temp['EXP:CTRL_ratio'] = node_table_temp['EXP:CTRL_ratio'].replace([np.inf, -np.inf], 10000000000)
+    # Replace inf values with a large number [np.inf, -np.inf], 10000000000 (E10) and -10000000000 (-E10), respectively
+    node_table_temp['EXP:CTRL_ratio'] = node_table_temp['EXP:CTRL_ratio'].replace([np.inf, -np.inf], [10000000000, -10000000000])
     # Round to 2 decimal places. Skip if value is None.
     node_table_temp['EXP:CTRL_ratio'] = node_table_temp['EXP:CTRL_ratio'].apply(lambda x: round(x, 2) if x is not None else None)
     # Add EXP:CTRL_ratio to cytoscape_cols_to_keep
