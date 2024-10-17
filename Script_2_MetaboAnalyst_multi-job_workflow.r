@@ -352,7 +352,7 @@ for (job_index in seq_along(job_names)) {
   # if the following line causes an error, skip and continue the rest of the script
   plot_tt_error_occurred <- FALSE
   tryCatch({
-    mset = PlotTT(mset, paste("T_test_", job_name, "_", sep = ''), "png", 72, width = NA)
+    mset = PlotTT(mset, paste("T_test_", job_name, "_", sep = ""), "png", 72, width = NA)
   }, error = function(e) {
     plot_tt_error_occurred = TRUE
     print("Error occurred in PlotTT function, likely due to low number of significant features. Skipping this step.")
