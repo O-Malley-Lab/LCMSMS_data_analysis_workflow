@@ -474,6 +474,8 @@ for job_index, job in enumerate(metadata['Job Name']):
 
     print('Finished main Cytoscape network for ' + job_name + ', took %.2f seconds' % (time.time() - start))
     start = time.time()
+
+    
     """""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""
     Main Part 2: Filtering Script for Output Excel
     """""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""
@@ -658,6 +660,10 @@ for job_index, job in enumerate(metadata['Job Name']):
     """""""""""""""""""""""""""""""""""""""""""""
     Save Cytoscape Session in Output Folder, Job Name folder
     """""""""""""""""""""""""""""""""""""""""""""
+    # If the job_name folder does not exist yet in OUTPUT_FOLDER, create it
+    if not os.path.exists(pjoin(OUTPUT_FOLDER, job_name)):
+        os.makedirs(pjoin(OUTPUT_FOLDER, job_name))
+    
     # Save the Cytoscape session
     p4c.session.save_session(filename=pjoin(OUTPUT_FOLDER, job_name, job_name + '_Cytoscape_session.cys'), overwrite_file=True)
 
