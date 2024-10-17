@@ -154,7 +154,7 @@ for (job_index in seq_along(job_names)) {
 
   # Print the job_name
   print("") # add empty line
-  print(paste("Starting job for ", job_name, ".", sep <- ""))
+  print(paste("Starting job for ", job_name, ".", sep = ""))
 
   # For copy-pasting GNPS downloaded output for Cytoscape script, first create the GNPS_output folder in the working directory, if it does not exist already
   output_dir_gnps <- paste(wd, "GNPS_output", sep = "\\")
@@ -281,10 +281,10 @@ for (job_index in seq_along(job_names)) {
   write.csv(norm_df, paste(job_name,"_normalized_data_transposed.csv", sep=""), row.names = FALSE)
 
   # Two plot summary plot: Feature View of before and after normalization:
-  mset <- PlotNormSummary(mset, paste("Normalization_feature_", job_name, "_", sep <- ""), format ="png", dpi=300, width <- NA);
+  mset <- PlotNormSummary(mset, paste("Normalization_feature_", job_name, "_", sep = ""), format ="png", dpi=300, width = NA);
 
   # Two plot summary plot: Sample View of before and after normalization
-  mset <- PlotSampleNormSummary(mset, paste("Normalization_sample_", job_name, "_", sep <- ""), format = "png", dpi=300, width <- NA);
+  mset <- PlotSampleNormSummary(mset, paste("Normalization_sample_", job_name, "_", sep = ""), format = "png", dpi=300, width = NA);
 
   ##############
   # Normalize Data to Sample-specific Factor (Currently not implemented)
@@ -327,10 +327,10 @@ for (job_index in seq_along(job_names)) {
   ##############
   # Perform fold-change analysis on uploaded data, unpaired.
   # Set fc.thresh to 2.0 fold-change threshold, and cmp.type set to 1 for group 2 (CTRL) vs group 1 (EXP).
-  mset <- FC.Anal(mset, 2.0, cmp.type <- 1, FALSE)
+  mset <- FC.Anal(mset, 2.0, cmp.type = 1, FALSE)
 
   # Plot fold-change analysis
-  mset <- PlotFC(mset, paste("Fold-change_", job_name, "_", sep <- ""), "png", 72, width <- NA)
+  mset <- PlotFC(mset, paste("Fold-change_", job_name, "_", sep = ""), "png", 72, width = NA)
 
   # # To view fold-change
   # mset$analSet$fc$fc.log
@@ -346,15 +346,15 @@ for (job_index in seq_along(job_names)) {
   # equal.var: TRUE = evaluates if the group variance is equal, to inform which t-test to use
   # pvalType = "fdr" = p-value adjustment method, "fdr" = false discovery rate
   # all_results = FALSE = only show significant results (do not return T-test analysis results for all compounds, only significant?)
-  mset <- Ttests.Anal(mset, nonpar <- F, threshp <- 0.05, paired <- FALSE, equal.var <- TRUE, "fdr", FALSE)
+  mset <- Ttests.Anal(mset, nonpar = F, threshp = 0.05, paired = FALSE, equal.var = TRUE, "fdr", FALSE)
 
   # Plot of the T-test results
   # if the following line causes an error, skip and continue the rest of the script
   plot_tt_error_occurred <- FALSE
   tryCatch({
-    mset <- PlotTT(mset, paste("T_test_", job_name, "_", sep <- ''), "png", 72, width <- NA)
+    mset = PlotTT(mset, paste("T_test_", job_name, "_", sep = ''), "png", 72, width = NA)
   }, error = function(e) {
-    plot_tt_error_occurred <- TRUE
+    plot_tt_error_occurred = TRUE
     print("Error occurred in PlotTT function, likely due to low number of significant features. Skipping this step.")
   })
 
@@ -376,7 +376,7 @@ for (job_index in seq_along(job_names)) {
   # Create the volcano plot
   # plotLbl: 1 = show labels for significant features
   # plotTheme: 0 = use default theme, or use 2 for less borders
-  mset <- PlotVolcano(mset, paste("Volcano_", job_name, "_", sep <- ""), 1, 0, format <- "png", dpi <- 300, width <- NA)
+  mset <- PlotVolcano(mset, paste("Volcano_", job_name, "_", sep = ""), 1, 0, format = "png", dpi = 300, width = NA)
 
 
   ##############
@@ -392,26 +392,26 @@ for (job_index in seq_along(job_names)) {
 
   # Create PCA overview
   # pc.num: 5 = the number of principal components to display in the pairwise score plot
-  mset <- PlotPCAPairSummary(mset, paste("PCA_Pair_", job_name, "_", sep <- ""), format = "png", dpi <- 300, width <- NA, 5)
+  mset <- PlotPCAPairSummary(mset, paste("PCA_Pair_", job_name, "_", sep = ""), format = "png", dpi = 300, width = NA, 5)
 
   # Create PCA scree plot
   # A Scree Plot is a simple line segment plot that shows the eigenvalues for each individual PC. The scree plot is used to determine the number of components to retain in PCA, because at a high enough number of considered components, the variance explained by higher components is not meaningful.
   # To visually assess the screen plot, look for the "elbow" in the plot, which is the point where the slope of the line changes the most. This is the point where the marginal gain in variance explained by adding another component is minimal.
   # scree.num: 5 = the number of principal components to display in the scree plot
-  mset <- PlotPCAScree(mset, paste("PCA_Scree_", job_name, "_", sep <- ""), "png", dpi <- 300, width <- NA, 5)
+  mset <- PlotPCAScree(mset, paste("PCA_Scree_", job_name, "_", sep = ""), "png", dpi = 300, width = NA, 5)
 
   # Create a 2D PCA score plot, using principal components 1 and 2
-  mset <- PlotPCA2DScore(mset, paste("PCA_score_2D_1_2_", job_name, "_", sep <- ""), format <- "png", dpi = 300, width <- NA, 1, 2, 0.95, 1, 0)
+  mset <- PlotPCA2DScore(mset, paste("PCA_score_2D_1_2_", job_name, "_", sep = ""), format = "png", dpi = 300, width = NA, 1, 2, 0.95, 1, 0)
 
   # "Error in PlotPCA3DScoreImg(mset, paste("PCA_score_3D_", job_name, "_", : object 'cols' not found""
   # # Create a 3D PCA score plot, using principal components 1, 2, and 3
   # mset<-PlotPCA3DScoreImg(mset, paste("PCA_score_3D_", job_name, "_", sep=''), "png", 72, width=NA, 1,2,3, 40)
 
   # Create a PCA loadings Plots, using principal components 1 and 2
-  mset <- PlotPCALoading(mset, paste("PCA_Loading_1_2_", job_name, "_", sep <- ""), "png", 72, width <- NA, 1, 2)
+  mset <- PlotPCALoading(mset, paste("PCA_Loading_1_2_", job_name, "_", sep = ""), "png", 72, width = NA, 1, 2)
 
   # Create a PCA Biplot, using principal components 1 and 2
-  mset <- PlotPCABiplot(mset, paste("PCA_BiPlot_1_2_", job_name, "_", sep <- ""), format <- "png", dpi <- 300, width <- NA, 1, 2)
+  mset <- PlotPCABiplot(mset, paste("PCA_BiPlot_1_2_", job_name, "_", sep = ""), format = "png", dpi = 300, width = NA, 1, 2)
 
   # # View the 3D interactive PLS-DA score plot
   # mset$imgSet$pca.3d
@@ -422,10 +422,10 @@ for (job_index in seq_along(job_names)) {
   # Rename Output Files and Add Appropriate Headers for Downstream Use
   ##############
   # Change "fold_change.csv" filename
-  file.rename("fold_change.csv", paste(job_name, "_fold_change.csv", sep <- ""))
+  file.rename("fold_change.csv", paste(job_name, "_fold_change.csv", sep = ""))
 
   # import the fold_change.csv file as a pandas dataframe
-  log2fc_data <- read.csv(paste(job_name, "_fold_change.csv", sep <- ""))
+  log2fc_data <- read.csv(paste(job_name, "_fold_change.csv", sep = ""))
 
   # Name the first column header 'MetaboAnalyst ID'
   colnames(log2fc_data)[1] <- "MetaboAnalyst_ID"
@@ -434,14 +434,14 @@ for (job_index in seq_along(job_names)) {
   log2fc_data$shared_name <- sapply(strsplit(as.character(log2fc_data$MetaboAnalyst_ID), "/"), "[", 1)
 
   # Save dataframe
-  write.csv(log2fc_data, paste(job_name, "_fold_change.csv", sep <- ""), row.names <- FALSE)
+  write.csv(log2fc_data, paste(job_name, "_fold_change.csv", sep = ""), row.names = FALSE)
 
 
   # Change "t_test.csv" filename
-  file.rename("t_test.csv", paste(job_name, "_t_test.csv", sep <- ""))
+  file.rename("t_test.csv", paste(job_name, "_t_test.csv", sep = ""))
 
   # import the fold_change.csv file as a pandas dataframe
-  t_test_data <- read.csv(paste(job_name, "_t_test.csv", sep <- ""))
+  t_test_data <- read.csv(paste(job_name, "_t_test.csv", sep = ""))
 
   # Name the first column header 'MetaboAnalyst ID'
   colnames(t_test_data)[1] <- "MetaboAnalyst_ID"
@@ -450,7 +450,7 @@ for (job_index in seq_along(job_names)) {
   t_test_data$shared_name <- sapply(strsplit(as.character(t_test_data$MetaboAnalyst_ID), "/"), "[", 1)
 
   # Save dataframe
-  write.csv(t_test_data, paste(job_name, "_t_test.csv", sep <- ""), row.names = FALSE)
+  write.csv(t_test_data, paste(job_name, "_t_test.csv", sep = ""), row.names = FALSE)
 
   # Reset wd to starting wd
   setwd(wd)
