@@ -373,6 +373,9 @@ for (job_index in seq_along(job_names)) {
   # cmp.type=1 for group 2 (EXP) vs group 1 (CTRL)
   mset <- Volcano.Anal(mset, FALSE, 2.0, 1, F, 0.05, TRUE, "raw")
 
+  # Positive log2 fold-change values indicate upregulation in group 2 (EXP).
+  # Negative log2 fold-change values indicate downregulation in group 2 (EXP).
+
   # Create the volcano plot
   # plotLbl: 1 = show labels for significant features
   # plotTheme: 0 = use default theme, or use 2 for less borders

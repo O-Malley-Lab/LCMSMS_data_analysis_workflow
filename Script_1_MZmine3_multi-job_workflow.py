@@ -203,7 +203,7 @@ METADATA_OVERALL_FILENAME = 'Overall_Running_Metadata_for_All_LCMSMS_Jobs.xlsx'
 METADATA_JOB_TAB = 'Multi-jobs'
 
 # String directory location of your local MZmine3 executable (need to install MZmine3 to enable commandline use)
-MZMINE_EXE_DIR = 'D:\MZmine\MZmine.exe'
+MZMINE_EXE_DIR = 'D:\\MZmine\\MZmine.exe'
 
 # Note, for input mzML files, all control file should have 'CTRL' in filename, otherwise script will not know which file is EXP and which is CTRL for comparison. So far, this script only handles two classes in any given job, 'CTRL' and 'EXP'.
 
