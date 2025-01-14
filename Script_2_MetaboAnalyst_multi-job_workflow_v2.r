@@ -21,52 +21,41 @@ rm(list = ls())
 # #############################################
 # # Setting up MetaboAnalystR (only need to do once)
 # #############################################
-# # Step 1. Install package dependencies
-# # Specifying "always" fixed an error I was having, where ~4 packages would not update and would freeze the run
-# options(install.packages.compile.from.source = "always")
-# ### Install MetaboAnalystR --> Run once, then comment out
+### Install MetaboAnalystR --> Run once, then comment out
 # metanr_packages <- function(){
-# 
+#   
 #   metr_pkgs <- c("impute", "pcaMethods", "globaltest", "GlobalAncova", "Rgraphviz", "preprocessCore", "genefilter", "sva", "limma", "KEGGgraph", "siggenes","BiocParallel", "MSnbase", "multtest","RBGL","edgeR","fgsea","devtools","crmn","httr","qs")
-# 
+#   
 #   list_installed <- installed.packages()
-# 
+#   
 #   new_pkgs <- subset(metr_pkgs, !(metr_pkgs %in% list_installed[, "Package"]))
-# 
+#   
 #   if(length(new_pkgs)!=0){
-# 
+#     
 #     if (!requireNamespace("BiocManager", quietly = TRUE))
 #       install.packages("BiocManager")
 #     BiocManager::install(new_pkgs)
 #     print(c(new_pkgs, " packages added..."))
 #   }
-# 
+#   
 #   if((length(new_pkgs)<1)){
 #     print("No new packages added...")
 #   }
 # }
 # metanr_packages()
-
-###
-# # Also installed the following packages: ggplot2, ggrepel, iheatmapr, ellipse
-
-# #############################################
-# # Step 2. Install the devtools package
-
-# # Install devtools
 # install.packages("devtools")
 # library(devtools)
-# 
-# # Use MetaboAnalystR version with 4.0 volcano plots with correct data point sizes but no p-value legend: 5aee8b4f0d27c27864198a6fd99414575d693836
+# # Use version with 4.0 volcano plots with correct data point sizes but no p-value legend: 5aee8b4f0d27c27864198a6fd99414575d693836
 # devtools::install_github("xia-lab/MetaboAnalystR", build = TRUE, ref = "5aee8b4f0d27c27864198a6fd99414575d693836", build_vignettes = TRUE, build_manual =T)
+# # devtools::install_github("xia-lab/MetaboAnalystR", build = TRUE, build_vignettes = TRUE, build_manual =T)
+# library(MetaboAnalystR)
 
 
-
+### Other tentatively required packages:
 # To view vignettes online: (note, this does not seem to work)
 #browseVignettes("MetaboAnalystR")
 
 # # Based off of errors when trying to run, installed the following packages:
-
 # # 1) Install readxl package
 # install.packages("readxl")
 # library(readxl)
@@ -185,9 +174,9 @@ for (job_index in seq_along(job_names)) {
   # Load MetaboAnalystR
   library(MetaboAnalystR)
 
-  # Initialize data object mset for MetaboAnalystR
+  # Initialize data object init for MetaboAnalystR
   # data.type: pktable = peak intensity table
-  mset <- InitDataObjects("pktable", "stat", FALSE);
+  init <- InitDataObjects("pktable", "stat", FALSE);
 
   # Import the peak intensity data table from MZmine3 (Script 1)
   input_table_dir <- paste(job_dir, "\\", job_name, input_table_post_str, sep="")
@@ -197,59 +186,35 @@ for (job_index in seq_along(job_names)) {
     return()
   }
 
-  # Read the peak intensity data table into mset
+  # Read the peak intensity data table into raw_data
   # format: colu = unpaired data, in columns, rather than paired (_p) or in rows (row_)
   # lbl.type: disc = discrete data, rather than continuous (cont)
-  mset <- Read.TextData(mset, input_table_dir, "colu", "disc")
-  mset <- SanityCheckData(mset)
+  raw_data <- Read.TextData(init, input_table_dir, "colu", "disc")
+  raw_data <- SanityCheckData(raw_data)
 
 
   ##############
   # Replace Missing Values
   ##############
   # Replace missing or 0 values in the metabolomics data with a small volume (default is half of the minimum positive value in the data)
-  mset <- ReplaceMin(mset)
+  processed_data <- ReplaceMin(raw_data);
 
-  ##############
-  # Data Filtering (Currently not implemented)
-  ##############
-  # The following info on Data Filtering is from the web version of MetaboAnalyst one-factor statistical analysis workflow
-  # The purpose of the data filtering is to identify and remove variables that are unlikely to be of use when modeling the data
-  # These non-informative variables include those with (1) low repeatability, as characterized by those with high percent RSD (relative standard deviation), (2) near-constant variables, and (3) very small values.
-
-  # FilterVariable function in MetaboAnalystR states that final dataset should have no more than 5000 variables for effective computing
-
-  # Plot the features before filtering < to-do
-
-  # Reliability filter
-  # default off, requires QC samples
-
-  # Variance filter
-  # Use RSD, with 40% filtered out for LC-MS with number of features over 1000
-  # mset<-FilterVariable(mset, qc.filter=FALSE, filter="rsd", filter.cutoff=40)
-
-  # Abundance filter
-  # default mean intensity value
-
-  # Plot the features after filtering < to-do
-
-
+  
   ##############
   # Normalize Data to TIC
   ##############
   # Prepare data for normalization (function should always be initialized)
-  mset <- PreparePrenormData(mset)
+  processed_data <- PreparePrenormData(processed_data);
 
   # Normalize data to total ion chromatogram (TIC)
   # rowNorm: "SumNorm" = normalization to constant sum
   # transNorm: "NULL" = no transformation
   # scaleNorm: "None" for no scaling; or change to "MeanCenter" = mean centering
   # ref: NULL = no reference sample (default)
-
-  mset <- Normalization(mset, "SumNorm", "NULL", "None")
-
+  processed_data <- Normalization(processed_data, "NULL", "SumNorm", "NULL", "None");
+  
   # Write the normalized data to a pandas dataframe
-  norm_df <- data.frame(t(mset$dataSet$norm))
+  norm_df <- data.frame(t(processed_data$dataSet$norm))
   # Write the row.names to a new column (shift all other columns over so that row.names are in the first column)
   norm_df$MetaboAnalyst_ID <- rownames(norm_df)
   norm_df <- norm_df[, c(ncol(norm_df), 1:(ncol(norm_df)-1))]
@@ -264,59 +229,21 @@ for (job_index in seq_along(job_names)) {
   write.csv(norm_df, paste(job_name,"_normalized_data_transposed.csv", sep=""), row.names = FALSE)
 
   # Two plot summary plot: Feature View of before and after normalization:
-  mset <- PlotNormSummary(mset, paste("Normalization_feature_", job_name, "_", sep = ""), format ="png", dpi=300, width = NA);
+  PlotNormSummary(processed_data, paste("Normalization_feature_", job_name, "_", sep = ""), format ="png", dpi=300, width = NA);
 
   # Two plot summary plot: Sample View of before and after normalization
-  mset <- PlotSampleNormSummary(mset, paste("Normalization_sample_", job_name, "_", sep = ""), format = "png", dpi=300, width = NA);
+  PlotSampleNormSummary(processed_data, paste("Normalization_sample_", job_name, "_", sep = ""), format = "png", dpi=300, width = NA);
 
-  ##############
-  # Normalize Data to Sample-specific Factor (Currently not implemented)
-  ##############
-  # Note: If instead you want to do normalization to cell pellet weights, uncomment below code, comment out the above section to normalize to TIC, and define cell_pellet_weights_post_str with the correct filename by adding it in the Values to Change section
-  # cell_pellet_weights_filename = paste(job_name, cell_pellets_weights_post_str, sep='')
-  # setwd(wd_input)
-  # setwd(job_name)
-  # if (!file.exists(cell_pellet_weights_filename)){
-  #   mset<-Normalization(mset, "SumNorm", "NULL", "None")
-  # } else {
-  #   cell_pellet_weights_dir = paste(wd_input, "\\", job_name, "\\", cell_pellet_weights_filename, sep='')
-  #     cell_pellet_data = readxl::read_excel(cell_pellet_weights_dir)
-  #     # Double check that the cell_pellet_data rows are in the same order as ,Set$dataSet$url.smp.nms
-  #     sample_cols <-mset$dataSet$url.smp.nms
-  #     cell_pellet_data_new = cell_pellet_data[match(sample_cols, cell_pellet_data$"Sample"),]
-
-  #   # for value in cell_pellet_data_new$"Weight (mg)"
-  #   norm.vec <- as.numeric(cell_pellet_data_new$"Weight (mg)")
-
-  #   # Call function using rowNorm="SpecNorm"
-  #   setwd(wd_output)
-  #   # When using SpecNorm, norm.vec is used with no way to specify in the function
-  #   mset<-Normalization(mset, "SpecNorm", "NULL", "None")
-  # }
-  # setwd(wd_output)
-
-  # # Write the normalized data to a csv file
-  # write.csv(t(mset$dataSet$norm), paste(job_name,"_normalized_data_transposed.csv", sep=''), row.names = TRUE)
-
-  # # Two plot summary plot: Feature View of before and after normalization:
-  # mset<-PlotNormSummary(mset, paste("Normalization_feature_", job_name, "_", sep=''), format ="png", dpi=300, width=NA);
-
-  # # Two plot summary plot: Sample View of before and after normalization
-  # mset<-PlotSampleNormSummary(mset, paste("Normalization_sample_", job_name, "_", sep=''), format = "png", dpi=300, width=NA);
-
-
+  
   ##############
   # Fold-change Analysis
   ##############
   # Perform fold-change analysis on uploaded data, unpaired.
   # Set fc.thresh to 2.0 fold-change threshold, and cmp.type set to 1 for group 2 (CTRL) vs group 1 (EXP).
-  mset <- FC.Anal(mset, 2.0, cmp.type = 1, FALSE)
+  fold_change_anal <- FC.Anal(processed_data, 2.0, cmp.type = 1, FALSE)
 
   # Plot fold-change analysis
-  mset <- PlotFC(mset, paste("Fold-change_", job_name, "_", sep = ""), "png", 72, width = NA)
-
-  # # To view fold-change
-  # mset$analSet$fc$fc.log
+  PlotFC(fold_change_anal, paste("Fold-change_", job_name, "_", sep = ""), "png", 72, width = NA)
 
 
   ##############
@@ -327,15 +254,15 @@ for (job_index in seq_along(job_names)) {
   # threshp: 0.05 = threshold p-value
   # paired: FALSE = data is not paired
   # equal.var: TRUE = evaluates if the group variance is equal, to inform which t-test to use
-  # pvalType = "fdr" = p-value adjustment method, "fdr" = false discovery rate
-  # all_results = FALSE = only show significant results (do not return T-test analysis results for all compounds, only significant?)
-  mset <- Ttests.Anal(mset, nonpar = F, threshp = 0.05, paired = FALSE, equal.var = TRUE, "fdr", FALSE)
+  # pvalType = p-value adjustment method, "raw" = raw p-value, fdr = FDR-adjusted p-value
+  # all_results = TRUE = report p-values for all features, not just significant values
+  tt_anal <- Ttests.Anal(fold_change_anal, nonpar = F, threshp = 0.05, paired = FALSE, equal.var = TRUE, "fdr", FALSE)
 
   # Plot of the T-test results
   # if the following line causes an error, skip and continue the rest of the script
   plot_tt_error_occurred <- FALSE
   tryCatch({
-    mset = PlotTT(mset, paste("T_test_", job_name, "_", sep = ""), "png", 72, width = NA)
+    plot_obj_tt = PlotTT(tt_anal, paste("T_test_", job_name, "_", sep = ""), "png", 72, width = NA)
   }, error = function(e) {
     plot_tt_error_occurred = TRUE
     print("Error occurred in PlotTT function, likely due to low number of significant features. Skipping this step.")
@@ -348,13 +275,13 @@ for (job_index in seq_along(job_names)) {
   # Perform the volcano analysis
   # paired: FALSE = data is not paired
   # fc.thresh: 2.0 = fold-change threshold
-  # cmp.type: 0 = group 1 (CTRL?) vs group 2 (EXP?)
+  # cmp.type: 0 = group 1 (CTRL) vs group 2 (EXP)
   # nonpar: F = false, for using a non-parametric test, which is a distribution-free test with fewer assumptions. T-tests are parametric.
   # threshp: 0.05 = threshold p-value
   # equal.var: TRUE = evaluates if the group variance is equal, to inform which t-test to use
-  # pval.type: "raw" = use raw p-values, instead of FDR-adjusted p-values (Q: why?)
+  # pval.type: "fdr" = use fdr p-values, "raw" = use raw p-values
   # cmp.type=1 for group 2 (EXP) vs group 1 (CTRL)
-  mset <- Volcano.Anal(mset, FALSE, 2.0, 1, F, 0.05, TRUE, "raw")
+  volcano_anal <- Volcano.Anal(tt_anal, FALSE, 2.0, 1, F, 0.05, TRUE, "fdr")
 
   # Positive log2 fold-change values indicate upregulation in group 2 (EXP).
   # Negative log2 fold-change values indicate downregulation in group 2 (EXP).
@@ -362,46 +289,39 @@ for (job_index in seq_along(job_names)) {
   # Create the volcano plot
   # plotLbl: 1 = show labels for significant features
   # plotTheme: 0 = use default theme, or use 2 for less borders
-  mset <- PlotVolcano(mset, paste("Volcano_", job_name, "_", sep = ""), 1, 0, format = "png", dpi = 300, width = NA)
-
-
-  ##############
-  # ANOVA, Correlation Analysis, and Pattern Searching are additional MetaboAnalyst tools but are only for multi-group analysis
-  ##############
+  plot_volcano_error_occurred <- FALSE
+  tryCatch({
+    plot_obj_volc = PlotVolcano(volcano_anal, paste("Volcano_", job_name, "_", sep = ""), 1, 0, format = "png", dpi = 300, width = NA)
+    }, error = function(e) {
+      plot_volcano_error_occurred = TRUE
+      print("Error occurred in PlotVolcano function, likely due to low number of significant features. Skipping this step.")
+    })
 
 
   ##############
   # Principal Component Analysis (PCA)
   ##############
   # Perform PCA analysis
-  mset <- PCA.Anal(mset)
+  pca_anal <- PCA.Anal(tt_anal)
 
   # Create PCA overview
   # pc.num: 5 = the number of principal components to display in the pairwise score plot
-  mset <- PlotPCAPairSummary(mset, paste("PCA_Pair_", job_name, "_", sep = ""), format = "png", dpi = 300, width = NA, 5)
+  PlotPCAPairSummary(pca_anal, paste("PCA_Pair_", job_name, "_", sep = ""), format = "png", dpi = 300, width = NA, 5)
 
   # Create PCA scree plot
   # A Scree Plot is a simple line segment plot that shows the eigenvalues for each individual PC. The scree plot is used to determine the number of components to retain in PCA, because at a high enough number of considered components, the variance explained by higher components is not meaningful.
   # To visually assess the screen plot, look for the "elbow" in the plot, which is the point where the slope of the line changes the most. This is the point where the marginal gain in variance explained by adding another component is minimal.
   # scree.num: 5 = the number of principal components to display in the scree plot
-  mset <- PlotPCAScree(mset, paste("PCA_Scree_", job_name, "_", sep = ""), "png", dpi = 300, width = NA, 5)
+  PlotPCAScree(pca_anal, paste("PCA_Scree_", job_name, "_", sep = ""), "png", dpi = 300, width = NA, 5)
 
   # Create a 2D PCA score plot, using principal components 1 and 2
-  mset <- PlotPCA2DScore(mset, paste("PCA_score_2D_1_2_", job_name, "_", sep = ""), format = "png", dpi = 300, width = NA, 1, 2, 0.95, 1, 0)
-
-  # "Error in PlotPCA3DScoreImg(mset, paste("PCA_score_3D_", job_name, "_", : object 'cols' not found""
-  # # Create a 3D PCA score plot, using principal components 1, 2, and 3
-  # mset<-PlotPCA3DScoreImg(mset, paste("PCA_score_3D_", job_name, "_", sep=''), "png", 72, width=NA, 1,2,3, 40)
+  PlotPCA2DScore(pca_anal, paste("PCA_score_2D_1_2_", job_name, "_", sep = ""), format = "png", dpi = 300, width = NA, 1, 2, 0.95, 1, 0)
 
   # Create a PCA loadings Plots, using principal components 1 and 2
-  mset <- PlotPCALoading(mset, paste("PCA_Loading_1_2_", job_name, "_", sep = ""), "png", 72, width = NA, 1, 2)
+  PlotPCALoading(pca_anal, paste("PCA_Loading_1_2_", job_name, "_", sep = ""), "png", 72, width = NA, 1, 2)
 
   # Create a PCA Biplot, using principal components 1 and 2
-  mset <- PlotPCABiplot(mset, paste("PCA_BiPlot_1_2_", job_name, "_", sep = ""), format = "png", dpi = 300, width = NA, 1, 2)
-
-  # # View the 3D interactive PLS-DA score plot
-  # mset$imgSet$pca.3d
-  # # ^ I was not able to get this 3d viewer to work
+  PlotPCABiplot(pca_anal, paste("PCA_BiPlot_1_2_", job_name, "_", sep = ""), format = "png", dpi = 300, width = NA, 1, 2)
 
 
   ##############
