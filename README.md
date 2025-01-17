@@ -1,6 +1,90 @@
-# LCMSMS_data_analysis_workflow
- 
-LC-MS/MS Data Analysis Workflow Outline
+# Heterologous Expression of Anaerobic Gut Fungal Polyketides and Nonribosomal Peptides in Model Fungal Hosts
+
+## Background
+*In silico* genome mining tools predict biosynthetic gene clusters for secondary metabolites from anaerobic gut fungi (phylum Neocallimastigomycota). In this research project, we sought to learn more about the products of these gene clusters via the technique of heterologous expression, wherein you insert predicted biosynthetic genes into vectors, transform the vectors into model hosts, culture the transformed host microbe under expression conditions, and harvest samples for data analysis.
+
+For this project, we mainly use an untargeted metabolomics screen with LC-MS/MS (liquid chromatography with tandem mass spectrometry) to determine which expression groups possess standout metabolites (by abundance and t-test statistics) relative to the negative control, model host microbe expressing empty vector (transformed vector with no inserted gene to express). We implement multiple existing tools to perform data processing and analysis: MZmine3, MetaboAnalyst, GNPS, and SIRIUS.
+
+While screening heterologous expression is a main use case for this workflow, other untargeted LC-MS/MS data sources with 2 sample groups can be similarly processed and analyzed. Overall, datasets run through this workflow include the following experimental-control pairings:
+| Experimental Group                                    | Control for Comparison                               |
+| ------------------------------------------------- | ----------------------------------------- |
+| Heterologous Expression |
+| Empty Vector Negative Control |
+| Cultured Anaerobic Gut Fungi |
+| Media Negative Control |
+| Cultured Anaerobic Gut Fungi Spiked with Epigenetic Elicitors |
+| Cultured Anaerobic Gut Fungi Spiked with Blank Solvent |
+
+## Associated Publication
+[to be filled in]
+
+## Installation
+### Dependencies [to do: check all]
+
+#### Script 1: MZmine3 Multi-job Workflow
+- Python 3.8+
+- Required Python packages:
+    - pandas
+    - os
+    - xml.etree.ElementTree
+    - subprocess
+    - shutil
+    - ftplib
+    - python-dotenv
+- MZmine3 installation (https://github.com/mzmine/mzmine3)
+- GNPS account with FTP access
+
+#### Script 2: MetaboAnalyst Multi-job Workflow  
+- R 4.0+
+- Required R packages:
+    - MetaboAnalystR
+    - impute
+    - pcaMethods
+    - globaltest 
+    - GlobalAncova
+    - Rgraphviz
+    - preprocessCore
+    - genefilter
+    - sva
+    - limma
+    - KEGGgraph
+    - siggenes
+    - BiocParallel
+    - MSnbase
+    - multtest
+    - RBGL
+    - edgeR
+    - fgsea
+    - devtools
+    - crmn
+    - httr
+    - qs
+    - readxl (for reading Excel metadata)
+    - ggrepel (for plot labeling)
+    - ellipse (for PCA plots)
+    - vegan (for statistical analysis)
+
+#### Script 3: Cytoscape Networking Multi-job Workflow
+- Python 3.8+
+- Required Python packages:
+    - pandas
+    - py4cytoscape
+    - numpy
+- Cytoscape 3.9+ installation
+- Running Cytoscape instance required during script execution
+
+## Script Summaries
+### Script_1_MZmine3_multi-job_workflow.py
+Script 1 is a Python script that automates MZmine3 preprocessing of LC-MS/MS data. It creates metadata files, modifies XML parameters (based on your manually curated parameters template file), executes MZmine3 via command line, and prepares outputs for MetaboAnalyst, GNPS, and SIRIUS analysis. The script also handles FTP upload of processed data to GNPS servers.
+
+### Script_2_MetaboAnalyst_multi-job_workflow.r 
+Script 2 is an R script that performs statistical analysis of metabolomics data using MetaboAnalystR. Features include data normalization, fold-change analysis, t-tests, volcano plots, and principal component analysis (PCA). The script generates visualizations and statistical outputs for metabolite abundance comparisons.
+
+### Script_3_Cytoscape_networking_multi-job_workflow.py
+Script 3 is a Python script for creating and formatting molecular networks in Cytoscape. It processes GNPS networking results, integrates MetaboAnalyst statistical data, and applies custom visual styles. The script includes filtering options to highlight metabolites of interest and generates detailed node attribute tables.
+
+
+## Script Details
 
 **************Part 1:**************
 
@@ -40,6 +124,9 @@ Script 1 features:
 Script 2 features:
 - Run MetaboAnalyst tool
 
+After runnning:
+Manually check correctness of statistical treatments. For example, ensure appropriate feature and sample normalization (Gaussian curve) by going to temp folder --> job folder --> MetaboAnalystR Output --> normalization .png outputs.
+
 **************Part 3:**************
 
 Manual: determine style .xml settings for Cytoscape networks
@@ -47,7 +134,6 @@ Manual: determine style .xml settings for Cytoscape networks
 Script 3 features:
 - Python filter script
 - Align data analysis results from MZmine3, MetaboAnalyst, and GNPS.
-
 
 Output Excel Tabs: 
 "All Peaks": unfiltered list of all peaks
@@ -58,11 +144,18 @@ Output Excel Tabs:
 "ABMBA Standard": specify which feature is likely the ABMBA standard
 "Filter parameters": record what parameters were used for the job
 
-
 - Script: Adjust GNPS cytoscape network file in Python (py4cytoscape)
 
 Import node table with additional data, create pie charts, adjust style, label compound names
 
 
 **************Part 4:**************
-Manual: (optional) run SIRIUS tool using MZmine3 output for SIRIUS
+Manual: (optional) separately run SIRIUS tool using MZmine3 output for SIRIUS
+
+## Support
+For support with using these scripts, please contact lbutkovich@ucsb.edu.
+
+## Authors and Acknowledgements
+Primary author: Lazarina Butkovich (University of California, Santa Barbara)
+
+Thank you to Fred Krauss for feedback and assistance in writing and formatting these scripts. 
