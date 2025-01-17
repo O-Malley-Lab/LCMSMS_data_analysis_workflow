@@ -8,12 +8,9 @@ For this project, we mainly use an untargeted metabolomics screen with LC-MS/MS 
 While screening heterologous expression is a main use case for this workflow, other untargeted LC-MS/MS data sources with 2 sample groups can be similarly processed and analyzed. Overall, datasets run through this workflow include the following experimental-control pairings:
 | Experimental Group                                    | Control for Comparison                               |
 | ------------------------------------------------- | ----------------------------------------- |
-| Heterologous Expression |
-| Empty Vector Negative Control |
-| Cultured Anaerobic Gut Fungi |
-| Media Negative Control |
-| Cultured Anaerobic Gut Fungi Spiked with Epigenetic Elicitors |
-| Cultured Anaerobic Gut Fungi Spiked with Blank Solvent |
+| Heterologous Expression | Empty Vector Negative Control |
+| Cultured Anaerobic Gut Fungi | Media Negative Control |
+| Cultured Anaerobic Gut Fungi Spiked with Epigenetic Elicitors | Cultured Anaerobic Gut Fungi Spiked with Blank Solvent |
 
 ## Associated Publication
 [to be filled in]
