@@ -118,13 +118,15 @@ def commandline_MZmine3(mzmine_exe_dir, xml_temp_dir_pre_str, job_name, mzmine3_
 
     return exit_code
 
-def create_metaboanalyst_ids(gnps_input_df):
+def create_metaboanalyst_ids(gnps_input_df, rt_min_cutoff):
     """
     Create MetaboAnalyst IDs for the MetaboAnalyst input file from the GNPS input file.
 
     Input
     gnps_input_df : pandas.DataFrame
         Dataframe of the GNPS input file.
+    rt_min_cutoff : float
+        Minimum retention time cutoff for features to include in MetaboAnalyst input file.
 
     Output
     metaboanalyst_ids : list of str
@@ -133,6 +135,8 @@ def create_metaboanalyst_ids(gnps_input_df):
 
     # Sort gnps_input_df by row ID
     gnps_input_df = gnps_input_df.sort_values(by = 'row ID')
+    # Remove rows with RT below rt_min_cutoff
+    gnps_input_df = gnps_input_df[gnps_input_df['row retention time'] >= rt_min_cutoff]
     metaboanalyst_ids = []
     # Example format of metaboanalyst_id: 1/239.0947mz/0.03min
     for id in gnps_input_df['row ID']:
@@ -238,7 +242,11 @@ for job_index, job in enumerate(metadata['Job Name']):
     ionization = metadata['Ionization'][job_index]
     exp_rep_num = metadata['EXP num replicates'][job_index]
     ctrl_rep_num = metadata['CTRL num replicates'][job_index]
-
+    # if RT minimum cutoff column value is empty, use 0 as the default value
+    if pd.isnull(metadata['RT minimum cutoff'][job_index]):
+        rt_minimum_cutoff = 0
+    else:
+        rt_minimum_cutoff = metadata['RT minimum cutoff'][job_index]
 
     # If it does not already exist, make a folder in temp folder for the job name
     if not os.path.exists(pjoin(TEMP_OVERALL_FOLDER, job_name)):
@@ -564,7 +572,7 @@ for job_index, job in enumerate(metadata['Job Name']):
 
     # Go through each row ID in gnps_input_df and add the feature identifier string and intensity values to metaboanalyst_input_df
     # example format: 1/239.0947mz/0.03min
-    metaboanalyst_ids = create_metaboanalyst_ids(gnps_input_df)
+    metaboanalyst_ids = create_metaboanalyst_ids(gnps_input_df, rt_minimum_cutoff)
 
     # Iterate through each id in metaboanalyst_ids and add the string as the value for the first column, starting at row 3 (recall, row 1 and row 2 are already filled with a different format)
     for i, id in enumerate(metaboanalyst_ids, start = 2):
