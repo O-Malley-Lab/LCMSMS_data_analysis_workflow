@@ -101,7 +101,8 @@ Notes: create separate data file folder for EXP with base job name and CTRL samp
 
 FILL OUT METADATA EXCEL FOR JOBS TO RUN
 - Manual: fill out a main metadata excel sheet with running account of job information for all jobs, as well as info for all changeable values
-Excel Columns: base job name, CTRL sample name, ionization mode, EXP replicate number, CTRL replicate number, MZmine3 batch template
+Excel Columns: base job name, CTRL sample name, ionization mode, EXP replicate number, CTRL replicate number, MZmine3 batch template, RT minimum cutoff
+Note: the RT minimum cutoff can be determine by viewing the TIC for the .mzML files in MZmine and qualitatively approximating the metabolites that quickly come off the column. Removing these difficult-to- improves downstream data handling and statistical analysis.
 
 DETERMINE PARAMETERS FOR MZMINE3 TOOL TO RUN JOBS
 - Manual (one-time): if necessary, manually create a MZmine3 job for the data files to determine pre-processing parameters. Alternatively, use previously determined parameters

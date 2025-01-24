@@ -23,6 +23,9 @@ import ftplib
 from dotenv import dotenv_values
 import time
 start = time.time()
+# import stats
+import numpy as np
+import scipy.stats as stats
 
 """""""""""""""""""""""""""""""""""""""""""""
 Functions
@@ -219,7 +222,15 @@ config = dotenv_values(".env")
 # Get USERNAME and PASSWD from .env file
 USERNAME = config['USERNAME']
 PASSWD = config['PASSWD']
-RUN_FTP = True
+RUN_FTP = False
+
+# ABMBA internal standard feature m/z and RT
+ABMBA_MZ_POS  = 229.9811 #m/z 229.9811
+ABMBA_RT_POS = 4.685 #4.685 minutes
+ABMBA_MZ_NEG = 227.9655 #m/z 227.9655
+ABMBA_RT_NEG = 4.8 #4.8 min
+MZ_TOL = 0.01 #m/z tolerance for matching ABMBA
+RT_TOL = 0.1 #RT tolerance for matching ABMBA
 
 # PRIOR to running script, you need to manually create/generate the batch parameters .xml file for your jobs (filename specified in METADATA_OVERALL_FILENAME column 'MZmine3 batch template'). You should manually look at the parameters settings in the MZmine3 GUI to ensure they are correct for your job. This script will edit the .xml file to input the correct filenames and metadata for the job. Parameters to particularly consider:
 # - Instrument-specific parameters (MZmine3 allows you to specify a setup, and you will get some default paramets)
@@ -233,6 +244,9 @@ Create GNPS and MetaboAnalyst Metadata .tsv files
 """""""""""""""""""""""""""""""""""""""""""""
 # Import metadata table for job
 metadata = pd.read_excel(pjoin(INPUT_FOLDER, METADATA_OVERALL_FILENAME), sheet_name = METADATA_JOB_TAB)
+
+# Create ABMBA dictionary to record the ABMBA feature ID for each job
+abmba_dict = {}
 
 for job_index, job in enumerate(metadata['Job Name']):
     # Run the entirety of below code for each job
@@ -415,9 +429,8 @@ for job_index, job in enumerate(metadata['Job Name']):
 
 
     """""""""""""""""""""""""""""""""""""""""""""
-    Use XML file to run MZmine3 in Commandline <-- to-do
+    Use XML file to run MZmine3 in Commandline
     """""""""""""""""""""""""""""""""""""""""""""
-    # Later, implement GNPS job auto-run <-- to-do
     # Print time taken to prepare files for MZmine3
     print('Finished preparing files for MZmine3 for ' + job_name + ', took %.2f seconds' % (time.time() - start))
     start = time.time()
@@ -430,6 +443,7 @@ for job_index, job in enumerate(metadata['Job Name']):
     # Print time taken to run MZmine3
     print('Finished running MZmine3, took %.2f seconds' % (time.time() - start))
     start = time.time() 
+
 
     """""""""""""""""""""""""""""""""""""""""""""
     Rearrange MZmine3 output files for easy GNPS input
@@ -595,6 +609,86 @@ for job_index, job in enumerate(metadata['Job Name']):
             if pd.isnull(metaboanalyst_input_df.loc[metaboanalyst_row.index[0], filename_gnps]):
                 metaboanalyst_input_df.loc[metaboanalyst_row.index[0], filename_gnps] = ''
 
+    # Find the metaboanalyst_id that best matches the internal standard ABMBA
+    # If ionization is POS, use ABMBA_MZ_POS and ABMBA_RT_POS, and if it is NEG, use ABMBA_MZ_NEG and ABMBA_RT_NEG
+    if ionization == 'POS':
+        abmba_mz = ABMBA_MZ_POS
+        abmba_rt = ABMBA_RT_POS
+    elif ionization == 'NEG':
+        abmba_mz = ABMBA_MZ_NEG
+        abmba_rt = ABMBA_RT_NEG
+
+    # Find the metaboanalyst_id that best matches the internal standard ABMBA, within tolerances
+    abmba_ids = []
+    for id in metaboanalyst_ids:
+        mz = float(id.split('/')[1][:-2])
+        rt = float(id.split('/')[2][:-3])
+        if abs(mz - abmba_mz) <= MZ_TOL and abs(rt - abmba_rt) <= RT_TOL:
+            abmba_ids.append(id)
+    
+    # If there are multiple abmba_ids, use the one with closest mz value
+    if len(abmba_ids) > 1:
+        mz_diffs = [abs(float(id.split('/')[1][:-2]) - abmba_mz) for id in abmba_ids]
+        abmba_id = abmba_ids[np.argmin(mz_diffs)]
+    elif len(abmba_ids) == 1:
+        abmba_id = abmba_ids[0]
+    else:
+        abmba_id = None
+        # Print statement and stop script if no ABMBA ID is found
+        raise ValueError('No ABMBA ID found in MetaboAnalyst IDs for job ' + job_name)
+
+    # Add the ABMBA ID to abmba_dict, with the key as the job name, to later write in the original metadata file
+    abmba_dict[job_name] = abmba_id
+
+    # # Print what percentile that average peak intensity of the ABMBA ID is in for each filename and variance within groups
+    # for group in ['CTRL', 'EXP']:
+    #     print(f"\n{group} group:")
+        
+    #     # Get filenames for this group
+    #     group_files = metadata_df[metadata_df['Class'] == group]['Filename'].tolist()
+        
+    #     # Get ABMBA intensities for this group
+    #     abmba_intensities = []
+    #     for filename in group_files:
+    #         intensity = float(metaboanalyst_input_df[metaboanalyst_input_df['Filename'] == abmba_id][filename].values[0])
+    #         abmba_intensities.append(intensity)
+            
+    #         # Get all intensities for this file starting from row index 2 (skip header and class rows)
+    #         intensity_values = metaboanalyst_input_df[filename].iloc[2:].dropna()
+    #         # Convert to float only the numeric values 
+    #         intensities = pd.to_numeric(intensity_values, errors='coerce').dropna()
+            
+    #         # Calculate percentile
+    #         percentile = stats.percentileofscore(intensities, intensity)
+    #         print(f'The peak intensity of ABMBA in {filename} is in the {percentile:.1f}th percentile.')
+        
+    #     # Calculate variance of ABMBA intensities within group
+    #     abmba_var = np.var(abmba_intensities)
+    #     abmba_mean = np.mean(abmba_intensities)
+    #     abmba_cv = (np.sqrt(abmba_var) / abmba_mean) * 100 if abmba_mean != 0 else 0
+    #     print(f'ABMBA intensity variance within {group} group: {abmba_var:.2e}')
+    #     print(f'ABMBA coefficient of variation within {group} group: {abmba_cv:.1f}%')
+
+    #     # Calculate CV percentile relative to all other features
+    #     # Get intensities for all features for this group's files
+    #     all_feature_cvs = []
+    #     for feature_id in metaboanalyst_input_df['Filename'].iloc[2:]:  # Skip header and class rows
+    #         feature_intensities = []
+    #         for filename in group_files:
+    #             intensity = metaboanalyst_input_df[metaboanalyst_input_df['Filename'] == feature_id][filename].values[0]
+    #             if intensity != '':  # Skip empty values
+    #                 feature_intensities.append(float(intensity))
+    #         if feature_intensities:  # Only calculate CV if we have values
+    #             feature_mean = np.mean(feature_intensities)
+    #             if feature_mean != 0:
+    #                 feature_cv = (np.sqrt(np.var(feature_intensities)) / feature_mean) * 100
+    #                 all_feature_cvs.append(feature_cv)
+
+    #     # Calculate percentile of ABMBA CV
+    #     cv_percentile = stats.percentileofscore(all_feature_cvs, abmba_cv)
+    #     print(f'ABMBA CV is in the {cv_percentile:.1f}th percentile relative to all features in {group} group')
+
+
     # Export the MetaboAnalyst input file to temp folder
     metaboanalyst_input_filename = job_name + '_MetaboAnalyst_input.csv'
     metaboanalyst_input_filepath = pjoin(temp_job_folder, metaboanalyst_input_filename)
@@ -603,3 +697,12 @@ for job_index, job in enumerate(metadata['Job Name']):
     # Print time taken to prepare files for MetaboAnalyst
     print('Finished preparing files for MetaboAnalyst for ' + job_name + ', took %.2f seconds' % (time.time() - start))
     start = time.time()
+
+"""""""""""""""""""""""""""""""""""""""""""""
+Record the ABMBA IDs in the Overall Metadata Table
+"""""""""""""""""""""""""""""""""""""""""""""
+# Use abmba_dict to update the metadata table with the ABMBA ID for each job
+metadata['ABMBA_Feature_Name_from_Script_1'] = metadata['Job Name'].map(abmba_dict)
+
+# Overwrite the metadata table with the updated ABMBA IDs, in the input folder
+metadata.to_excel(pjoin(INPUT_FOLDER, METADATA_OVERALL_FILENAME), sheet_name = METADATA_JOB_TAB, index = False)

@@ -9,34 +9,34 @@ rm(list = ls())
 
 ###
 
-### Install MetaboAnalystR --> Run once, then comment out
-metanr_packages <- function(){
-
-  metr_pkgs <- c("impute", "pcaMethods", "globaltest", "GlobalAncova", "Rgraphviz", "preprocessCore", "genefilter", "sva", "limma", "KEGGgraph", "siggenes","BiocParallel", "MSnbase", "multtest","RBGL","edgeR","fgsea","devtools","crmn","httr","qs")
-
-  list_installed <- installed.packages()
-
-  new_pkgs <- subset(metr_pkgs, !(metr_pkgs %in% list_installed[, "Package"]))
-
-  if(length(new_pkgs)!=0){
-
-    if (!requireNamespace("BiocManager", quietly = TRUE))
-      install.packages("BiocManager")
-    BiocManager::install(new_pkgs)
-    print(c(new_pkgs, " packages added..."))
-  }
-
-  if((length(new_pkgs)<1)){
-    print("No new packages added...")
-  }
-}
-metanr_packages()
-install.packages("devtools")
-library(devtools)
-# Use version with 4.0 volcano plots with correct data point sizes but no p-value legend: 5aee8b4f0d27c27864198a6fd99414575d693836
-devtools::install_github("xia-lab/MetaboAnalystR", build = TRUE, ref = "5aee8b4f0d27c27864198a6fd99414575d693836", build_vignettes = TRUE, build_manual =T)
-# devtools::install_github("xia-lab/MetaboAnalystR", build = TRUE, build_vignettes = TRUE, build_manual =T)
-library(MetaboAnalystR)
+# ### Install MetaboAnalystR --> Run once, then comment out
+# metanr_packages <- function(){
+# 
+#   metr_pkgs <- c("impute", "pcaMethods", "globaltest", "GlobalAncova", "Rgraphviz", "preprocessCore", "genefilter", "sva", "limma", "KEGGgraph", "siggenes","BiocParallel", "MSnbase", "multtest","RBGL","edgeR","fgsea","devtools","crmn","httr","qs")
+# 
+#   list_installed <- installed.packages()
+# 
+#   new_pkgs <- subset(metr_pkgs, !(metr_pkgs %in% list_installed[, "Package"]))
+# 
+#   if(length(new_pkgs)!=0){
+# 
+#     if (!requireNamespace("BiocManager", quietly = TRUE))
+#       install.packages("BiocManager")
+#     BiocManager::install(new_pkgs)
+#     print(c(new_pkgs, " packages added..."))
+#   }
+# 
+#   if((length(new_pkgs)<1)){
+#     print("No new packages added...")
+#   }
+# }
+# metanr_packages()
+# install.packages("devtools")
+# library(devtools)
+# # Use version with 4.0 volcano plots with correct data point sizes but no p-value legend: 5aee8b4f0d27c27864198a6fd99414575d693836
+# devtools::install_github("xia-lab/MetaboAnalystR", build = TRUE, ref = "5aee8b4f0d27c27864198a6fd99414575d693836", build_vignettes = TRUE, build_manual =T)
+# # devtools::install_github("xia-lab/MetaboAnalystR", build = TRUE, build_vignettes = TRUE, build_manual =T)
+# library(MetaboAnalystR)
 
 ###
 
@@ -79,7 +79,7 @@ plot_obj_fold_change <- PlotFC(fold_change_anal, "fc_0_", "png", 72, width=NA)
 
 # Perform T-test
 # Perform T-test (parametric)
-tt_anal <- Ttests.Anal(fold_change_anal, nonpar=F, threshp=0.05, paired=FALSE, equal.var=TRUE, "fdr", FALSE)
+tt_anal <- Ttests.Anal(fold_change_anal, nonpar=F, threshp=0.05, paired=FALSE, equal.var=TRUE, "fdr", TRUE)
 
 # Plot of the T-test results
 plot_obj_tt <-PlotTT(tt_anal, imgName = "tt_0_", format = "png", dpi = 72, width=NA)
@@ -88,8 +88,12 @@ plot_obj_tt <-PlotTT(tt_anal, imgName = "tt_0_", format = "png", dpi = 72, width
 ### Generate volcano plot. Change raw to fdr to test for my LC-MS/MS analysis script
 volcano_anal <- Volcano.Anal(tt_anal, FALSE, 2.0, 0, F, 0.1, TRUE, "fdr")
 
-plot_obj_volcano <- PlotVolcano(volcano_anal, "volcano_0_", 1, 0, format ="png", dpi=72, width=NA)
+plot_obj_volcano <- PlotVolcano(volcano_anal, "volcano_fdr-adj_p_", 1, 0, format ="png", dpi=72, width=NA)
 
+### Generate volcano plot. Change raw to fdr to test for my LC-MS/MS analysis script
+volcano_anal <- Volcano.Anal(tt_anal, FALSE, 2.0, 0, F, 0.1, TRUE, "raw")
+
+plot_obj_volcano <- PlotVolcano(volcano_anal, "volcano_raw_p_", 1, 0, format ="png", dpi=72, width=NA)
 
 ### Perform PCA analysis
 pca_anal <- PCA.Anal(tt_anal)
