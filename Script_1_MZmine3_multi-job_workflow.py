@@ -600,58 +600,6 @@ for job_index, job in enumerate(metadata['Job Name']):
         # Print statement and stop script if no ABMBA ID is found
         raise ValueError('No ABMBA ID found in MetaboAnalyst IDs for job ' + job_name)
 
-    # Add the ABMBA ID to abmba_dict, with the key as the job name, to later write in the original metadata file
-    abmba_dict[job_name] = abmba_id
-
-    # # Print what percentile that average peak intensity of the ABMBA ID is in for each filename and variance within groups
-    # for group in ['CTRL', 'EXP']:
-    #     print(f"\n{group} group:")
-        
-    #     # Get filenames for this group
-    #     group_files = metadata_df[metadata_df['Class'] == group]['Filename'].tolist()
-        
-    #     # Get ABMBA intensities for this group
-    #     abmba_intensities = []
-    #     for filename in group_files:
-    #         intensity = float(metaboanalyst_input_df[metaboanalyst_input_df['Filename'] == abmba_id][filename].values[0])
-    #         abmba_intensities.append(intensity)
-            
-    #         # Get all intensities for this file starting from row index 2 (skip header and class rows)
-    #         intensity_values = metaboanalyst_input_df[filename].iloc[2:].dropna()
-    #         # Convert to float only the numeric values 
-    #         intensities = pd.to_numeric(intensity_values, errors='coerce').dropna()
-            
-    #         # Calculate percentile
-    #         percentile = stats.percentileofscore(intensities, intensity)
-    #         print(f'The peak intensity of ABMBA in {filename} is in the {percentile:.1f}th percentile.')
-        
-    #     # Calculate variance of ABMBA intensities within group
-    #     abmba_var = np.var(abmba_intensities)
-    #     abmba_mean = np.mean(abmba_intensities)
-    #     abmba_cv = (np.sqrt(abmba_var) / abmba_mean) * 100 if abmba_mean != 0 else 0
-    #     print(f'ABMBA intensity variance within {group} group: {abmba_var:.2e}')
-    #     print(f'ABMBA coefficient of variation within {group} group: {abmba_cv:.1f}%')
-
-    #     # Calculate CV percentile relative to all other features
-    #     # Get intensities for all features for this group's files
-    #     all_feature_cvs = []
-    #     for feature_id in metaboanalyst_input_df['Filename'].iloc[2:]:  # Skip header and class rows
-    #         feature_intensities = []
-    #         for filename in group_files:
-    #             intensity = metaboanalyst_input_df[metaboanalyst_input_df['Filename'] == feature_id][filename].values[0]
-    #             if intensity != '':  # Skip empty values
-    #                 feature_intensities.append(float(intensity))
-    #         if feature_intensities:  # Only calculate CV if we have values
-    #             feature_mean = np.mean(feature_intensities)
-    #             if feature_mean != 0:
-    #                 feature_cv = (np.sqrt(np.var(feature_intensities)) / feature_mean) * 100
-    #                 all_feature_cvs.append(feature_cv)
-
-    #     # Calculate percentile of ABMBA CV
-    #     cv_percentile = stats.percentileofscore(all_feature_cvs, abmba_cv)
-    #     print(f'ABMBA CV is in the {cv_percentile:.1f}th percentile relative to all features in {group} group')
-
-
     # Export the MetaboAnalyst input file to temp folder
     metaboanalyst_input_filename = job_name + '_MetaboAnalyst_input.csv'
     metaboanalyst_input_filepath = pjoin(temp_job_folder, metaboanalyst_input_filename)
@@ -661,35 +609,39 @@ for job_index, job in enumerate(metadata['Job Name']):
     print('Finished preparing files for MetaboAnalyst for ' + job_name + ', took %.2f seconds' % (time.time() - start))
     start = time.time()
 
-"""""""""""""""""""""""""""""""""""""""""""""
-Record the ABMBA IDs in the Overall Metadata Table
-"""""""""""""""""""""""""""""""""""""""""""""
-# Use abmba_dict to update the metadata table with the ABMBA ID for each job
-metadata['ABMBA_Feature_Name_from_Script_1'] = metadata['Job Name'].map(abmba_dict)
+    """""""""""""""""""""""""""""""""""""""""""""
+    Record the ABMBA feature in the Overall Metadata Table (perform for each job individually so that if error occurs, all previous jobs still have their recorded ABMBA feature)
+    """""""""""""""""""""""""""""""""""""""""""""
+    # Record the ABMBA feature in the Overall Metadata Table for the job row
+    metadata['ABMBA_Feature_Name_from_Script_1'] = metadata['ABMBA_Feature_Name_from_Script_1'].astype(object)
+    metadata.loc[job_index, 'ABMBA_Feature_Name_from_Script_1'] = abmba_id
 
-# Load the excel file
-excel_file = pd.ExcelFile(pjoin(INPUT_FOLDER, METADATA_OVERALL_FILENAME))
+    # Load the excel file
+    excel_file = pd.ExcelFile(pjoin(INPUT_FOLDER, METADATA_OVERALL_FILENAME))
 
-# Read all sheets into a dictionary 
-all_sheets = {sheet: pd.read_excel(excel_file, sheet_name=sheet) for sheet in excel_file.sheet_names}
+    # Read all sheets into a dictionary 
+    all_sheets = {sheet: pd.read_excel(excel_file, sheet_name=sheet) for sheet in excel_file.sheet_names}
 
-# Update the specific sheet with ABMBA IDs
-all_sheets[METADATA_JOB_TAB] = metadata
+    # Write the value also in the excel METADATA_OVERALL_FILENAME without changing any other sheets or values (use sheet name METADATA_JOB_TAB)
+    all_sheets[METADATA_JOB_TAB] = metadata
 
-# Create an Excel writer object
-with pd.ExcelWriter(pjoin(INPUT_FOLDER, METADATA_OVERALL_FILENAME), engine='openpyxl') as writer:
-    # Write each sheet back
-    for sheet_name, df in all_sheets.items():
-        df.to_excel(writer, sheet_name=sheet_name, index=False)
-        
-        # Auto-adjust column widths based on content
-        worksheet = writer.sheets[sheet_name]
-        for idx, col in enumerate(df.columns):
-            max_length = max(
-                df[col].astype(str).apply(len).max(),  # Length of longest entry
-                len(str(col))  # Length of column name
-            )
-            # Add a little extra width
-            adjusted_width = (max_length + 2)
-            worksheet.column_dimensions[chr(65 + idx)].width = adjusted_width
 
+    # Save the updated excel file
+    with pd.ExcelWriter(pjoin(INPUT_FOLDER, METADATA_OVERALL_FILENAME), engine='openpyxl') as writer:
+        # Write each sheet back
+        for sheet_name, df in all_sheets.items():
+            df.to_excel(writer, sheet_name=sheet_name, index=False)
+            
+            # Auto-adjust column widths based on content
+            worksheet = writer.sheets[sheet_name]
+            for idx, col in enumerate(df.columns):
+                max_length = max(
+                    df[col].astype(str).apply(len).max(),  # Length of longest entry
+                    len(str(col))  # Length of column name
+                )
+                # Add a little extra width
+                adjusted_width = (max_length + 2)
+                worksheet.column_dimensions[chr(65 + idx)].width = adjusted_width
+
+    # Print time taken to record ABMBA feature in metadata excel
+    print('Finished recording ABMBA feature in metadata excel for ' + job_name + ', took %.2f seconds' % (time.time() - start))
