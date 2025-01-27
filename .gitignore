@@ -171,3 +171,6 @@ output/
 
 # obsolete scripts folder
 obsolete_scripts/
+
+# Ignore .Rhistory files created
+.Rhistory

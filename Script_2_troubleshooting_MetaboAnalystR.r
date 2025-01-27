@@ -70,20 +70,30 @@ rm(list = ls())
 # install.packages("vegan")
 # library(vegan)
 
+# # 5) Install pls package
+# install.packages("pls")
+# library(pls)
+
+# # 6) Install 'rjson' package
+# install.packages("rjson")
+# library(rjson)
+
+
 ##############
 # Values to Change
 ##############
-setwd("C:\\Users\\lazab\\Documents\\github\\LCMSMS_data_analysis_workflow")
+wd <- "C:\\Users\\lazab\\Documents\\github\\LCMSMS_data_analysis_workflow"
+
 metadata_overall_filename <- "Overall_Running_Metadata_for_All_LCMSMS_Jobs.xlsx"
 metadata_job_tab <- "Multi-jobs"
 metadata_job_column <- "Job Name"
 input_table_post_str <- "_MetaboAnalyst_input.csv"
 
+
 ##############
 # Set working directory
 ##############
-# Save the original starting directory as wd
-wd <- getwd()
+setwd(wd)
 
 ##############
 # Load Metadata_overall
@@ -98,19 +108,14 @@ metadata_overall <- readxl::read_excel(metadata_overall_filename, sheet = metada
 job_names <- metadata_overall[[metadata_job_column]]
 abmba_features <- metadata_overall[["ABMBA_Feature_Name_from_Script_1"]]
 
-##############
-# Create For Loop over entire remaining script, to run for each Job Name
-##############
 
 #############################################
-# Troublshooting for MetaboAnalystR
+# Setting up MetaboAnalystR (only need to do once)
 #############################################
-
-###
-# Option 1: modify R commands from MetaboAnalyst online
-###
-
 for (job_index in seq_along(job_names)) {
+  ##############
+  # Get Job Information
+  ##############
   # Get job_name from metadata_overall first value in metadata_job_column
   job_name <- job_names[job_index]
   job_abmba_feature_name <- abmba_features[job_index]
@@ -119,6 +124,10 @@ for (job_index in seq_along(job_names)) {
   print("") # add empty line
   print(paste("Starting job for ", job_name, ".", sep = ""))
   
+  
+  ##############
+  # Create Folders for Organizing Outputs
+  ##############
   # For copy-pasting GNPS downloaded output for Cytoscape script, first create the GNPS_output folder in the working directory, if it does not exist already
   output_dir_gnps <- paste(wd, "GNPS_output", sep = "\\")
   if (!dir.exists(output_dir_gnps)){
@@ -190,78 +199,52 @@ for (job_index in seq_along(job_names)) {
   # Replace missing or 0 values in the metabolomics data with a small volume (default is half of the minimum positive value in the data)
   mset <- ReplaceMin(mset)
   
+  
+  ##############
+  # Apply Abundance Filter (Median) and Normalize Data to Reference Feature (ABMBA)
+  ##############
+  # Variance filter
+  # No QC sample to use for filter
+  # var.filter = "rsd"
+  # var.cutoff = 0
+  # int.filter = "median", "mean" (Abundance filter)
+  # int.cutoff = 40
+  mset<-FilterVariable(mset, "F", 0, var.filter="rsd", 0, "median", 40)
+  
+  # Prepare data for normalization (function should always be initialized)
+  mset <- PreparePrenormData(mset)
+
+  # Normalize data to reference feature (ABMBA)
+  # rowNorm: "CompNorm" = normalization to reference feature
+  # transNorm: "LogNorm" = log10 normalization, NULL" = no transformation
+  # ref: job_abmba_feature_name = feature name for internal standard, ABMBA, determined from Script 1
+  # scaleNorm: "NULL" for no scaling
+  mset <- Normalization(mset, "CompNorm", transNorm="LogNorm", scaleNorm="NULL", ref=job_abmba_feature_name, ratio=FALSE, ratioNum=20)
+
 
   # ##############
-  # # Option 1: Normalize Data to Reference Feature (ABMBA) then filter data
+  # # Alternative Normalization Method: Filter Data then Normalize Data to TIC (commented out)
   # ##############
-  # # Prepare data for normalization (function should always be initialized)
-  # mset <- PreparePrenormData(mset)
-  # 
-  # # Normalize data to reference feature (ABMBA)
-  # # rowNorm: "CompNorm" = normalization to reference feature
-  # # transNorm: "NULL" = no transformation
-  # # ref: job_abmba_feature_name = feature name for internal standard, ABMBA, determined from Script 1
-  # # scaleNorm: "None" for no scaling
-  # mset <- Normalization(mset, "CompNorm", transNorm="NULL", scaleNorm="NULL", ref=job_abmba_feature_name, ratio=FALSE, ratioNum=20)
-  # 
-  # # Because CompNorm is independent of number of features, it is fine to perform variance filter afterwards.
-  # # Performing variance filter prior can cause error if the ABMBA feature is filtered out.
-  # 
   # # Variance filter
   # # Use RSD, with 40% filtered out for LC-MS with number of features over 1000
   # # Abundance filter
   # # Mean Filter
-  # mset <- FilterVariable(mset, "F", 0, var.filter="rsd", var.cutoff=40, "mean", 0)
-  
-  
-  ##############
-  # Option 2: Filter Data then Normalize Data to TIC (commented out)
-  ##############
-  # Variance filter
-  # Use RSD, with 40% filtered out for LC-MS with number of features over 1000
-  # Abundance filter
-  # Mean Filter
-  mset <- FilterVariable(mset, "F", 0, var.filter="rsd", var.cutoff=40, "mean", 25)
-
-  # Prepare data for normalization (function should always be initialized)
-  mset <- PreparePrenormData(mset)
-
-  # Normalize data to total ion chromatogram (TIC)
-  # rowNorm: "SumNorm" = normalization to constant sum
-  # transNorm: "NULL" = no transformation
-  # scaleNorm: "None" for no scaling; or change to "MeanCenter" = mean centering, "AutoNorm" for autoscaling, etc.
-  # ref: NULL = no reference sample (default)
-
-  mset <- Normalization(mset, "SumNorm", transNorm="NULL", scaleNorm="AutoNorm", ratio=FALSE, ratioNum=20)
+  # mset <- FilterVariable(mset, "F", 0, var.filter="rsd", var.cutoff=40, "mean", 25)
+  # 
+  # # Prepare data for normalization (function should always be initialized)
+  # mset <- PreparePrenormData(mset)
+  # 
+  # # Normalize data to total ion chromatogram (TIC)
+  # # rowNorm: "SumNorm" = normalization to constant sum
+  # # transNorm: "NULL" = no transformation
+  # # scaleNorm: "None" for no scaling; or change to "MeanCenter" = mean centering, "AutoNorm" for autoscaling, etc.
+  # # ref: NULL = no reference sample (default)
+  # 
+  # mset <- Normalization(mset, "SumNorm", transNorm="NULL", scaleNorm="AutoNorm", ratio=FALSE, ratioNum=20)
 
 
   ##############
-  # Export Normalized Data
-  ##############
-  # Write the normalized data to a pandas dataframe
-  norm_df <- data.frame(t(mset$dataSet$norm))
-  # Write the row.names to a new column (shift all other columns over so that row.names are in the first column)
-  norm_df$MetaboAnalyst_ID <- rownames(norm_df)
-  norm_df <- norm_df[, c(ncol(norm_df), 1:(ncol(norm_df)-1))]
-  
-  # Create a shared_name column
-  norm_df$shared_name <- sapply(strsplit(as.character(norm_df$MetaboAnalyst_ID), "/"), "[", 1)
-  
-  # Remove the row.names column
-  rownames(norm_df) <- NULL
-  
-  # Write norm_df to csv
-  write.csv(norm_df, paste(job_name,"_normalized_data_transposed.csv", sep=""), row.names = FALSE)
-  
-  # Two plot summary plot: Feature View of before and after normalization:
-  mset <- PlotNormSummary(mset, paste("Normalization_feature_", job_name, "_", sep = ""), format ="png", dpi=300, width = NA);
-  
-  # Two plot summary plot: Sample View of before and after normalization
-  mset <- PlotSampleNormSummary(mset, paste("Normalization_sample_", job_name, "_", sep = ""), format = "png", dpi=300, width = NA);
-  
-  
-  ##############
-  # Normalize Data to Sample-specific Factor (Currently not implemented)
+  # Alternative Normalization Method: Normalize to Sample-specific Factor (commented out)
   ##############
   # Note: If instead you want to do normalization to cell pellet weights, uncomment below code, comment out the above section to normalize to TIC, and define cell_pellet_weights_post_str with the correct filename by adding it in the Values to Change section
   # cell_pellet_weights_filename = paste(job_name, cell_pellets_weights_post_str, sep='')
@@ -297,6 +280,31 @@ for (job_index in seq_along(job_names)) {
   
 
   ##############
+  # Export Normalized Data
+  ##############
+  # Write the normalized data to a pandas dataframe
+  norm_df <- data.frame(t(mset$dataSet$norm))
+  # Write the row.names to a new column (shift all other columns over so that row.names are in the first column)
+  norm_df$MetaboAnalyst_ID <- rownames(norm_df)
+  norm_df <- norm_df[, c(ncol(norm_df), 1:(ncol(norm_df)-1))]
+  
+  # Create a shared_name column
+  norm_df$shared_name <- sapply(strsplit(as.character(norm_df$MetaboAnalyst_ID), "/"), "[", 1)
+  
+  # Remove the row.names column
+  rownames(norm_df) <- NULL
+  
+  # Write norm_df to csv
+  write.csv(norm_df, paste(job_name,"_normalized_data_transposed.csv", sep=""), row.names = FALSE)
+  
+  # Two plot summary plot: Feature View of before and after normalization:
+  mset <- PlotNormSummary(mset, paste("Normalization_feature_", job_name, "_", sep = ""), format ="png", dpi=300, width = NA);
+  
+  # Two plot summary plot: Sample View of before and after normalization
+  mset <- PlotSampleNormSummary(mset, paste("Normalization_sample_", job_name, "_", sep = ""), format = "png", dpi=300, width = NA);
+  
+
+  ##############
   # Fold-change Analysis
   ##############
   # Perform fold-change analysis on uploaded data, unpaired.
@@ -324,15 +332,16 @@ for (job_index in seq_along(job_names)) {
   # all_results = TRUE = show all results, not only  significant results
   mset <- Ttests.Anal(mset, nonpar = F, threshp = 0.05, paired = FALSE, equal.var = TRUE, "fdr", TRUE)
 
-  # Plot of the T-test results
-  # if the following line causes an error, skip and continue the rest of the script
-  plot_tt_error_occurred <- FALSE
-  tryCatch({
-    mset = PlotTT(mset, paste("T_test_", job_name, "_", sep = ""), "png", 72, width = NA)
-  }, error = function(e) {
-    plot_tt_error_occurred = TRUE
-    print("Error occurred in PlotTT function, likely due to low number of significant features. Skipping this step.")
-  })
+  # # Plot of the T-test results
+  # # if the following line causes an error, skip and continue the rest of the script
+  # setwd(output_dir)
+  # plot_tt_error_occurred <- FALSE
+  # tryCatch({
+  #   mset = PlotTT(mset, paste("T_test_", job_name, "_", sep = ""), "png", 72, width = NA)
+  # }, error = function(e) {
+  #   plot_tt_error_occurred = TRUE
+  #   print("Error occurred in PlotTT function, likely due to low number of significant features. Skipping this step.")
+  # })
 
 
   ##############
@@ -364,7 +373,7 @@ for (job_index in seq_along(job_names)) {
   mset <- PlotVolcano(mset, paste("Volcano_raw_p_", job_name, "_", sep = ""), 1, 0, format = "png", dpi = 300, width = NA)
 
   # ##############
-  # # Volcano Plot: FDR-adjusted p-values
+  # # Volcano Plot: FDR-adjusted p-values (commented out to avoid errors due to no significant hits)
   # ##############
   # # Perform the volcano analysis
   # # paired: FALSE = data is not paired
@@ -423,7 +432,30 @@ for (job_index in seq_along(job_names)) {
   # mset$imgSet$pca.3d
   # # ^ I was not able to get this 3d viewer to work
   
+  
+  # ##############
+  # # Partial Least Squares - Discriminant Analysis (PLS-DA) -- (commented out to perform sPLS-DA instead)
+  # ##############
+  # # Dimensionality reduction that takes into account sample groupings, to emphasize metabolite features that contribute most to group differences
+  # mset<-PLSR.Anal(mset, reg=TRUE)
+  # mset<-PlotPLSPairSummary(mset, paste("pls_pair_0_", job_name, "_", sep=""), "png", 72, width=NA, 5)
+  # mset<-PlotPLS2DScore(mset, paste("pls_score2d_0_", job_name, "_", sep=""), "png", 72, width=NA, 1,2,0.95,0,0, "na")
+  # mset<-PlotPLS3DScoreImg(mset, paste("pls_score3d_0_", job_name, "_", sep=""), "png", 72, width=NA, 1,2,3, 40)
+  # mset<-PlotPLSLoading(mset, paste("pls_loading_0_", job_name, "_", sep=""), "png", 72, width=NA, 1, 2);
+  # # mset<-PlotPLS3DLoading(mset, paste("pls_loading3d_0_", job_name, "_", sep=""), "json", 1,2,3)
+  # mset<-PlotPLS.Imp(mset, paste("pls_imp_0_", job_name, "_", sep=""), "png", 72, width=NA, "vip", "Comp. 1", 15,FALSE)
+  
+  
+  ##############
+  # Sparse Partial Least Squares - Discriminant Analysis (sPLS-DA)
+  ##############
+  mset<-SPLSR.Anal(mset, 5, 10, "same", "Mfold", 5, F)
+  mset<-PlotSPLSPairSummary(mset, paste("spls_pair_0_", job_name, "_", sep=""), "png", 72, width=NA, 5)
+  mset<-PlotSPLS2DScore(mset, paste("spls_score2d_0_", job_name, "_", sep=""), "png", 72, width=NA, 1,2,0.95,0,0,"na")
+  mset<-PlotSPLS3DScoreImg(mset, paste("spls_score3d_0_", job_name, "_", sep=""), "png", 72, width=NA, 1,2,3, 40)
+  mset<-PlotSPLSLoading(mset, paste("spls_loading_0_", job_name, "_", sep=""), "png", 72, width=NA, 1,"overview");
 
+  
   ##############
   # Rename Output Files and Add Appropriate Headers for Downstream Use
   ##############
