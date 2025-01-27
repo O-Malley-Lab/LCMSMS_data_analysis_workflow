@@ -1,5 +1,5 @@
 """""""""""""""""""""""""""""""""""""""""""""
-LCMSMS Data Analysis Workflow, Script 1: Prepare Inputs for MZmine3
+LCMSMS Data Analysis Workflow, Script 1: MZmine3 Multi-Job Workflow
 
 @author: Lazarina Butkovich
 
@@ -10,6 +10,7 @@ Features include:
 - Rearrange MZmine3 output files for easy GNPS input
 - Use FTP to upload GNPS_input_for_job_name folder to GNPS
 - Use the MZmine3 output for GNPS input to generate the MetaboAnalyst input
+- Determine the MetaboAnalyst ID for the ABMBA internal standard feature for normalization in Script 2
 
 """""""""""""""""""""""""""""""""""""""""""""
 import pandas as pd
@@ -200,7 +201,7 @@ def delete_folder(ftp, folder_name):
     ftp.rmd(folder_name)
 
 """""""""""""""""""""""""""""""""""""""""""""
-Values
+Values *** CHANGE THESE VALUES AS NEEDED ***
 """""""""""""""""""""""""""""""""""""""""""""
 INPUT_FOLDER = r'input' 
 TEMP_OVERALL_FOLDER = r'temp'
@@ -222,6 +223,7 @@ config = dotenv_values(".env")
 # Get USERNAME and PASSWD from .env file
 USERNAME = config['USERNAME']
 PASSWD = config['PASSWD']
+# Set RUN_FTP to True to run FTP, False to not run FTP (to save running time when FTP not necessary)
 RUN_FTP = False
 
 # ABMBA internal standard feature m/z and RT
@@ -446,45 +448,6 @@ for job_index, job in enumerate(metadata['Job Name']):
 
 
     """""""""""""""""""""""""""""""""""""""""""""
-    Rearrange MZmine3 output files for easy GNPS input
-    """""""""""""""""""""""""""""""""""""""""""""
-    # Update: .mzML files are large, so instead of transferring them to a specific folder, we will leave them in their input files and only access them from there. Additionally, all other files for GNPS input will also not be moved or copied and will only be accessed and used from their original locations.
-
-    # # Create a new folder in temp, job_name folder "GNPS_input_for_" + job_name
-    # gnps_input_folder = pjoin(temp_job_folder, "GNPS_input_for_" + job_name)
-    # os.makedirs(gnps_input_folder)
-
-    # """
-    # .mzML files
-    # """
-
-    # # # Copy .mzML files from input folder to GNPS_input_for_job_name folder
-    # # for filename in exp_filenames:
-    # #     shutil.copy(pjoin(INPUT_FOLDER, job_name, filename), pjoin(gnps_input_folder, filename))
-
-    # # for filename in ctrl_filenames:
-    # #     shutil.copy(pjoin(INPUT_FOLDER, control_folder_name, filename), pjoin(gnps_input_folder, filename))
-
-    # """
-    # Quant Peak Area .csv
-    # """
-    # # Cut the quant peak area .csv file from temp folder, job_name folder to the GNPS_input_for_job_name folder
-    # shutil.move(pjoin(temp_job_folder, job_name + '_gnps_quant.csv'), pjoin(gnps_input_folder, job_name + '_gnps_quant.csv'))
-
-    # """
-    # .mgf MS2 file
-    # """
-    # # MZmine3 produces a .mgf file in the temp folder, job_name folder. Cut and paste the .mgf file to the GNPS_input_for_job_name folder
-    # shutil.move(pjoin(temp_job_folder, job_name + '_gnps.mgf'), pjoin(gnps_input_folder, job_name + '_gnps.mgf'))
-
-    # """
-    # Metadata .tsv file
-    # """
-    # # Copy the GNPS metadata .tsv from temp folder, job_name folder to the GNPS_input_for_job_name folder
-    # shutil.copy(metadata_filepath_gnps, pjoin(gnps_input_folder, metadata_filename_gnps))
-    # ""
-
-    """""""""""""""""""""""""""""""""""""""""""""
     Use FTP () to upload GNPS_input_for_job_name folder to GNPS
     """""""""""""""""""""""""""""""""""""""""""""
     # Only run this section if RUN_FTP is True
@@ -704,5 +667,29 @@ Record the ABMBA IDs in the Overall Metadata Table
 # Use abmba_dict to update the metadata table with the ABMBA ID for each job
 metadata['ABMBA_Feature_Name_from_Script_1'] = metadata['Job Name'].map(abmba_dict)
 
-# Overwrite the metadata table with the updated ABMBA IDs, in the input folder
-metadata.to_excel(pjoin(INPUT_FOLDER, METADATA_OVERALL_FILENAME), sheet_name = METADATA_JOB_TAB, index = False)
+# Load the excel file
+excel_file = pd.ExcelFile(pjoin(INPUT_FOLDER, METADATA_OVERALL_FILENAME))
+
+# Read all sheets into a dictionary 
+all_sheets = {sheet: pd.read_excel(excel_file, sheet_name=sheet) for sheet in excel_file.sheet_names}
+
+# Update the specific sheet with ABMBA IDs
+all_sheets[METADATA_JOB_TAB] = metadata
+
+# Create an Excel writer object
+with pd.ExcelWriter(pjoin(INPUT_FOLDER, METADATA_OVERALL_FILENAME), engine='openpyxl') as writer:
+    # Write each sheet back
+    for sheet_name, df in all_sheets.items():
+        df.to_excel(writer, sheet_name=sheet_name, index=False)
+        
+        # Auto-adjust column widths based on content
+        worksheet = writer.sheets[sheet_name]
+        for idx, col in enumerate(df.columns):
+            max_length = max(
+                df[col].astype(str).apply(len).max(),  # Length of longest entry
+                len(str(col))  # Length of column name
+            )
+            # Add a little extra width
+            adjusted_width = (max_length + 2)
+            worksheet.column_dimensions[chr(65 + idx)].width = adjusted_width
+

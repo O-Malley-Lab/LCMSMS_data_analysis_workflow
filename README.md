@@ -72,7 +72,7 @@ While screening heterologous expression is a main use case for this workflow, ot
 
 ## Script Summaries
 ### Script_1_MZmine3_multi-job_workflow.py
-Script 1 is a Python script that automates MZmine3 preprocessing of LC-MS/MS data. It creates metadata files, modifies XML parameters (based on your manually curated parameters template file), executes MZmine3 via command line, and prepares outputs for MetaboAnalyst, GNPS, and SIRIUS analysis. The script also handles FTP upload of processed data to GNPS servers.
+Script 1 is a Python script that automates MZmine3 preprocessing of LC-MS/MS data. It creates metadata files, modifies XML parameters (based on your manually curated parameters template file), executes MZmine3 via command line, and prepares inputs to MetaboAnalyst, GNPS, and SIRIUS analysis. The script also handles FTP upload of processed data to GNPS servers.
 
 ### Script_2_MetaboAnalyst_multi-job_workflow.r 
 Script 2 is an R script that performs statistical analysis of metabolomics data using MetaboAnalystR. Features include data normalization, fold-change analysis, t-tests, volcano plots, and principal component analysis (PCA). The script generates visualizations and statistical outputs for metabolite abundance comparisons.

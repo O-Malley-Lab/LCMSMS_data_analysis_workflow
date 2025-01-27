@@ -190,57 +190,49 @@ for (job_index in seq_along(job_names)) {
   # Replace missing or 0 values in the metabolomics data with a small volume (default is half of the minimum positive value in the data)
   mset <- ReplaceMin(mset)
   
-  
-  ##############
-  # Data Filtering
-  ##############
-  # The following info on Data Filtering is from the web version of MetaboAnalyst one-factor statistical analysis workflow
-  # The purpose of the data filtering is to identify and remove variables that are unlikely to be of use when modeling the data
-  # The following filtering aims to remove near-constant variables (not metabolites of interest) and very small values (likely noise).
-  # FilterVariable function in MetaboAnalystR states that final dataset should have no more than 5000 variables for effective computing
-  
-  
-  # Plot the features before filtering < to-do
-  
-
-  # Plot the features before filtering < to-do
-  
-  # Reliability filter
-  # default off, requires QC samples
-  
-  # Variance filter
-  # Use RSD, with 40% filtered out for LC-MS with number of features over 1000
-  # Abundance filter
-  # Mean Filter
-  mset <- FilterVariable(mset, "F", 0, var.filter="rsd", var.cutoff=10, "mean", 0)
-
-
-  ##############
-  # Option 1: Normalize Data to Reference Feature (ABMBA)
-  ##############
-  # Prepare data for normalization (function should always be initialized)
-  mset <- PreparePrenormData(mset)
-
-  # Normalize data to reference feature (ABMBA)
-  # rowNorm: "CompNorm" = normalization to reference feature
-  # transNorm: "NULL" = no transformation
-  # ref: job_abmba_feature_name = feature name for internal standard, ABMBA, determined from Script 1
-  # scaleNorm: "None" for no scaling
-  mset <- Normalization(mset, "CompNorm", transNorm="NULL", scaleNorm="NULL", ref=job_abmba_feature_name, ratio=FALSE, ratioNum=20)
 
   # ##############
-  # # Option 2: Normalize Data to TIC (commented out)
+  # # Option 1: Normalize Data to Reference Feature (ABMBA) then filter data
   # ##############
   # # Prepare data for normalization (function should always be initialized)
   # mset <- PreparePrenormData(mset)
   # 
-  # # Normalize data to total ion chromatogram (TIC)
-  # # rowNorm: "SumNorm" = normalization to constant sum
+  # # Normalize data to reference feature (ABMBA)
+  # # rowNorm: "CompNorm" = normalization to reference feature
   # # transNorm: "NULL" = no transformation
-  # # scaleNorm: "None" for no scaling; or change to "MeanCenter" = mean centering, "AutoNorm" for autoscaling, etc.
-  # # ref: NULL = no reference sample (default)
+  # # ref: job_abmba_feature_name = feature name for internal standard, ABMBA, determined from Script 1
+  # # scaleNorm: "None" for no scaling
+  # mset <- Normalization(mset, "CompNorm", transNorm="NULL", scaleNorm="NULL", ref=job_abmba_feature_name, ratio=FALSE, ratioNum=20)
   # 
-  # mset <- Normalization(mset, "SumNorm", transNorm="NULL", scaleNorm="AutoNorm", ratio=FALSE, ratioNum=20)
+  # # Because CompNorm is independent of number of features, it is fine to perform variance filter afterwards.
+  # # Performing variance filter prior can cause error if the ABMBA feature is filtered out.
+  # 
+  # # Variance filter
+  # # Use RSD, with 40% filtered out for LC-MS with number of features over 1000
+  # # Abundance filter
+  # # Mean Filter
+  # mset <- FilterVariable(mset, "F", 0, var.filter="rsd", var.cutoff=40, "mean", 0)
+  
+  
+  ##############
+  # Option 2: Filter Data then Normalize Data to TIC (commented out)
+  ##############
+  # Variance filter
+  # Use RSD, with 40% filtered out for LC-MS with number of features over 1000
+  # Abundance filter
+  # Mean Filter
+  mset <- FilterVariable(mset, "F", 0, var.filter="rsd", var.cutoff=40, "mean", 25)
+
+  # Prepare data for normalization (function should always be initialized)
+  mset <- PreparePrenormData(mset)
+
+  # Normalize data to total ion chromatogram (TIC)
+  # rowNorm: "SumNorm" = normalization to constant sum
+  # transNorm: "NULL" = no transformation
+  # scaleNorm: "None" for no scaling; or change to "MeanCenter" = mean centering, "AutoNorm" for autoscaling, etc.
+  # ref: NULL = no reference sample (default)
+
+  mset <- Normalization(mset, "SumNorm", transNorm="NULL", scaleNorm="AutoNorm", ratio=FALSE, ratioNum=20)
 
 
   ##############
