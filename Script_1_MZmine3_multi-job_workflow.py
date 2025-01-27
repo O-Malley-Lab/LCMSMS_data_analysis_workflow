@@ -231,8 +231,8 @@ ABMBA_MZ_POS  = 229.9811 #m/z 229.9811
 ABMBA_RT_POS = 4.685 #4.685 minutes
 ABMBA_MZ_NEG = 227.9655 #m/z 227.9655
 ABMBA_RT_NEG = 4.8 #4.8 min
-MZ_TOL = 0.01 #m/z tolerance for matching ABMBA
-RT_TOL = 0.1 #RT tolerance for matching ABMBA
+MZ_TOL = 0.1 #m/z tolerance for matching ABMBA
+RT_TOL = 1 #RT tolerance for matching ABMBA
 
 # PRIOR to running script, you need to manually create/generate the batch parameters .xml file for your jobs (filename specified in METADATA_OVERALL_FILENAME column 'MZmine3 batch template'). You should manually look at the parameters settings in the MZmine3 GUI to ensure they are correct for your job. This script will edit the .xml file to input the correct filenames and metadata for the job. Parameters to particularly consider:
 # - Instrument-specific parameters (MZmine3 allows you to specify a setup, and you will get some default paramets)
