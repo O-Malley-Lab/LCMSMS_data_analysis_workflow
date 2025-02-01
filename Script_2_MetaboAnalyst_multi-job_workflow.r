@@ -508,6 +508,7 @@ for (job_index in seq_along(job_names)) {
 
 }
 
+setwd(wd)
 # If .Rhistory was created in the working directory, delete it
 if (file.exists(".Rhistory")) {
   file.remove(".Rhistory")

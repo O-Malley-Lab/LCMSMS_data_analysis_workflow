@@ -174,3 +174,6 @@ obsolete_scripts/
 
 # Ignore .Rhistory files created
 .Rhistory
+
+# output_for_comparison folder
+output_for_comparison/

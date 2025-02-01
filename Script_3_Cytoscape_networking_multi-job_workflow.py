@@ -217,22 +217,22 @@ OUTPUT_FOLDER = r'output'
 METADATA_OVERALL_FILENAME = 'Overall_Running_Metadata_for_All_LCMSMS_Jobs.xlsx'
 METADATA_JOB_TAB = 'Multi-jobs'
 
-cytoscape_inputs_folder_name = 'Cytoscape_inputs'
+# CYTOSCAPE_INPUTS_FOLDER_NAME = 'Cytoscape_inputs'
 
 # Cytoscape style .xml filenames (located in cytoscape_inputs_folder).
 # Note, you need to manually edit the 'visualStyle name' in the .xml file to match the filename (without the .xml)
-cytoscape_style_filename = 'styles_7.xml'
-cytoscape_style_filtered_filename = 'styles_7_filter_node_emphasis.xml'
+CYTOSCAPE_STYLE_FILENAME = 'styles_7.xml'
+CYTOSCAPE_STYLE_FILTERED_FILENAME = 'styles_7_filter_node_emphasis.xml'
 
-# MetaboAnalyst Outputs of Interest
-metaboanalyst_output_folder_name = 'MetaboAnalystR_Output'
-metaboanalyst_log2FC_filename_post_str = "_fold_change.csv"
-metaboanalyst_ttest_filename_post_str = "_t_test.csv"
-metaboanalyst_norm_peak_area_filename_post_str = "_normalized_data_transposed.csv"
+# MetaboAnalyst Outputs of Interest  
+METABOANALYST_OUTPUT_FOLDER_NAME = 'MetaboAnalystR_Output'
+METABOANALYST_LOG2FC_FILENAME_POST_STR = "_fold_change.csv"
+METABOANALYST_TTEST_FILENAME_POST_STR = "_t_test.csv"
+METABOANALYST_NORM_PEAK_AREA_FILENAME_POST_STR = "_normalized_data_transposed.csv"
 
 # Columns from MetaboAnalyst Outputs to add to Cytoscape node table
-log2fc_cols_to_keep = ['shared_name', 'log2.FC.']
-t_test_cols_to_keep = ['shared_name', 'p.value']
+LOG2FC_COLS_TO_KEEP = ['shared_name', 'log2.FC.']
+T_TEST_COLS_TO_KEEP = ['shared_name', 'p.value']
 
 # Filtering Parameters
 CTRL_LOG10_CUTOFF = 5 # Log10 of CTRL must be less than this value
@@ -248,7 +248,7 @@ METABOANALYSTR_PVAL_CUTOFF_STRINGENT = 0.05
 NODES_TO_KEEP_CUTOFF_FOR_STRINGENT_FILTER = 20
 
 # Filters for upregulated likely host metabolites
-HOST_CTRL_LOG10_CUTOFF = 3 # Log10 of CTRL must be greater than this value
+HOST_CTRL_LOG10_CUTOFF = 5 # Log10 of CTRL must be greater than this value
 HOST_RATIO_CUTOFF = 10 # Ratio of EXP to CTRL must be greater than this value
 
 # Set deviation amounts for RT and m/z (for identifying specific peaks, such as standards)
@@ -259,8 +259,12 @@ RT_DEV = 0.5
 # ABMBA standard peak
 ABMBA_MZ_POS  = 229.9811 #m/z 229.9811
 ABMBA_RT_POS = 4.685 #4.685 minutes
-# ABMBA_MZ_NEG = 227.9655 #m/z 227.9655
-# ABMBA_RT_NEG = 4.8 #4.8 min
+ABMBA_MZ_NEG = 227.9655 #m/z 227.9655
+ABMBA_RT_NEG = 4.8 #4.8 min
+
+# Columns of interest
+COLUMNS_OF_INTEREST = ['shared name', 'precursor mass', 'RTMean', 'log2.FC.', 'p.value', 'Compound_Name', 'Suspect_Compound_Match','Analog:MQScore', 'GNPSGROUP:EXP','GNPSGROUP:CTRL', 'GNPSGROUP:EXP_log10','GNPSGROUP:CTRL_log10', 'EXP:CTRL_ratio', 'Best Ion', 'GNPSLinkout_Cluster']
+
 
 """""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""
 Iterate over each job_name in metadata
@@ -270,7 +274,7 @@ metadata = pd.read_excel(pjoin(INPUT_FOLDER, METADATA_OVERALL_FILENAME), sheet_n
 
 for job_index, job in enumerate(metadata['Job Name']):
 
-    # Cytoscape column names to keep (and their order) in the exported node table (input for filtering script)
+    # Cytoscape column names to keep (and their order) in the exported node table (input for filtering script), with columns added through for-loop
     cytoscape_cols_to_keep = [
     'shared name', 'precursor mass', 'RTMean', 'Best Ion', 'GNPSGROUP:EXP', 'GNPSGROUP:CTRL', 'componentindex', 'sum(precursor intensity)', 'NODE_TYPE','number of spectra',  'MassDiff', 'GNPSLinkout_Network', 'GNPSLinkout_Cluster', 'Instrument', 'PI', 'GNPSLibraryURL', 'Analog:MQScore', 'SpectrumID', 'Analog:SharedPeaks','Compound_Name','log2.FC.', 'p.value',
     ]
@@ -286,6 +290,15 @@ for job_index, job in enumerate(metadata['Job Name']):
     ionization = metadata['Ionization'][job_index]
     exp_rep_num = metadata['EXP num replicates'][job_index]
     ctrl_rep_num = metadata['CTRL num replicates'][job_index]
+
+    if ionization == 'POS':
+        abmba_mz = ABMBA_MZ_POS
+        abmba_rt = ABMBA_RT_POS
+    elif ionization == 'NEG':
+        abmba_mz = ABMBA_MZ_NEG
+        abmba_rt = ABMBA_RT_NEG
+    else:
+        raise ValueError(f'Invalid ionization mode for job {job_name}. Must be either "POS" or "NEG".')
 
     # Define cytoscape inputs folder 
     cytoscape_inputs_folder = pjoin(INPUT_FOLDER, 'Cytoscape_inputs')
@@ -314,7 +327,7 @@ for job_index, job in enumerate(metadata['Job Name']):
     """""""""""""""""""""""""""""""""""""""""""""
     Set Visual Style
     """""""""""""""""""""""""""""""""""""""""""""
-    p4c_import_and_apply_cytoscape_style(pjoin(cytoscape_inputs_folder, cytoscape_style_filename), cytoscape_style_filename, suid_main_network, job_name)
+    p4c_import_and_apply_cytoscape_style(pjoin(cytoscape_inputs_folder, CYTOSCAPE_STYLE_FILENAME), CYTOSCAPE_STYLE_FILENAME, suid_main_network, job_name)
 
 
     """""""""""""""""""""""""""""""""""""""""""""
@@ -339,18 +352,18 @@ for job_index, job in enumerate(metadata['Job Name']):
     Import MetaboAnalyst Data
     """""""""""""""""""""""""""""""""""""""""""""
     # Import and load log2fc data. Values >0 are upregulated in EXP.
-    log2fc_filename = job_name + metaboanalyst_log2FC_filename_post_str
-    log2fc_data = pd.read_csv(pjoin(TEMP_OVERALL_FOLDER, job_name, metaboanalyst_output_folder_name, log2fc_filename))
-    node_table_add_columns(log2fc_data, log2fc_cols_to_keep, suid_main_network, 'shared_name')
+    log2fc_filename = job_name + METABOANALYST_LOG2FC_FILENAME_POST_STR
+    log2fc_data = pd.read_csv(pjoin(TEMP_OVERALL_FOLDER, job_name, METABOANALYST_OUTPUT_FOLDER_NAME, log2fc_filename))
+    node_table_add_columns(log2fc_data, LOG2FC_COLS_TO_KEEP, suid_main_network, 'shared_name')
 
     # Import and load t-test data. Values <0.05 are significant.
-    t_test_filename = job_name + metaboanalyst_ttest_filename_post_str
-    t_test_data = pd.read_csv(pjoin(TEMP_OVERALL_FOLDER, job_name, metaboanalyst_output_folder_name, t_test_filename))
-    node_table_add_columns(t_test_data, t_test_cols_to_keep, suid_main_network, 'shared_name')
+    t_test_filename = job_name + METABOANALYST_TTEST_FILENAME_POST_STR
+    t_test_data = pd.read_csv(pjoin(TEMP_OVERALL_FOLDER, job_name, METABOANALYST_OUTPUT_FOLDER_NAME, t_test_filename))
+    node_table_add_columns(t_test_data, T_TEST_COLS_TO_KEEP, suid_main_network, 'shared_name')
 
     # Import normalized peak area data
-    norm_peak_area_filename = job_name + metaboanalyst_norm_peak_area_filename_post_str
-    norm_peak_area_data = pd.read_csv(pjoin(TEMP_OVERALL_FOLDER, job_name, metaboanalyst_output_folder_name, norm_peak_area_filename))
+    norm_peak_area_filename = job_name + METABOANALYST_NORM_PEAK_AREA_FILENAME_POST_STR
+    norm_peak_area_data = pd.read_csv(pjoin(TEMP_OVERALL_FOLDER, job_name, METABOANALYST_OUTPUT_FOLDER_NAME, norm_peak_area_filename))
     # Keep all normalized peak area columns except for MetaboAnalyst_ID
     norm_peak_area_data = norm_peak_area_data.drop(columns=['MetaboAnalyst_ID'])
     # Rename normalized data columns (not shared_name) to end with '_normalized'
@@ -536,10 +549,10 @@ for job_index, job in enumerate(metadata['Job Name']):
     table_ABMBA = node_table.copy()
 
     # First, filter for peaks that have a m/z ('precursor mass') within the deviation of the ABMBA standard m/z
-    table_ABMBA = table_ABMBA[(table_ABMBA['precursor mass'] > ABMBA_MZ_POS - MZ_DEV) & (table_ABMBA['precursor mass'] < ABMBA_MZ_POS + MZ_DEV)]
+    table_ABMBA = table_ABMBA[(table_ABMBA['precursor mass'] > abmba_mz - MZ_DEV) & (table_ABMBA['precursor mass'] < abmba_mz + MZ_DEV)]
 
     # Second, filter for peaks that have a RT ('RTMean') within the deviation of the ABMBA standard RT
-    table_ABMBA = table_ABMBA[(table_ABMBA['RTMean'] > ABMBA_RT_POS - RT_DEV) & (table_ABMBA['RTMean'] < ABMBA_RT_POS + RT_DEV)]
+    table_ABMBA = table_ABMBA[(table_ABMBA['RTMean'] > abmba_rt - RT_DEV) & (table_ABMBA['RTMean'] < abmba_rt + RT_DEV)]
 
     # Sort table_ABMBA in ascending order by name
     table_ABMBA = table_ABMBA.sort_values(by = 'name', ascending = True)
@@ -563,10 +576,7 @@ for job_index, job in enumerate(metadata['Job Name']):
     """""""""""""""""""""""""""""""""""""""""""""
     Formatted Simplest Table
     """""""""""""""""""""""""""""""""""""""""""""
-    # Make an easy-to-read formatted table with all peaks
-    columns_of_interest = ['shared name', 'precursor mass', 'RTMean', 'log2.FC.', 'p.value', 'GNPSGROUP:EXP','GNPSGROUP:CTRL', 'GNPSGROUP:EXP_log10','GNPSGROUP:CTRL_log10', 'EXP:CTRL_ratio', 'Best Ion', 'GNPSLinkout_Cluster','Compound_Name','Analog:MQScore'] 
-
-    table_formatted = node_table[columns_of_interest].copy()
+    table_formatted = node_table[COLUMNS_OF_INTEREST].copy()
 
     # Make the values in "GNPSGROUP:EXP","GNPSGROUP:CTRL", "GNPSGROUP:EXP_log10","GNPSGROUP:CTRL_log10", 'EXP:CTRL_ratio' be in scientific notation and rounded to 2 decimal places
     columns_sci_notation = ['GNPSGROUP:EXP','GNPSGROUP:CTRL', 'p.value']
@@ -585,49 +595,12 @@ for job_index, job in enumerate(metadata['Job Name']):
     """""""""""""""""""""""""""""""""""""""""""""
     Make a table of the parameters used in this script
     """""""""""""""""""""""""""""""""""""""""""""
-    parameters = pd.DataFrame({'Parameter': ['METABOANALYSTR_LOG2FC_CUTOFF', 'METABOANALYSTR_PVAL_CUTOFF', 'CTRL_LOG10_CUTOFF', 'EXP_LOG10_CUTOFF', 'HOST_CTRL_LOG10_CUTOFF', 'HOST_RATIO_CUTOFF', 'MZ_DEV', 'RT_DEV','ABMBA_MZ_POS','ABMBA_RT_POS'], 'Value': [METABOANALYSTR_LOG2FC_CUTOFF, METABOANALYSTR_PVAL_CUTOFF, CTRL_LOG10_CUTOFF, EXP_LOG10_CUTOFF, HOST_CTRL_LOG10_CUTOFF, HOST_RATIO_CUTOFF, MZ_DEV, RT_DEV, ABMBA_MZ_POS, ABMBA_RT_POS]})
-
+    parameters = pd.DataFrame({'Parameter': ['METABOANALYSTR_LOG2FC_CUTOFF', 'METABOANALYSTR_PVAL_CUTOFF', 'CTRL_LOG10_CUTOFF', 'EXP_LOG10_CUTOFF', 'HOST_CTRL_LOG10_CUTOFF', 'HOST_RATIO_CUTOFF', 'MZ_DEV', 'RT_DEV','ABMBA_mz','ABMBA_RT'], 'Value': [METABOANALYSTR_LOG2FC_CUTOFF, METABOANALYSTR_PVAL_CUTOFF, CTRL_LOG10_CUTOFF, EXP_LOG10_CUTOFF, HOST_CTRL_LOG10_CUTOFF, HOST_RATIO_CUTOFF, MZ_DEV, RT_DEV, abmba_mz, abmba_rt]})
 
 
     """""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""
     Main Part 3: Create Filtered Cytoscape Networks for Peaks of Interest
     """""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""
-    # """""""""""""""""""""""""""""""""""""""""""""
-    # Run test Cytoscape filter first
-    # """""""""""""""""""""""""""""""""""""""""""""
-    # # Create a pandas of TRUE and FALSE values for the nodes to keep, with keys of shared name. We will keep nodes that have a 'EXP:CTRL_ratio' greater than the RATIO_CUTOFF
-    # nodes_to_keep = node_table_temp['EXP:CTRL_ratio'] > RATIO_CUTOFF
-    # suid_test = p4c_network_add_filter_columns("test_filter", node_table_temp, nodes_to_keep, suid_main_network, key_col='shared name', componentindex_colname='componentindex')
-    # p4c_import_and_apply_cytoscape_style(pjoin(cytoscape_inputs_folder, cytoscape_style_filtered_filename), cytoscape_style_filtered_filename, suid_test, job_name + '_test_filter')
-
-    # """""""""""""""""""""""""""""""""""""""""""""
-    # Create filtered network for Filtered Peaks of Interest
-    # """""""""""""""""""""""""""""""""""""""""""""
-    # # Create a pandas of TRUE and FALSE values for the nodes to keep, with keys of shared name. We will keep nodes that satisfy the following:
-    # # First, filter for peaks that have a GNPSGROUP:CTRL_log10 less than the cutoff
-    # # Second, filter for peaks that have a GNPSGROUP:EXP_log10 greater than the cutoff
-    # # Third, filter for peaks that have a EXP:CTRL_ratio greater than the cutoff
-    # # copy the node_table_temp
-    # nodes_to_keep_1 = node_table_temp['GNPSGROUP:CTRL_log10'] < CTRL_LOG10_CUTOFF
-    # nodes_to_keep_1 = nodes_to_keep_1 & (node_table_temp['GNPSGROUP:EXP_log10'] > EXP_LOG10_CUTOFF)
-    # nodes_to_keep_1 = nodes_to_keep_1 & (node_table_temp['EXP:CTRL_ratio'] > RATIO_CUTOFF)
-
-    # suid_target = p4c_network_add_filter_columns("Filtered_Peaks_of_Interest", node_table_temp, nodes_to_keep_1, suid_main_network, key_col='shared name', componentindex_colname='componentindex')
-    # p4c_import_and_apply_cytoscape_style(pjoin(cytoscape_inputs_folder, cytoscape_style_filtered_filename), cytoscape_style_filtered_filename, suid_target, job_name + '_Filtered_Peaks_of_Interest')
-    # # Unfortunately, I do not think there is a good way to ensure node labels appear in front of the nodes; sometimes they appear behind.
-
-
-    # """""""""""""""""""""""""""""""""""""""""""""
-    # Create filtered network for Filtered Peaks of Interest, More Stringent
-    # """""""""""""""""""""""""""""""""""""""""""""
-    # nodes_to_keep_stringent = node_table_temp['GNPSGROUP:CTRL_log10'] < CTRL_LOG10_CUTOFF_STRINGENT
-    # nodes_to_keep_stringent = nodes_to_keep_stringent & (node_table_temp['GNPSGROUP:EXP_log10'] > EXP_LOG10_CUTOFF_STRINGENT)
-    # nodes_to_keep_stringent = nodes_to_keep_stringent & (node_table_temp['EXP:CTRL_ratio'] > RATIO_CUTOFF_STRINGENT)
-
-    # suid_target = p4c_network_add_filter_columns("Filtered_Peaks_of_Interest_Stringent", node_table_temp, nodes_to_keep_stringent, suid_main_network, key_col='shared name', componentindex_colname='componentindex')
-    # p4c_import_and_apply_cytoscape_style(pjoin(cytoscape_inputs_folder, cytoscape_style_filtered_filename), cytoscape_style_filtered_filename, suid_target, job_name + '_Filtered_Peaks_of_Interest_Stringent')
-
-
     """""""""""""""""""""""""""""""""""""""""""""
     Create filtered network for MetaboAnalystR filters
     """""""""""""""""""""""""""""""""""""""""""""
@@ -638,7 +611,7 @@ for job_index, job in enumerate(metadata['Job Name']):
     nodes_to_keep_metaboanalystr = nodes_to_keep_metaboanalystr & (node_table_temp['GNPSGROUP:EXP_log10'] > EXP_LOG10_CUTOFF)
 
     suid_target = p4c_network_add_filter_columns("MetaboAnalystR_Filter", node_table_temp, nodes_to_keep_metaboanalystr, suid_main_network, key_col='shared name', componentindex_colname='componentindex')
-    p4c_import_and_apply_cytoscape_style(pjoin(cytoscape_inputs_folder, cytoscape_style_filtered_filename), cytoscape_style_filtered_filename, suid_target, job_name + '_MetaboAnalystR_Filter')
+    p4c_import_and_apply_cytoscape_style(pjoin(cytoscape_inputs_folder, CYTOSCAPE_STYLE_FILTERED_FILENAME), CYTOSCAPE_STYLE_FILTERED_FILENAME, suid_target, job_name + '_MetaboAnalystR_Filter')
 
 
     """""""""""""""""""""""""""""""""""""""""""""
@@ -654,7 +627,7 @@ for job_index, job in enumerate(metadata['Job Name']):
         nodes_to_keep_metaboanalystr_stringent = nodes_to_keep_metaboanalystr_stringent & (node_table_temp['GNPSGROUP:EXP_log10'] > EXP_LOG10_CUTOFF_STRINGENT)
 
         suid_target = p4c_network_add_filter_columns("MetaboAnalystR_Filter_Stringent", node_table_temp, nodes_to_keep_metaboanalystr_stringent, suid_main_network, key_col='shared name', componentindex_colname='componentindex')
-        p4c_import_and_apply_cytoscape_style(pjoin(cytoscape_inputs_folder, cytoscape_style_filtered_filename), cytoscape_style_filtered_filename, suid_target, job_name + '_MetaboAnalystR_Filter_Stringent')
+        p4c_import_and_apply_cytoscape_style(pjoin(cytoscape_inputs_folder, CYTOSCAPE_STYLE_FILTERED_FILENAME), CYTOSCAPE_STYLE_FILTERED_FILENAME, suid_target, job_name + '_MetaboAnalystR_Filter_Stringent')
 
 
     """""""""""""""""""""""""""""""""""""""""""""
@@ -674,13 +647,49 @@ for job_index, job in enumerate(metadata['Job Name']):
     Write a table for the stringently filtered peaks of interest, if it exists
     """""""""""""""""""""""""""""""""""""""""""""
     if run_stringent_filter:
-        table_stringent = node_table[columns_of_interest].copy()
+        table_stringent = node_table[COLUMNS_OF_INTEREST].copy()
 
         # For rows kept in nodes_to_keep_metaboanalystr_stringent, keep in table_stringent. Determine this based on the shared name
         table_stringent = table_stringent[table_stringent['shared name'].isin(node_table_temp[nodes_to_keep_metaboanalystr_stringent]['shared name'])]
 
         # Order rows from highest to lowest 'GNPSGROUP:EXP_log10'
         table_stringent = table_stringent.sort_values(by = 'GNPSGROUP:EXP_log10', ascending = False)
+
+
+    """""""""""""""""""""""""""""""""""""""""""""
+    Format Column Order in Dataframes for Excel Sheets
+    """""""""""""""""""""""""""""""""""""""""""""
+    # For each dataframe written to a sheet, have the first columns be COLUMNS_OF_INTEREST ('shared name', 'precursor mass', 'RTMean', 'log2.FC.', 'p.value', 'GNPSGROUP:EXP','GNPSGROUP:CTRL', 'GNPSGROUP:EXP_log10','GNPSGROUP:CTRL_log10', 'EXP:CTRL_ratio', 'Best Ion', 'GNPSLinkout_Cluster','Compound_Name','Analog:MQScore') and then the rest of the columns in the dataframe
+    # For each dataframe, reorder columns to have COLUMNS_OF_INTEREST first
+    dataframes = {
+        'table_formatted': table_formatted,
+        'node_table': node_table,
+        'table_stringent': table_stringent,
+        'table_filtered': table_filtered,
+        'table_host_upreg': table_host_upreg,
+        'table_all_matched_cmpds': table_all_matched_cmpds,
+        'table_matched_cmpds_no_suspect': table_matched_cmpds_no_suspect,
+        'table_ABMBA': table_ABMBA
+    }
+
+    for name, df in dataframes.items():
+        # Get columns that are in both COLUMNS_OF_INTEREST and df.columns
+        valid_cols = [col for col in COLUMNS_OF_INTEREST if col in df.columns]
+        # Get remaining columns that are not in COLUMNS_OF_INTEREST
+        other_cols = [col for col in df.columns if col not in COLUMNS_OF_INTEREST]
+        # Reorder columns with valid COLUMNS_OF_INTEREST first, then other columns
+        dataframes[name] = df.reindex(columns=valid_cols + other_cols)
+
+    # Update original variables with reordered dataframes
+    table_formatted = dataframes['table_formatted']
+    node_table = dataframes['node_table']
+    table_stringent = dataframes['table_stringent']
+    table_filtered = dataframes['table_filtered']
+    table_host_upreg = dataframes['table_host_upreg']
+    table_all_matched_cmpds = dataframes['table_all_matched_cmpds']
+    table_matched_cmpds_no_suspect = dataframes['table_matched_cmpds_no_suspect']
+    table_ABMBA = dataframes['table_ABMBA']
+    
 
     """""""""""""""""""""""""""""""""""""""""""""
     Write each dataframe to a different sheet in output excel
@@ -706,7 +715,6 @@ for job_index, job in enumerate(metadata['Job Name']):
     table_ABMBA.to_excel(writer, sheet_name = 'ABMBA Standard', index = False)
     parameters.to_excel(writer, sheet_name = 'Filter Parameters', index = False)
     
-
     # Format the excel sheets so that the column width matches the size of the header text
     workbook = writer.book
     # For each table and corresponding excel tab, format width

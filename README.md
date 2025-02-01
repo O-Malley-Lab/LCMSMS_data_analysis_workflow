@@ -129,6 +129,8 @@ Manually check correctness of statistical treatments. For example, ensure approp
 
 Manual: determine style .xml settings for Cytoscape networks
 
+Manual: Download GNPS job results: (1) 
+
 Script 3 features:
 - Python filter script
 - Align data analysis results from MZmine3, MetaboAnalyst, and GNPS.
