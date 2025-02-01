@@ -263,7 +263,7 @@ ABMBA_MZ_NEG = 227.9655 #m/z 227.9655
 ABMBA_RT_NEG = 4.8 #4.8 min
 
 # Columns of interest
-COLUMNS_OF_INTEREST = ['shared name', 'precursor mass', 'RTMean', 'log2.FC.', 'p.value', 'Compound_Name', 'Suspect_Compound_Match','Analog:MQScore', 'GNPSGROUP:EXP','GNPSGROUP:CTRL', 'GNPSGROUP:EXP_log10','GNPSGROUP:CTRL_log10', 'EXP:CTRL_ratio', 'Best Ion', 'GNPSLinkout_Cluster']
+COLUMNS_OF_INTEREST = ['shared name', 'precursor mass', 'RTMean', 'log2.FC.', 'p.value', 'Compound_Name', 'Suspect_Compound_Match','Analog:MQScore', 'GNPSGROUP:EXP','GNPSGROUP:CTRL', 'GNPSGROUP:EXP_log10','GNPSGROUP:CTRL_log10', 'EXP:CTRL_ratio', 'GNPSLinkout_Cluster']
 
 
 """""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""
@@ -276,7 +276,7 @@ for job_index, job in enumerate(metadata['Job Name']):
 
     # Cytoscape column names to keep (and their order) in the exported node table (input for filtering script), with columns added through for-loop
     cytoscape_cols_to_keep = [
-    'shared name', 'precursor mass', 'RTMean', 'Best Ion', 'GNPSGROUP:EXP', 'GNPSGROUP:CTRL', 'componentindex', 'sum(precursor intensity)', 'NODE_TYPE','number of spectra',  'MassDiff', 'GNPSLinkout_Network', 'GNPSLinkout_Cluster', 'Instrument', 'PI', 'GNPSLibraryURL', 'Analog:MQScore', 'SpectrumID', 'Analog:SharedPeaks','Compound_Name','log2.FC.', 'p.value',
+    'shared name', 'precursor mass', 'RTMean', 'GNPSGROUP:EXP', 'GNPSGROUP:CTRL', 'componentindex', 'sum(precursor intensity)', 'NODE_TYPE','number of spectra',  'MassDiff', 'GNPSLinkout_Network', 'GNPSLinkout_Cluster', 'Instrument', 'PI', 'GNPSLibraryURL', 'Analog:MQScore', 'SpectrumID', 'Analog:SharedPeaks','Compound_Name','log2.FC.', 'p.value',
     ]
     """""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""
     Main Part 1: Prepare Cytoscape Network and Format Node Table
@@ -585,7 +585,11 @@ for job_index, job in enumerate(metadata['Job Name']):
 
     columns_to_round = ['log2.FC.','GNPSGROUP:EXP_log10','GNPSGROUP:CTRL_log10']
     # Round to 2 decimal places. Skip if value is None.
-    table_formatted[columns_to_round] = table_formatted[columns_to_round].applymap(lambda x: round(x, 2) if pd.notnull(x) else x)
+    for col in columns_to_round:
+        table_formatted[col] = pd.to_numeric(table_formatted[col], errors='coerce')
+        table_formatted[col] = table_formatted[col].round(2)
+
+    # table_formatted[columns_to_round] = table_formatted[columns_to_round].applymap(lambda x: round(x, 2) if pd.notnull(x) else x)
     # print row for each row in table_formatted with NoneType in log2.FC. column
     # for index, row in table_formatted.iterrows():
     #     if pd.isnull(row['log2.FC.']):
@@ -659,18 +663,20 @@ for job_index, job in enumerate(metadata['Job Name']):
     """""""""""""""""""""""""""""""""""""""""""""
     Format Column Order in Dataframes for Excel Sheets
     """""""""""""""""""""""""""""""""""""""""""""
-    # For each dataframe written to a sheet, have the first columns be COLUMNS_OF_INTEREST ('shared name', 'precursor mass', 'RTMean', 'log2.FC.', 'p.value', 'GNPSGROUP:EXP','GNPSGROUP:CTRL', 'GNPSGROUP:EXP_log10','GNPSGROUP:CTRL_log10', 'EXP:CTRL_ratio', 'Best Ion', 'GNPSLinkout_Cluster','Compound_Name','Analog:MQScore') and then the rest of the columns in the dataframe
+    # For each dataframe written to a sheet, have the first columns be COLUMNS_OF_INTEREST ('shared name', 'precursor mass', 'RTMean', 'log2.FC.', 'p.value', 'GNPSGROUP:EXP','GNPSGROUP:CTRL', 'GNPSGROUP:EXP_log10','GNPSGROUP:CTRL_log10', 'EXP:CTRL_ratio',  'GNPSLinkout_Cluster','Compound_Name','Analog:MQScore') and then the rest of the columns in the dataframe
     # For each dataframe, reorder columns to have COLUMNS_OF_INTEREST first
     dataframes = {
         'table_formatted': table_formatted,
         'node_table': node_table,
-        'table_stringent': table_stringent,
-        'table_filtered': table_filtered,
+        'table_filtered': table_filtered, 
         'table_host_upreg': table_host_upreg,
         'table_all_matched_cmpds': table_all_matched_cmpds,
         'table_matched_cmpds_no_suspect': table_matched_cmpds_no_suspect,
         'table_ABMBA': table_ABMBA
     }
+
+    if run_stringent_filter:
+        dataframes['table_stringent'] = table_stringent
 
     for name, df in dataframes.items():
         # Get columns that are in both COLUMNS_OF_INTEREST and df.columns
@@ -683,12 +689,14 @@ for job_index, job in enumerate(metadata['Job Name']):
     # Update original variables with reordered dataframes
     table_formatted = dataframes['table_formatted']
     node_table = dataframes['node_table']
-    table_stringent = dataframes['table_stringent']
     table_filtered = dataframes['table_filtered']
     table_host_upreg = dataframes['table_host_upreg']
     table_all_matched_cmpds = dataframes['table_all_matched_cmpds']
     table_matched_cmpds_no_suspect = dataframes['table_matched_cmpds_no_suspect']
     table_ABMBA = dataframes['table_ABMBA']
+
+    if run_stringent_filter:
+        table_stringent = dataframes['table_stringent']
     
 
     """""""""""""""""""""""""""""""""""""""""""""
