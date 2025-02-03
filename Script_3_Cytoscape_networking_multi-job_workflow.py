@@ -1,3 +1,10 @@
+"""""""""""""""""""""""""""""""""""""""""""""
+LCMSMS Data Analysis Workflow, Script 3: Cytoscape Networking, Multi-job Workflow
+
+@author: Lazarina Butkovich
+
+"""""""""""""""""""""""""""""""""""""""""""""
+
 import os
 from os.path import join as pjoin
 import pandas as pd
@@ -226,8 +233,10 @@ CYTOSCAPE_STYLE_FILTERED_FILENAME = 'styles_7_filter_node_emphasis.xml'
 
 # MetaboAnalyst Outputs of Interest  
 METABOANALYST_OUTPUT_FOLDER_NAME = 'MetaboAnalystR_Output'
-METABOANALYST_LOG2FC_FILENAME_POST_STR = "_fold_change.csv"
-METABOANALYST_TTEST_FILENAME_POST_STR = "_t_test.csv"
+# METABOANALYST_LOG2FC_FILENAME_POST_STR = "_fold_change.csv"
+# METABOANALYST_TTEST_FILENAME_POST_STR = "_t_test.csv"
+METABOANALYST_LOG2FC_FILENAME_POST_STR = "_fc_all.csv"
+METABOANALYST_TTEST_ALL_RESULTS_FILENAME = "t_test_all.csv"
 METABOANALYST_NORM_PEAK_AREA_FILENAME_POST_STR = "_normalized_data_transposed.csv"
 
 # Columns from MetaboAnalyst Outputs to add to Cytoscape node table
@@ -354,11 +363,20 @@ for job_index, job in enumerate(metadata['Job Name']):
     # Import and load log2fc data. Values >0 are upregulated in EXP.
     log2fc_filename = job_name + METABOANALYST_LOG2FC_FILENAME_POST_STR
     log2fc_data = pd.read_csv(pjoin(TEMP_OVERALL_FOLDER, job_name, METABOANALYST_OUTPUT_FOLDER_NAME, log2fc_filename))
+    # Convert MetaboAnalyst_ID name to a column "shared name", where the value in the column prior to the first '/' is the shared name value
+    log2fc_data['shared_name'] = log2fc_data['MetaboAnalyst_ID'].apply(lambda x: x.split('/')[0])
+    # Rename "Log2_FoldChange" column to "log2.FC."
+    log2fc_data = log2fc_data.rename(columns={'Log2_FoldChange': 'log2.FC.'})
     node_table_add_columns(log2fc_data, LOG2FC_COLS_TO_KEEP, suid_main_network, 'shared_name')
 
     # Import and load t-test data. Values <0.05 are significant.
-    t_test_filename = job_name + METABOANALYST_TTEST_FILENAME_POST_STR
-    t_test_data = pd.read_csv(pjoin(TEMP_OVERALL_FOLDER, job_name, METABOANALYST_OUTPUT_FOLDER_NAME, t_test_filename))
+    # t_test_filename = job_name + METABOANALYST_TTEST_FILENAME_POST_STR
+    # t_test_data = pd.read_csv(pjoin(TEMP_OVERALL_FOLDER, job_name, METABOANALYST_OUTPUT_FOLDER_NAME, t_test_filename))
+    t_test_data = pd.read_csv(pjoin(TEMP_OVERALL_FOLDER, job_name, METABOANALYST_OUTPUT_FOLDER_NAME, METABOANALYST_TTEST_ALL_RESULTS_FILENAME))
+    # Rename the first column (unnamed) to 'MetaboAnalyst_ID'
+    t_test_data = t_test_data.rename(columns={t_test_data.columns[0]: 'MetaboAnalyst_ID'})
+    # Convert MetaboAnalyst_ID name to a column "shared name", where the value in the column prior to the first '/' is the shared name value
+    t_test_data['shared_name'] = t_test_data['MetaboAnalyst_ID'].apply(lambda x: x.split('/')[0])
     node_table_add_columns(t_test_data, T_TEST_COLS_TO_KEEP, suid_main_network, 'shared_name')
 
     # Import normalized peak area data

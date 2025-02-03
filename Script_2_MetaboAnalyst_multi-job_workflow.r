@@ -308,11 +308,29 @@ for (job_index in seq_along(job_names)) {
   # Fold-change Analysis
   ##############
   # Perform fold-change analysis on uploaded data, unpaired.
-  # Set fc.thresh to 2.0 fold-change threshold, and cmp.type set to 1 for EXP/CTRL comparison
-  mset <- FC.Anal(mset, 2.0, cmp.type = 1, FALSE)
+  # Set fc.thresh to 0 fold-change threshold (include all results in output file; apply threshold later --> tool auto-filters at +/- 1)
+  # Set cmp.type set to 1 for EXP/CTRL comparison
+  mset <- FC.Anal(mset, fc.thresh = 0, cmp.type = 1, FALSE)
 
   # Plot fold-change analysis
   mset <- PlotFC(mset, paste("Fold-change_", job_name, "_", sep = ""), "png", 72, width = NA)
+
+  # Export all FC data (in mset, analSet, fc, fc.all)
+  # Export fc.all from mset
+  fc_all_data <- mset$analSet$fc$fc.all
+  # fc_all_data is only 1 column with the fold-change values. Add the MetaboAnalyst_ID column. fc.all has attr (#, "names") with the MetaboAnalyst_IDs
+  # Convert fc_all_data to a data frame before adding column
+  fc_all_data <- data.frame(Log2_FoldChange = fc_all_data)
+
+  # Add MetaboAnalyst_ID column correctly
+  fc_all_data$MetaboAnalyst_ID <- rownames(fc_all_data)
+
+  # Reset row names to avoid duplicate indexing issues
+  rownames(fc_all_data) <- NULL
+
+  # Write to CSV
+  write.csv(fc_all_data, paste(job_name, "_fc_all.csv", sep=""), row.names = FALSE)
+
 
   # # To view fold-change
   # mset$analSet$fc$fc.log
