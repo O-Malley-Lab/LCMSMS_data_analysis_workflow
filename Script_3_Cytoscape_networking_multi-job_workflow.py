@@ -638,6 +638,14 @@ for job_index, job in enumerate(metadata['Job Name']):
     suid_target = p4c_network_add_filter_columns("MetaboAnalystR_Filter", node_table_temp, nodes_to_keep_metaboanalystr, suid_main_network, key_col='shared name', componentindex_colname='componentindex')
     p4c_import_and_apply_cytoscape_style(pjoin(cytoscape_inputs_folder, CYTOSCAPE_STYLE_FILTERED_FILENAME), CYTOSCAPE_STYLE_FILTERED_FILENAME, suid_target, job_name + '_MetaboAnalystR_Filter')
 
+    """""""""""""""""""""""""""""""""""""""""""""
+    Create filtered network for with only stringent abundance filters (no MetaboAnalyst R stat filters)
+    """""""""""""""""""""""""""""""""""""""""""""
+    nodes_to_keep_abundance = (node_table_temp['GNPSGROUP:CTRL_log10'] < CTRL_LOG10_CUTOFF) | (node_table_temp['GNPSGROUP:CTRL_log10'].isnull())
+    nodes_to_keep_abundance = nodes_to_keep_abundance & (node_table_temp['GNPSGROUP:EXP_log10'] > EXP_LOG10_CUTOFF)
+
+    suid_target = p4c_network_add_filter_columns("Stringent_Abundance_Filter", node_table_temp, nodes_to_keep_abundance, suid_main_network, key_col='shared name', componentindex_colname='componentindex')
+    p4c_import_and_apply_cytoscape_style(pjoin(cytoscape_inputs_folder, CYTOSCAPE_STYLE_FILTERED_FILENAME), CYTOSCAPE_STYLE_FILTERED_FILENAME, suid_target, job_name + '_Stringent_Abundance_Filter')
 
     """""""""""""""""""""""""""""""""""""""""""""
     Create more stringent filtered network for MetaboAnalystR filters, for sample groups with many nodes_to_keep
