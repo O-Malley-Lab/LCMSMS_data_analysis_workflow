@@ -315,21 +315,21 @@ for (job_index in seq_along(job_names)) {
   # Plot fold-change analysis
   mset <- PlotFC(mset, paste("Fold-change_", job_name, "_", sep = ""), "png", 72, width = NA)
 
-  # Export all FC data (in mset, analSet, fc, fc.all)
-  # Export fc.all from mset
-  fc_all_data <- mset$analSet$fc$fc.all
-  # fc_all_data is only 1 column with the fold-change values. Add the MetaboAnalyst_ID column. fc.all has attr (#, "names") with the MetaboAnalyst_IDs
-  # Convert fc_all_data to a data frame before adding column
-  fc_all_data <- data.frame(Log2_FoldChange = fc_all_data)
+  # Export all FC data (in mset, analSet, fc, fc.log)
+  # Export fc.log from mset
+  fc_export_data <- mset$analSet$fc$fc.log
+  # fc_export_data is only 1 column with the fold-change values. Add the MetaboAnalyst_ID column. fc.all has attr (#, "names") with the MetaboAnalyst_IDs
+  # Convert fc_export_data to a data frame before adding column
+  fc_export_data <- data.frame(Log2_FoldChange = fc_export_data)
 
   # Add MetaboAnalyst_ID column correctly
-  fc_all_data$MetaboAnalyst_ID <- rownames(fc_all_data)
+  fc_export_data$MetaboAnalyst_ID <- rownames(fc_export_data)
 
   # Reset row names to avoid duplicate indexing issues
-  rownames(fc_all_data) <- NULL
+  rownames(fc_export_data) <- NULL
 
   # Write to CSV
-  write.csv(fc_all_data, paste(job_name, "_fc_all.csv", sep=""), row.names = FALSE)
+  write.csv(fc_export_data, paste(job_name, "_fc_all.csv", sep=""), row.names = FALSE)
 
 
   # # To view fold-change

@@ -228,8 +228,10 @@ METADATA_JOB_TAB = 'Multi-jobs'
 
 # Cytoscape style .xml filenames (located in cytoscape_inputs_folder).
 # Note, you need to manually edit the 'visualStyle name' in the .xml file to match the filename (without the .xml)
-CYTOSCAPE_STYLE_FILENAME = 'styles_7.xml'
-CYTOSCAPE_STYLE_FILTERED_FILENAME = 'styles_7_filter_node_emphasis.xml'
+# CYTOSCAPE_STYLE_FILENAME = 'styles_7.xml'
+CYTOSCAPE_STYLE_FILENAME = 'styles_7_label_shared_name.xml'
+# CYTOSCAPE_STYLE_FILTERED_FILENAME = 'styles_7_filter_node_emphasis.xml'
+CYTOSCAPE_STYLE_FILTERED_FILENAME = 'styles_7_label_shared_name_filter_node_emphasis.xml'
 
 # MetaboAnalyst Outputs of Interest  
 METABOANALYST_OUTPUT_FOLDER_NAME = 'MetaboAnalystR_Output'
@@ -278,6 +280,7 @@ COLUMNS_OF_INTEREST = ['shared name', 'precursor mass', 'RTMean', 'log2.FC.', 'p
 """""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""
 Iterate over each job_name in metadata
 """""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""
+start = time.time()
 # Import metadata table for job
 metadata = pd.read_excel(pjoin(INPUT_FOLDER, METADATA_OVERALL_FILENAME), sheet_name = METADATA_JOB_TAB)
 
@@ -770,3 +773,6 @@ for job_index, job in enumerate(metadata['Job Name']):
 
     # Close the Pandas Excel writer and output the Excel file. XlsxWriter object has no attribute 'save'. Use 'close' instead
     writer.close()
+    # Print time taken to write the excel file
+
+print("All jobs complete.")
