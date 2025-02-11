@@ -158,8 +158,9 @@ for job_index, job in enumerate(metadata[JOB_COLNAME]):
     ax.set_xlabel('log2(FC)', fontsize=FONT_SIZE)
     ax.set_ylabel('-log10(p-value)', fontsize=FONT_SIZE)
 
-    # Add plot title, job name
-    ax.set_title(f'{job}', fontsize=16)
+    # Add plot title, job name. Remove the portion of the job string after the last "_"
+    job_title = job.rsplit('_', 1)[0]
+    ax.set_title(f'{job_title}', fontsize=FONT_SIZE)
 
     # Save plot once and reuse the figure
     volcano_plot_filename = job + '_volcano_plot.png'

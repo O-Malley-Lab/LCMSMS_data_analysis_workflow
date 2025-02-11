@@ -224,7 +224,7 @@ config = dotenv_values(".env")
 USERNAME = config['USERNAME']
 PASSWD = config['PASSWD']
 # Set RUN_FTP to True to run FTP, False to not run FTP (to save running time when FTP not necessary)
-RUN_FTP = False
+RUN_FTP = True
 
 # ABMBA internal standard feature m/z and RT
 ABMBA_MZ_POS  = 229.9811 #m/z 229.9811

@@ -273,6 +273,11 @@ ABMBA_RT_POS = 4.685 #4.685 minutes
 ABMBA_MZ_NEG = 227.9655 #m/z 227.9655
 ABMBA_RT_NEG = 4.8 #4.8 min
 
+# Compounds of Interest
+# Baumin
+BAUMIN_MZ_POS = 523.1249
+BAUMIN_RT_POS = 4.67
+
 # Columns of interest
 COLUMNS_OF_INTEREST = ['shared name', 'precursor mass', 'RTMean', 'log2.FC.', 'p.value', 'Compound_Name', 'Suspect_Compound_Match','Analog:MQScore', 'GNPSGROUP:EXP','GNPSGROUP:CTRL', 'GNPSGROUP:EXP_log10','GNPSGROUP:CTRL_log10', 'EXP:CTRL_ratio', 'GNPSLinkout_Cluster']
 
@@ -580,6 +585,25 @@ for job_index, job in enumerate(metadata['Job Name']):
     # Reset index
     table_ABMBA = table_ABMBA.reset_index(drop = True)
 
+    """""""""""""""""""""""""""""""""""""""""""""
+    Write a table listing potential baumin peaks
+    """""""""""""""""""""""""""""""""""""""""""""
+    # if positive ionization mode, use BAUMIN_MZ_POS and BAUMIN_RT_POS. Otherwise, skip searching for baumin.
+    if ionization == 'POS':
+        table_baumin = node_table.copy()
+
+        # First, filter for peaks that have a m/z ('precursor mass') within the deviation of the baumin standard m/z
+        table_baumin = table_baumin[(table_baumin['precursor mass'] > BAUMIN_MZ_POS - MZ_DEV) & (table_baumin['precursor mass'] < BAUMIN_MZ_POS + MZ_DEV)]
+
+        # Second, filter for peaks that have a RT ('RTMean') within the deviation of the baumin standard RT
+        table_baumin = table_baumin[(table_baumin['RTMean'] > BAUMIN_RT_POS - RT_DEV) & (table_baumin['RTMean'] < BAUMIN_RT_POS + RT_DEV)]
+
+        # Sort table_baumin in ascending order by name
+        table_baumin = table_baumin.sort_values(by = 'name', ascending = True)
+
+        # Reset index
+        table_baumin = table_baumin.reset_index(drop = True)
+
 
     """""""""""""""""""""""""""""""""""""""""""""
     Write a table with all peaks with compound matches to databases. This includes potential primary metabolites. Have a version without suspect compounds and a version with suspect compounds.
@@ -704,6 +728,9 @@ for job_index, job in enumerate(metadata['Job Name']):
         'table_ABMBA': table_ABMBA
     }
 
+    if ionization == 'POS':
+        dataframes['table_baumin'] = table_baumin
+
     if run_stringent_filter:
         dataframes['table_stringent'] = table_stringent
 
@@ -723,6 +750,9 @@ for job_index, job in enumerate(metadata['Job Name']):
     table_all_matched_cmpds = dataframes['table_all_matched_cmpds']
     table_matched_cmpds_no_suspect = dataframes['table_matched_cmpds_no_suspect']
     table_ABMBA = dataframes['table_ABMBA']
+
+    if ionization == 'POS':
+        table_baumin = dataframes['table_baumin']
 
     if run_stringent_filter:
         table_stringent = dataframes['table_stringent']
@@ -750,6 +780,8 @@ for job_index, job in enumerate(metadata['Job Name']):
     table_all_matched_cmpds.to_excel(writer, sheet_name = 'All Cmpd Matches', index = False)
     table_matched_cmpds_no_suspect.to_excel(writer, sheet_name = 'Cmpd Matches No Sus', index = False)
     table_ABMBA.to_excel(writer, sheet_name = 'ABMBA Standard', index = False)
+    if ionization == 'POS':
+        table_baumin.to_excel(writer, sheet_name = 'Putative Baumin', index = False)
     parameters.to_excel(writer, sheet_name = 'Filter Parameters', index = False)
     
     # Format the excel sheets so that the column width matches the size of the header text
