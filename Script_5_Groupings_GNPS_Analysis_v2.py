@@ -26,6 +26,7 @@ import py4cytoscape as p4c
 import numpy as np
 import matplotlib.pyplot as plt
 from collections import namedtuple
+import itertools
 import time
 start = time.time()
 
@@ -169,6 +170,43 @@ def p4c_get_filtered_nodes_and_clusters(node_table, nodes_to_keep, key_col, comp
     filter_df = generate_filter_df(node_table, nodes_to_keep_list, nodes_to_keep_componentindex, componentindex_list, key_col)
     return filter_df
 
+def p4c_network_add_filter_columns(filter_name, node_table, nodes_to_keep, network_to_clone_suid, key_col='shared name', componentindex_colname='componentindex'):
+    """
+    Add columns to the node table of the network to filter based on the nodes to keep. This function uses the p4c_get_filtered_nodes_and_clusters function.
+
+    Inputs
+    filter_name: str
+        Name of the filter to create
+    node_table: DataFrame
+        Node table of the Cytoscape network
+    nodes_to_keep: list of bool
+        List of TRUE and FALSE values for the nodes to keep
+    network_to_clone_suid: int  
+        SUID of the network to clone
+    key_col: str
+        Column name of the key column (shared name)
+
+    Outputs
+    return: int
+        SUID of the filtered network
+    """
+    # Create the filtered network
+    network_filter_suid = p4c.clone_network(network=network_to_clone_suid)
+    # Generate the dataframe filter_df to filter the network
+    filter_df = p4c_get_filtered_nodes_and_clusters(node_table, nodes_to_keep, key_col, componentindex_colname)
+    # Add the 2 lists (nodes and componentindex) of TRUE and FALSE values to the network, using function node_table_add_columns
+    node_table_add_columns(filter_df, ['shared name', 'keep_componentindex'], network_filter_suid, 'shared name')
+    node_table_add_columns(filter_df, ['shared name', 'keep_node'], network_filter_suid, 'shared name')
+    p4c.create_column_filter(filter_name = filter_name, column = 'keep_componentindex', criterion = False, predicate = 'IS', type = 'nodes', network = network_filter_suid)
+    # The above step only selects nodes that meet the filter criteria. To remove the unselected nodes, use the following command
+    # https://py4cytoscape.readthedocs.io/en/0.0.10/reference/generated/py4cytoscape.network_selection.delete_selected_nodes.html
+    p4c.network_selection.delete_selected_nodes(network = network_filter_suid)
+
+    # Reorganize network to remove gaps
+    p4c.layout_network('force-directed', network_filter_suid)
+    return network_filter_suid
+
+
 def p4c_import_and_apply_cytoscape_style(dir, cytoscape_style_filename, suid, network_rename):
     """
     Import and apply a Cytoscape style to the network. Additionally, name the network.
@@ -214,6 +252,50 @@ def apply_exp_ctrl_filter(node_table_to_filter, exp_colname, ctrl_colname, exp_c
     nodes_to_keep = (node_table_to_filter[exp_colname] > exp_cutoff) & (node_table_to_filter[ctrl_colname] < ctrl_cutoff)
     return nodes_to_keep
 
+def create_exp_ctrl_mapping(data_cols_dict):
+    """
+    Create a dictionary mapping experimental columns to their control columns using FinalExpCtrlMapping named tuples.
+    Takes into account cases where multiple experimental groups share the same control group.
+
+    Inputs
+    data_cols_dict: dict
+        Dictionary where keys are group names and values are ExpCtrlGroups named tuples
+        containing experimental and control filenames
+
+    Outputs
+    return: dict
+        Dictionary where keys are experimental column names and values are FinalExpCtrlMapping 
+        named tuples containing the experimental and control group names
+    """
+    exp_ctrl_mapping = {}
+    ctrl_groups_seen = {}  # Track control groups we've seen
+
+    for group_name, group_data in data_cols_dict.items():
+        exp_col = f"{group_name}_exp_avg"
+        ctrl_col = f"{group_name}_ctrl_avg"
+        
+        # Create tuple of sorted control filenames to use as dictionary key
+        ctrl_files = tuple(sorted(group_data.ctrl_filenames))
+        
+        if ctrl_files in ctrl_groups_seen:
+            # This control group has been seen before
+            original_ctrl_group = ctrl_groups_seen[ctrl_files]
+            mapping = FinalExpCtrlMapping(
+                exp_group=exp_col,
+                ctrl_group=f"{original_ctrl_group}_ctrl_avg"
+            )
+        else:
+            # This is a new control group
+            ctrl_groups_seen[ctrl_files] = group_name
+            mapping = FinalExpCtrlMapping(
+                exp_group=exp_col,
+                ctrl_group=ctrl_col
+            )
+            
+        exp_ctrl_mapping[exp_col] = mapping
+        
+    return exp_ctrl_mapping
+
 """""""""""""""""""""""""""""""""""""""""""""
 Values
 """""""""""""""""""""""""""""""""""""""""""""
@@ -229,9 +311,9 @@ METADATA_JOB_TAB = 'Multi-jobs'
 EXP_VS_CTRL_TEMP_FOLDER_COL_NAMES = ['G1_temp_folder', 'G2_temp_folder', 'G3_temp_folder', 'G4_temp_folder', 'G5_temp_folder', 'G6_temp_folder']
 
 # Filter for metabolites with intensity above this value in experimental sample groups
-EXP_INTENSITY_CUTOFF = 0
+EXP_INTENSITY_CUTOFF = 100000
 # Filter for metabolites with intensity below this value in control sample groups
-CTRL_INTENSITY_CUTOFF = 1
+CTRL_INTENSITY_CUTOFF = 100000
 # Columns of interest
 COLUMNS_OF_INTEREST = ['shared name', 'precursor mass', 'RTMean', 'G1', 'G2', 'G3', 'G4', 'G5', 'G6', 'Compound_Name', 'MQScore', 'Smiles', 'INCHI', 'GNPSLibraryURL', 'componentindex', 'DefaultGroups']
 
@@ -240,6 +322,7 @@ GROUP_NAME_COLUMNS = ['G1', 'G2', 'G3', 'G4', 'G5', 'G6']
 # Create a named tuple to store the filenames of the experimental and control groups
 ExpCtrlGroups = namedtuple('FileGroups', ['exp_filenames', 'ctrl_filenames'])
 GroupToValue = namedtuple('GtoJob', ['group_name', 'value'])
+FinalExpCtrlMapping = namedtuple('ExpCtrlMapping', ['exp_group', 'ctrl_group'])
 
 """""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""
 Iterate over each job_name in metadata
@@ -304,7 +387,7 @@ for job_index, job in enumerate(metadata['Job_Name']):
                     )
 
     """""""""""""""""""""""""""""""""""""""""""""
-    Import Abundance Data from Bucket Table and Organize Data Columns
+    Import Abundance Data from Bucket Table and Organize Data Columns. Replace all 0 abundance values with 1/5th of the lowest non-zero value in the data columns.
     """""""""""""""""""""""""""""""""""""""""""""
     # Import bucket table (contains string "buckettable" in filename) from GNPS_OUTPUT_FOLDER --> GROUPING_INPUT_FOLDER_NAME -->  job_name folder
     job_folder = pjoin(GNPS_OUTPUT_FOLDER, GROUPING_INPUT_FOLDER_NAME, job_name)
@@ -317,6 +400,13 @@ for job_index, job in enumerate(metadata['Job_Name']):
 
     # Change column name "#OTU ID" to "shared name"
     bucket_table.rename(columns={'#OTU ID': 'shared name'}, inplace=True)
+
+    # Of all values in bucket_table data columns (not the shared name column) find the lowest non-zero value. 1/5th of this value will be used to replace all 0 values in the data columns.
+    min_val = bucket_table[bucket_table.columns[1:]].replace(0, np.nan).min().min()
+    replace_val = min_val / 5
+    # Replace all 0 values in the data columns with replace_val (do not replace any values in the shared name column)
+    bucket_table[bucket_table.columns[1:]] = bucket_table[bucket_table.columns[1:]].replace(0, replace_val)
+
     # bucket_table contains only columns shared name and the data column, each named as the exp_filenames and ctrl_filenames in data_cols_dict.
     # Organize the data columns as they appear in data_cols_dict. Start with the job_name for the first group in data_cols_dict, then move to the next group in data_cols_dict.
     data_cols = []
@@ -394,7 +484,7 @@ for job_index, job in enumerate(metadata['Job_Name']):
         if col in node_table.columns:
             node_table_clean[col] = node_table[col]
 
-    # Rename column names G1, G2, G3, G4, G5, and G6 in node_table_clean to be the corresponding values in job_group_names. Rename these as the GNPS output spectral counts data type
+    # Rename column names G1, G3, and G5 in node_table_clean to be the corresponding values in job_group_names. Rename these as the GNPS output spectral counts data type
     node_table_clean.rename(columns={group.group_name: group.value + "_spectral_counts" for group in job_group_names}, inplace=True)
 
     # Clear existing node table data
@@ -420,25 +510,24 @@ for job_index, job in enumerate(metadata['Job_Name']):
     # For the style file, G1, G3, and G5 are set to represent EXP type groups, and G2, G4, and G6 to represent CTRL type groups. When replacing text in filedata, ensure that the G# text is properly replaced by EXP vs CTRL type.
     exp_unused = ['G1', 'G3', 'G5']
     ctrl_unused = ['G2', 'G4', 'G6']
-    for group_name, value in job_group_names:
-        # if value is not a key in data_cols_dict, skip to next group_name
-        if value not in data_cols_dict:
-            continue
-        # only use EXP groups from data_cols_dict to indicate the _exp_avg and _ctrl_avg columns to use in the pie charts
+    # Keep track of which ctrl groups are used with which exp groups with final_mapping
+    final_mapping = create_exp_ctrl_mapping(data_cols_dict)
+
+    for exp_col, mapping in final_mapping.items():
+        # only use EXP groups to indicate the _exp_avg and _ctrl_avg columns to use in pie charts
         if not exp_unused or not ctrl_unused:
-            print('Error in renaming pie chart columns for job {job_name}.')
+            print(f'Error in renaming pie chart columns for job {job_name}.')
             break
+            
         str_to_replace_exp = exp_unused.pop(0)
         str_to_replace_ctrl = ctrl_unused.pop(0)
-        # use format .replace(f'&quot;{old_col_name}&quot;', f'&quot;{group_name}&quot;')
-        print(f'&quot;{str_to_replace_exp}&quot;')
-        print(f'&quot;{value}_exp_avg&quot;')
-        filedata = filedata.replace(f'&quot;{str_to_replace_exp}&quot;', f'&quot;{value}_exp_avg&quot;')
-        # If the exact same ctrl string has already been used, skip the renaming process (some EXP have the same CTRL)
-        if f'&quot;{group_name}_exp_avg&quot;' not in filedata:
-            print(f'&quot;{str_to_replace_ctrl}&quot;')
-            print(f'&quot;{value}_ctrl_avg&quot;')
-            filedata = filedata.replace(f'&quot;{str_to_replace_ctrl}&quot;', f'&quot;{value}_ctrl_avg&quot;')
+
+        # Replace experimental group name
+        filedata = filedata.replace(f'&quot;{str_to_replace_exp}&quot;', f'&quot;{mapping.exp_group}&quot;')
+        
+        # Only replace control group if it hasn't been used before
+        if f'&quot;{mapping.ctrl_group}&quot;' not in filedata:
+            filedata = filedata.replace(f'&quot;{str_to_replace_ctrl}&quot;', f'&quot;{mapping.ctrl_group}&quot;')
 
     # Additionally, change "<visualStyle name="{cytoscape_style_filename_root}">, where {cytoscape_style_filename_root} is the string value for cytoscape_style_filename without ".xml", to be "<visualStyle name="{cytoscape_style_filename_new_root}">, where cytoscape_style_filename_new_root is the string value for cytoscape_style_filename_new without ".xml"
     cytoscape_style_filename_new = f'{job_name}_style.xml'
@@ -456,3 +545,78 @@ for job_index, job in enumerate(metadata['Job_Name']):
     """""""""""""""""""""""""""""""""""""""""""""
     # Apply the Cytoscape style
     p4c_import_and_apply_cytoscape_style(pjoin(cytoscape_inputs_folder, cytoscape_style_filename_new), cytoscape_style_filename_new, suid_main_network, job_name)
+
+    """""""""""""""""""""""""""""""""""""""""""""
+    Create Filtered Networks
+    """""""""""""""""""""""""""""""""""""""""""""
+    # Re-acquire node table (since modifying columns)
+    node_table = p4c.tables.get_table_columns(table='node', network=suid_main_network)
+    # For each EXP-CTRL pair in final_mapping, make a list of nodes_to_keep, based on nodes that meet the intensity cutoffs (EXP > EXP_INTENSITY_CUTOFF, CTRL < CTRL_INTENSITY_CUTOFF). The nodes_to_keep will be used in different combinations. Use combinatorics to include all possible combinations of EXP-CTRL pairs.
+    # ie: 
+    nodes_to_keep_list = []
+    for exp_col, mapping in final_mapping.items():
+        nodes_to_keep = apply_exp_ctrl_filter(node_table, mapping.exp_group, mapping.ctrl_group, EXP_INTENSITY_CUTOFF, CTRL_INTENSITY_CUTOFF)
+        nodes_to_keep_list.append(nodes_to_keep)
+
+    # Create a mapping of filter indices to their corresponding group names
+    filter_group_names = {}
+    for i, (exp_col, mapping) in enumerate(final_mapping.items()):
+        # Extract the group name from the exp_col (removes '_exp_avg')
+        group_name = exp_col.rsplit('_', 2)[0]
+        filter_group_names[i] = group_name
+
+    # Create combinations with both the filters and their names
+    all_combinations = []
+    all_combination_names = []
+    for r in range(1, len(nodes_to_keep_list) + 1):
+        # Get filter combinations
+        filter_combinations = list(itertools.combinations(enumerate(nodes_to_keep_list), r))
+        
+        for combo in filter_combinations:
+            # Split indices and filters
+            indices, filters = zip(*combo)
+            # Create filter name using actual group names
+            name = "Filter_" + "_and_".join(filter_group_names[i] for i in indices)
+            # Store both filters and name
+            all_combinations.append(filters)
+            all_combination_names.append(name)
+
+    # For each combination, create a filtered network and reapply style
+    for i, filters in enumerate(all_combinations):
+        # Combine multiple filters using logical AND (&)
+        if len(filters) > 1:
+            combined_filter = filters[0]
+            for f in filters[1:]:
+                combined_filter = combined_filter & f
+        else:
+            combined_filter = filters[0]
+        
+        # Create filtered network
+        suid_filtered_network = p4c_network_add_filter_columns(
+            all_combination_names[i], 
+            node_table, 
+            combined_filter,  # Pass the combined filter instead of tuple of filters
+            suid_main_network
+        )
+        
+        # Apply the Cytoscape style
+        p4c_import_and_apply_cytoscape_style(
+            pjoin(cytoscape_inputs_folder, cytoscape_style_filename_new),
+            cytoscape_style_filename_new, 
+            suid_filtered_network,
+            f"{job_name}_{all_combination_names[i]}"
+        )
+
+
+    """""""""""""""""""""""""""""""""""""""""""""
+    Save Cytoscape Session in Output Folder, Job Name folder
+    """""""""""""""""""""""""""""""""""""""""""""
+    # If the job_name folder does not exist yet in OUTPUT_FOLDER, create it
+    os.makedirs(pjoin(OUTPUT_FOLDER, job_name), exist_ok=True)
+
+    # Save the Cytoscape session
+    p4c.session.save_session(filename=pjoin(OUTPUT_FOLDER, job_name, job_name + '_Cytoscape_session.cys'), overwrite_file=True)
+
+    print('Session saved and finished filtered Cytoscape networks for ' + job_name + ', took %.2f seconds' % (time.time() - start))
+    start = time.time()
+
