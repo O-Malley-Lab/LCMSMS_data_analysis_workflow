@@ -264,7 +264,7 @@ for job_index, job in enumerate(metadata['Job_Name']):
     # Get ionization
     ionization = metadata['Ionization'][job_index]
     # Get style template file
-    style_template_filename = metadata['Cytoscape_Format_Template_File'][job_index]
+    cytoscape_style_filename = metadata['Cytoscape_Format_Template_File'][job_index]
 
 
     """""""""""""""""""""""""""""""""""""""""""""
@@ -320,20 +320,25 @@ for job_index, job in enumerate(metadata['Job_Name']):
     # bucket_table contains only columns shared name and the data column, each named as the exp_filenames and ctrl_filenames in data_cols_dict.
     # Organize the data columns as they appear in data_cols_dict. Start with the job_name for the first group in data_cols_dict, then move to the next group in data_cols_dict.
     data_cols = []
+    data_cols_avgs = []
     for group in job_group_names:
         if group.value in data_cols_dict:
+            # Add individual experimental columns
             data_cols.extend(data_cols_dict[group.value].exp_filenames)
-            # create a data column that averages the experimental columns. Add this average column to the bucket table. Name as job_name + "_avg"
-            bucket_table[group.value + "_avg"] = bucket_table[data_cols_dict[group.value].exp_filenames].mean(axis=1)
-            # Add the average column to data_cols
-            data_cols.append(group.value + "_avg")
+            # Calculate and add experimental average with distinct name
+            bucket_table[group.value + "_exp_avg"] = bucket_table[data_cols_dict[group.value].exp_filenames].mean(axis=1)
+            data_cols.append(group.value + "_exp_avg")
+            data_cols_avgs.append(group.value + "_exp_avg")
+            
+            # Add individual control columns
             data_cols.extend(data_cols_dict[group.value].ctrl_filenames)
-            # create a data column that averages the control columns. Add this average column to the bucket table. Name as job_name + "_avg"
-            bucket_table[group.value + "_avg"] = bucket_table[data_cols_dict[group.value].ctrl_filenames].mean(axis=1)
-            # Add the average column to data_cols
-            data_cols.append(group.value + "_avg")
+            # Calculate and add control average with distinct name
+            bucket_table[group.value + "_ctrl_avg"] = bucket_table[data_cols_dict[group.value].ctrl_filenames].mean(axis=1)
+            data_cols.append(group.value + "_ctrl_avg")
+            data_cols_avgs.append(group.value + "_ctrl_avg")
     # Order the columns
     data_cols = ['shared name'] + data_cols
+    data_cols_avgs = ['shared name'] + data_cols_avgs
     bucket_table = bucket_table[data_cols]
 
     # Export bucket table to excel. Export to the OUTPUT_FOLDER --> job_name folder (create if it does not exist). Filename is job_name + "_bucket_table.xlsx". Replace previous file if it exists.
@@ -346,22 +351,108 @@ for job_index, job in enumerate(metadata['Job_Name']):
     """""""""""""""""""""""""""""""""""""""""""""
     Open Cytoscape network from GNPS output .graphml
     """""""""""""""""""""""""""""""""""""""""""""
-    # Import .graphml file from GNPS_OUTPUT_FOLDER --> GROUPING_INPUT_FOLDER_NAME -->  job_name folder. Find the file in the folder containing "graphml" in its name.
-    graphml_file = [f for f in os.listdir(job_folder) if 'graphml' in f.lower()]
-    graphml_path = pjoin(job_folder, graphml_file[0]) if graphml_file else None
-    if graphml_path is not None:
-        network_suid = p4c.networks.load_file(graphml_path)
-    else:
-        print(f"Graphml file not found for job {job_name}")
+    # Destroy any networks already in the Cytsocape session
+    p4c.networks.delete_all_networks()
 
-    
+    # Import .graphml file from GNPS_OUTPUT_FOLDER --> GROUPING_INPUT_FOLDER_NAME -->  job_name folder. Find the file in the folder containing "graphml" in its name.
+    graphml_folder = [f for f in os.listdir(job_folder) if 'graphml' in f.lower()]
+    graphml_file = [f for f in os.listdir(pjoin(job_folder, graphml_folder[0])) if f.endswith('.graphml')]
+    graphml_path = pjoin(job_folder, graphml_folder[0], graphml_file[0]) if graphml_file else None
+    # Handle if graphml file is not found
+    if graphml_path is None:
+        print(f"Graphml file not found for job {job_name}")
+    else:
+        # Import the network into Cytoscape
+        p4c.import_network_from_file(graphml_path)
+
+    # Get the SUID of the current network
+    suid_main_network = p4c.get_network_suid()
+
 
     """""""""""""""""""""""""""""""""""""""""""""
     Import Abundance Data into the Cytoscape Node Table
     """""""""""""""""""""""""""""""""""""""""""""
+    # Load data into the node table, using the shared name as the key column
+    node_table_add_columns(bucket_table, data_cols_avgs, suid_main_network, 'shared name')
 
 
     """""""""""""""""""""""""""""""""""""""""""""
     Adjust Cytoscape Node Table Columns
     """""""""""""""""""""""""""""""""""""""""""""
+    node_cols_to_keep = []
+    # Make a copy of COLUMNS_OF_INTEREST
+    node_cols_to_keep.extend(COLUMNS_OF_INTEREST)
+    # After the first 3 columns of COLUMNS_OF_INTEREST, insert the data_cols_avgs (without the shared name column)
+    node_cols_to_keep[3:3] = data_cols_avgs[1:] 
 
+    # Get current node table
+    node_table = p4c.tables.get_table_columns(table='node', network=suid_main_network)
+
+    # Create a new DataFrame with only the desired columns in the specified order
+    node_table_clean = pd.DataFrame()
+    for col in node_cols_to_keep:
+        if col in node_table.columns:
+            node_table_clean[col] = node_table[col]
+
+    # Rename column names G1, G2, G3, G4, G5, and G6 in node_table_clean to be the corresponding values in job_group_names. Rename these as the GNPS output spectral counts data type
+    node_table_clean.rename(columns={group.group_name: group.value + "_spectral_counts" for group in job_group_names}, inplace=True)
+
+    # Clear existing node table data
+    cols_immutable = ['name', 'SUID', 'shared name', 'selected']
+    for col in node_table.columns:
+        if col not in cols_immutable:  # Don't delete required Cytoscape columns
+            p4c.delete_table_column(col, table='node', network=suid_main_network)
+
+    # Load the filtered and reordered data back into Cytoscape
+    p4c.tables.load_table_data(node_table_clean, data_key_column='shared name', 
+                              table_key_column='name', network=suid_main_network)
+
+
+    """""""""""""""""""""""""""""""""""""""""""""
+    Create new style file, using template style file as basis
+    """""""""""""""""""""""""""""""""""""""""""""
+    # For the style file, adjust the pie chart columns to match the new job_group_names values
+    # Get the template Cytoscape style file info
+    cytoscape_inputs_folder = pjoin(INPUT_FOLDER, 'Cytoscape_inputs')
+    with open(pjoin(cytoscape_inputs_folder, cytoscape_style_filename), 'r') as file:
+        filedata = file.read()
+
+    # For the style file, G1, G3, and G5 are set to represent EXP type groups, and G2, G4, and G6 to represent CTRL type groups. When replacing text in filedata, ensure that the G# text is properly replaced by EXP vs CTRL type.
+    exp_unused = ['G1', 'G3', 'G5']
+    ctrl_unused = ['G2', 'G4', 'G6']
+    for group_name, value in job_group_names:
+        # if value is not a key in data_cols_dict, skip to next group_name
+        if value not in data_cols_dict:
+            continue
+        # only use EXP groups from data_cols_dict to indicate the _exp_avg and _ctrl_avg columns to use in the pie charts
+        if not exp_unused or not ctrl_unused:
+            print('Error in renaming pie chart columns for job {job_name}.')
+            break
+        str_to_replace_exp = exp_unused.pop(0)
+        str_to_replace_ctrl = ctrl_unused.pop(0)
+        # use format .replace(f'&quot;{old_col_name}&quot;', f'&quot;{group_name}&quot;')
+        print(f'&quot;{str_to_replace_exp}&quot;')
+        print(f'&quot;{value}_exp_avg&quot;')
+        filedata = filedata.replace(f'&quot;{str_to_replace_exp}&quot;', f'&quot;{value}_exp_avg&quot;')
+        # If the exact same ctrl string has already been used, skip the renaming process (some EXP have the same CTRL)
+        if f'&quot;{group_name}_exp_avg&quot;' not in filedata:
+            print(f'&quot;{str_to_replace_ctrl}&quot;')
+            print(f'&quot;{value}_ctrl_avg&quot;')
+            filedata = filedata.replace(f'&quot;{str_to_replace_ctrl}&quot;', f'&quot;{value}_ctrl_avg&quot;')
+
+    # Additionally, change "<visualStyle name="{cytoscape_style_filename_root}">, where {cytoscape_style_filename_root} is the string value for cytoscape_style_filename without ".xml", to be "<visualStyle name="{cytoscape_style_filename_new_root}">, where cytoscape_style_filename_new_root is the string value for cytoscape_style_filename_new without ".xml"
+    cytoscape_style_filename_new = f'{job_name}_style.xml'
+    cytoscape_style_filename_root = cytoscape_style_filename.split('.')[0]
+    cytoscape_style_filename_new_root = cytoscape_style_filename_new.split('.')[0]
+    filedata = filedata.replace(f'name="{cytoscape_style_filename_root}"', f'name="{cytoscape_style_filename_new_root}"')
+
+    # Write the new style file in the cytoscape_inputs_folder
+    with open(pjoin(cytoscape_inputs_folder, cytoscape_style_filename_new), 'w') as file:
+        file.write(filedata)
+
+
+    """""""""""""""""""""""""""""""""""""""""""""
+    Set Visual Style
+    """""""""""""""""""""""""""""""""""""""""""""
+    # Apply the Cytoscape style
+    p4c_import_and_apply_cytoscape_style(pjoin(cytoscape_inputs_folder, cytoscape_style_filename_new), cytoscape_style_filename_new, suid_main_network, job_name)
