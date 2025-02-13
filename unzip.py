@@ -47,3 +47,33 @@ Move volcano plots to a single folder
 #                             shutil.copy2(src_path, dst_path)  # copy2 preserves metadata
 #                         except (IOError, OSError) as e:
 #                             print(f"Error copying {src_path}: {e}")
+
+# """
+# Unzip files in folder in Grouping_Analysis_Folders in GNPS_OUTPUT_FOLDER
+# """
+# grouping_analysis_folder = "Grouping_Analysis_Folders"
+# grouping_folders_path = pjoin(GNPS_OUTPUT_FOLDER, grouping_analysis_folder)
+# for job_folder in os.listdir(grouping_folders_path):
+#     job_folder_path = pjoin(grouping_folders_path, job_folder)
+#     # If there is a zipped folder in job_folder_path, unzip the contents and delete the original zipped folders.
+#     # If there is not a zipped folder, skip this job_folder_path and move to the next job_folder
+#     zipped_folders = []
+#     for file in os.listdir(job_folder_path):
+#         file_path = pjoin(job_folder_path, file)
+#         if file.endswith('.zip'):
+#             zipped_folders.append(file_path)
+#     if len(zipped_folders) == 0:
+#         continue
+#     for zipped_folder in zipped_folders:
+#         with zipfile.ZipFile(zipped_folder, 'r') as zip_ref:
+#             zip_ref.extractall(job_folder_path)
+#         os.remove(zipped_folder)
+#     print(f"Unzipped files in {job_folder}")
+
+# """
+# Print folder names in TEMP_OVERALL_FOLDER
+# """
+# # Print all the folder names in TEMP_OVERALL_FOLDER
+# if os.path.exists(TEMP_OVERALL_FOLDER):
+#     for folder in os.listdir(TEMP_OVERALL_FOLDER):
+#         print(folder)
