@@ -101,11 +101,13 @@ def format_column(worksheet, df):
         worksheet.freeze_panes(1, 0)
     return
 
-def generate_filter_df(nodes_to_keep_list, nodes_to_keep_componentindex, componentindex_list, key_col):
+def generate_filter_df(node_table, nodes_to_keep_list, nodes_to_keep_componentindex, componentindex_list, key_col):
     """
     Generate a dataframe to filter the Cytoscape network based on the nodes to keep. See p4c_get_filtered_nodes_and_clusters for more information.
 
     Inputs
+    node_table: DataFrame
+        Node table of the Cytoscape network
     nodes_to_keep_list: list of bool
         List of TRUE and FALSE values for the nodes to keep
     nodes_to_keep_componentindex: list of bool
@@ -160,33 +162,42 @@ def p4c_get_filtered_nodes_and_clusters(node_table, nodes_to_keep, key_col, comp
     componentindex_list = node_table.copy()
     componentindex_list = componentindex_list['componentindex'].tolist()
     # Generate the dataframe to filter the network
-    filter_df = generate_filter_df(nodes_to_keep_list, nodes_to_keep_componentindex, componentindex_list, key_col)
+    filter_df = generate_filter_df(node_table, nodes_to_keep_list, nodes_to_keep_componentindex, componentindex_list, key_col)
     return filter_df
 
 def p4c_network_add_filter_columns(filter_name, node_table, nodes_to_keep, network_to_clone_suid, key_col='shared name', componentindex_colname='componentindex'):
-    """Modified version to ensure columns are properly copied"""
+    """
+    Add columns to the node table of the network to filter based on the nodes to keep. This function uses the p4c_get_filtered_nodes_and_clusters function.
+
+    Inputs
+    filter_name: str
+        Name of the filter to create
+    node_table: DataFrame
+        Node table of the Cytoscape network
+    nodes_to_keep: list of bool
+        List of TRUE and FALSE values for the nodes to keep
+    network_to_clone_suid: int  
+        SUID of the network to clone
+    key_col: str
+        Column name of the key column (shared name)
+
+    Outputs
+    return: int
+        SUID of the filtered network
+    """
     # Create the filtered network
     network_filter_suid = p4c.clone_network(network=network_to_clone_suid)
-    
     # Generate the dataframe filter_df to filter the network
     filter_df = p4c_get_filtered_nodes_and_clusters(node_table, nodes_to_keep, key_col, componentindex_colname)
-    
-    # First, copy ALL columns from the original node table
-    all_columns = list(node_table.columns)
-    p4c.tables.load_table_data(node_table[all_columns], data_key_column=key_col, 
-                              table_key_column='name', network=network_filter_suid)
-    
-    # Then add the filter columns
+    # Add the 2 lists (nodes and componentindex) of TRUE and FALSE values to the network, using function node_table_add_columns
     node_table_add_columns(filter_df, ['shared name', 'keep_componentindex'], network_filter_suid, 'shared name')
     node_table_add_columns(filter_df, ['shared name', 'keep_node'], network_filter_suid, 'shared name')
-    
-    # Apply filter and delete nodes
-    p4c.create_column_filter(filter_name=filter_name, column='keep_componentindex', 
-                            criterion=False, predicate='IS', type='nodes', 
-                            network=network_filter_suid)
-    p4c.network_selection.delete_selected_nodes(network=network_filter_suid)
+    p4c.create_column_filter(filter_name = filter_name, column = 'keep_componentindex', criterion = False, predicate = 'IS', type = 'nodes', network = network_filter_suid)
+    # The above step only selects nodes that meet the filter criteria. To remove the unselected nodes, use the following command
+    # https://py4cytoscape.readthedocs.io/en/0.0.10/reference/generated/py4cytoscape.network_selection.delete_selected_nodes.html
+    p4c.network_selection.delete_selected_nodes(network = network_filter_suid)
 
-    # Reorganize network
+    # Reorganize network to remove gaps
     p4c.layout_network('force-directed', network_filter_suid)
     return network_filter_suid
 

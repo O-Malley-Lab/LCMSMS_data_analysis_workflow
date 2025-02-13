@@ -1,7 +1,9 @@
 """""""""""""""""""""""""""""""""""""""""""""
-LCMSMS Data Analysis Workflow, Script 3: Cytoscape Networking, Multi-job Workflow
+LCMSMS Data Analysis Workflow, Script 3: Cytoscape Networking, Multi-job Workflow v2
 
 @author: Lazarina Butkovich
+
+Compared to v1, this v2 script applies only 1 filter to the Cytoscape network, to simplify analysis (instead of looking at ~3 different sets of filtering parameters).
 
 """""""""""""""""""""""""""""""""""""""""""""
 
@@ -91,11 +93,13 @@ def format_column(worksheet, df):
         worksheet.freeze_panes(1, 0)
     return
 
-def generate_filter_df(nodes_to_keep_list, nodes_to_keep_componentindex, componentindex_list, key_col):
+def generate_filter_df(node_table, nodes_to_keep_list, nodes_to_keep_componentindex, componentindex_list, key_col):
     """
     Generate a dataframe to filter the Cytoscape network based on the nodes to keep. See p4c_get_filtered_nodes_and_clusters for more information.
 
     Inputs
+    node_table: DataFrame
+        Node table of the Cytoscape network
     nodes_to_keep_list: list of bool
         List of TRUE and FALSE values for the nodes to keep
     nodes_to_keep_componentindex: list of bool
@@ -150,7 +154,7 @@ def p4c_get_filtered_nodes_and_clusters(node_table, nodes_to_keep, key_col, comp
     componentindex_list = node_table.copy()
     componentindex_list = componentindex_list['componentindex'].tolist()
     # Generate the dataframe to filter the network
-    filter_df = generate_filter_df(nodes_to_keep_list, nodes_to_keep_componentindex, componentindex_list, key_col)
+    filter_df = generate_filter_df(node_table, nodes_to_keep_list, nodes_to_keep_componentindex, componentindex_list, key_col)
     return filter_df
 
 def p4c_network_add_filter_columns(filter_name, node_table, nodes_to_keep, network_to_clone_suid, key_col='shared name', componentindex_colname='componentindex'):
