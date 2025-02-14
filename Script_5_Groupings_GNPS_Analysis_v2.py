@@ -468,11 +468,32 @@ for job_index, job in enumerate(metadata['Job_Name']):
     bucket_table = bucket_table[data_cols]
 
     # Export bucket table to excel. Export to the OUTPUT_FOLDER --> job_name folder (create if it does not exist). Filename is job_name + "_bucket_table.xlsx". Replace previous file if it exists.
-    bucket_table_filename = job_name + "_bucket_table.xlsx"
-    bucket_table_path = pjoin(OUTPUT_FOLDER, job_name, bucket_table_filename)
-    os.makedirs(pjoin(OUTPUT_FOLDER, job_name), exist_ok=True)
-    bucket_table.to_excel(bucket_table_path, index=False)
+    # For bucket table to export, make all data columns be in scientific notation. Additionally, use conditional formatting to color the cells based on the value of the cell. The color scale should be from red to green, with the lowest value in red and the highest value in green.
+    bucket_table_to_export = bucket_table.copy()
+    bucket_table_path = pjoin(OUTPUT_FOLDER, job_name, job_name + "_bucket_table.xlsx")
     
+    # Create Excel writer object
+    with pd.ExcelWriter(bucket_table_path, engine='xlsxwriter') as writer:
+        # Write original numeric data to excel first
+        bucket_table_to_export = bucket_table.copy()
+        bucket_table_to_export.to_excel(writer, sheet_name='Sheet1', index=False)
+        
+        # Get workbook and worksheet objects
+        workbook = writer.book
+        worksheet = writer.sheets['Sheet1']
+        
+        # Create scientific notation number format
+        sci_format = workbook.add_format({'num_format': '0.00E+00'})
+        
+        # Apply scientific notation format to data cells (excluding 'shared name' column)
+        for col in range(1, len(bucket_table.columns)):  # Start from second column (skip 'shared name')
+            worksheet.set_column(col, col, 15, sci_format)  # Width set to 15
+        
+        # Format 'shared name' column width
+        worksheet.set_column(0, 0, len('shared name') + 2)
+        
+        # Freeze panes
+        worksheet.freeze_panes(1, 1)
 
     """""""""""""""""""""""""""""""""""""""""""""
     Open Cytoscape network from GNPS output .graphml
@@ -527,24 +548,22 @@ for job_index, job in enumerate(metadata['Job_Name']):
     node_table_clean = add_log10_columns(node_table_clean)
 
     # Reorder the columns in the node table so that the log10 columns appear after RTMean and the spectral counts columns appear at the end
-    
     # Get lists of column names by type
     spectral_counts_cols = [col for col in node_table_clean.columns if '_spectral_counts' in col]
     log10_cols = [col for col in node_table_clean.columns if '_log10' in col]
     other_cols = [col for col in node_table_clean.columns if col not in spectral_counts_cols + log10_cols]
-
     # Find index of 'RTMean' in other_cols
     rtmean_idx = other_cols.index('RTMean')
-    
     # Create new column order
     new_order = (other_cols[:rtmean_idx + 1] + 
                 log10_cols +
                 other_cols[rtmean_idx + 1:] +
                 spectral_counts_cols)
-    
     # Reorder the columns
     node_table_clean = node_table_clean[new_order]
 
+    # Convert RTMean from seconds to minutes (divide by 60)
+    node_table_clean['RTMean'] = node_table_clean['RTMean'] / 60
 
     # Clear existing node table data
     cols_immutable = ['name', 'SUID', 'shared name', 'selected']
