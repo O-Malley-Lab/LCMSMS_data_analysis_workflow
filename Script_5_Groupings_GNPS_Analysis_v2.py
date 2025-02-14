@@ -6,7 +6,7 @@ This script has the following features for analyzing GNPS output for comparing A
 
 In METADATA_FILENAME excel, describe the following:
 - Job_Name: Name of the job
-- Grouping_Type: 1 = 2 EXP vs CTRL pairs compared, 2 = 3 EXP vs CTRL pairs compared, 3 = 3 EXPs compared to 1 shared CTRL
+[to-do: fill in remaining]
 
 """""""""""""""""""""""""""""""""""""""""""""
 
@@ -206,7 +206,6 @@ def p4c_network_add_filter_columns(filter_name, node_table, nodes_to_keep, netwo
     p4c.layout_network('force-directed', network_filter_suid)
     return network_filter_suid
 
-
 def p4c_import_and_apply_cytoscape_style(dir, cytoscape_style_filename, suid, network_rename):
     """
     Import and apply a Cytoscape style to the network. Additionally, name the network.
@@ -296,6 +295,34 @@ def create_exp_ctrl_mapping(data_cols_dict):
         
     return exp_ctrl_mapping
 
+def add_log10_columns(df):
+    """
+    Add log10 columns for any columns ending with _exp_avg or _ctrl_avg.
+    Values of 0 have already been replaced with 1/5th of the minimum non-zero value before taking log10.
+    Log10 values are rounded to 2 decimal places.
+
+    Inputs
+    df: DataFrame
+        DataFrame containing the columns to transform
+
+    Outputs
+    return: DataFrame
+        DataFrame with additional log10 columns
+    """
+    # Find all columns ending with _exp_avg or _ctrl_avg
+    avg_cols = [col for col in df.columns if col.endswith('_exp_avg') or col.endswith('_ctrl_avg')]
+    
+    # For each average column
+    for col in avg_cols:
+        # Create new column name
+        log_col = col + '_log10'
+        # Calculate log10 values
+        df[log_col] = np.log10(df[col])
+        # Round to 2 decimal places
+        df[log_col] = df[log_col].round(2)
+    
+    return df
+
 """""""""""""""""""""""""""""""""""""""""""""
 Values
 """""""""""""""""""""""""""""""""""""""""""""
@@ -311,9 +338,9 @@ METADATA_JOB_TAB = 'Multi-jobs'
 EXP_VS_CTRL_TEMP_FOLDER_COL_NAMES = ['G1_temp_folder', 'G2_temp_folder', 'G3_temp_folder', 'G4_temp_folder', 'G5_temp_folder', 'G6_temp_folder']
 
 # Filter for metabolites with intensity above this value in experimental sample groups
-EXP_INTENSITY_CUTOFF = 100000
+EXP_INTENSITY_CUTOFF = 1000000
 # Filter for metabolites with intensity below this value in control sample groups
-CTRL_INTENSITY_CUTOFF = 100000
+CTRL_INTENSITY_CUTOFF = 1000000
 # Columns of interest
 COLUMNS_OF_INTEREST = ['shared name', 'precursor mass', 'RTMean', 'G1', 'G2', 'G3', 'G4', 'G5', 'G6', 'Compound_Name', 'MQScore', 'Smiles', 'INCHI', 'GNPSLibraryURL', 'componentindex', 'DefaultGroups']
 
@@ -321,6 +348,7 @@ GROUP_NAME_COLUMNS = ['G1', 'G2', 'G3', 'G4', 'G5', 'G6']
 
 # Create a named tuple to store the filenames of the experimental and control groups
 ExpCtrlGroups = namedtuple('FileGroups', ['exp_filenames', 'ctrl_filenames'])
+# All group_name should be converted to string
 GroupToValue = namedtuple('GtoJob', ['group_name', 'value'])
 FinalExpCtrlMapping = namedtuple('ExpCtrlMapping', ['exp_group', 'ctrl_group'])
 
@@ -329,17 +357,21 @@ Iterate over each job_name in metadata
 """""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""
 # Import metadata table for job
 metadata = pd.read_excel(pjoin(INPUT_FOLDER, METADATA_FILENAME), sheet_name = METADATA_JOB_TAB)
+# Convert all GROUP_NAME_COLUMNS to string
+metadata[GROUP_NAME_COLUMNS] = metadata[GROUP_NAME_COLUMNS].astype(str)
 
 for job_index, job in enumerate(metadata['Job_Name']):
     """""""""""""""""""""""""""""""""""""""""""""
     Get Job Info
     """""""""""""""""""""""""""""""""""""""""""""
     job_name = metadata['Job_Name'][job_index]
-    grouping_type = metadata['Grouping_Type'][job_index]
     # Get GtoJob named tuple
     job_group_names = []
     for group_column in GROUP_NAME_COLUMNS:
         job_group_names.append(GroupToValue(group_name = group_column, value = metadata[group_column][job_index]))
+    # Remove tuples where value is 'nan'. These represent empty spaces in the metadata excel input. For example, only 2 groups are being compared instead of 3.
+    job_group_names = [group for group in job_group_names if group.value != 'nan']
+        
     # Get temp folder names for each experimental vs. control group
     exp_vs_ctrl_temp_folders = []
     for i, name in enumerate(EXP_VS_CTRL_TEMP_FOLDER_COL_NAMES):
@@ -387,7 +419,7 @@ for job_index, job in enumerate(metadata['Job_Name']):
                     )
 
     """""""""""""""""""""""""""""""""""""""""""""
-    Import Abundance Data from Bucket Table and Organize Data Columns. Replace all 0 abundance values with 1/5th of the lowest non-zero value in the data columns.
+    Import Abundance Data from Bucket Table and Organize Data Columns.
     """""""""""""""""""""""""""""""""""""""""""""
     # Import bucket table (contains string "buckettable" in filename) from GNPS_OUTPUT_FOLDER --> GROUPING_INPUT_FOLDER_NAME -->  job_name folder
     job_folder = pjoin(GNPS_OUTPUT_FOLDER, GROUPING_INPUT_FOLDER_NAME, job_name)
@@ -412,6 +444,10 @@ for job_index, job in enumerate(metadata['Job_Name']):
     data_cols = []
     data_cols_avgs = []
     for group in job_group_names:
+        # Skip if group value is NaN
+        if pd.isna(group.value):
+            continue
+            
         if group.value in data_cols_dict:
             # Add individual experimental columns
             data_cols.extend(data_cols_dict[group.value].exp_filenames)
@@ -472,8 +508,8 @@ for job_index, job in enumerate(metadata['Job_Name']):
     node_cols_to_keep = []
     # Make a copy of COLUMNS_OF_INTEREST
     node_cols_to_keep.extend(COLUMNS_OF_INTEREST)
-    # After the first 3 columns of COLUMNS_OF_INTEREST, insert the data_cols_avgs (without the shared name column)
-    node_cols_to_keep[3:3] = data_cols_avgs[1:] 
+    # Add the data_cols_avgs (without the shared name column) to node_cols_to_keep
+    node_cols_to_keep.extend(data_cols_avgs[1:])
 
     # Get current node table
     node_table = p4c.tables.get_table_columns(table='node', network=suid_main_network)
@@ -484,8 +520,31 @@ for job_index, job in enumerate(metadata['Job_Name']):
         if col in node_table.columns:
             node_table_clean[col] = node_table[col]
 
-    # Rename column names G1, G3, and G5 in node_table_clean to be the corresponding values in job_group_names. Rename these as the GNPS output spectral counts data type
+    # Rename column names G# in node_table_clean to be the corresponding values in job_group_names. Rename these as the GNPS output spectral counts data type
     node_table_clean.rename(columns={group.group_name: group.value + "_spectral_counts" for group in job_group_names}, inplace=True)
+
+    # After each column ending in _exp_avg or _ctrl_avg, create corresponding log10 columns
+    node_table_clean = add_log10_columns(node_table_clean)
+
+    # Reorder the columns in the node table so that the log10 columns appear after RTMean and the spectral counts columns appear at the end
+    
+    # Get lists of column names by type
+    spectral_counts_cols = [col for col in node_table_clean.columns if '_spectral_counts' in col]
+    log10_cols = [col for col in node_table_clean.columns if '_log10' in col]
+    other_cols = [col for col in node_table_clean.columns if col not in spectral_counts_cols + log10_cols]
+
+    # Find index of 'RTMean' in other_cols
+    rtmean_idx = other_cols.index('RTMean')
+    
+    # Create new column order
+    new_order = (other_cols[:rtmean_idx + 1] + 
+                log10_cols +
+                other_cols[rtmean_idx + 1:] +
+                spectral_counts_cols)
+    
+    # Reorder the columns
+    node_table_clean = node_table_clean[new_order]
+
 
     # Clear existing node table data
     cols_immutable = ['name', 'SUID', 'shared name', 'selected']
@@ -595,9 +654,26 @@ for job_index, job in enumerate(metadata['Job_Name']):
         suid_filtered_network = p4c_network_add_filter_columns(
             all_combination_names[i], 
             node_table, 
-            combined_filter,  # Pass the combined filter instead of tuple of filters
+            combined_filter,
             suid_main_network
         )
+        
+        # Wait briefly for network creation
+        time.sleep(1)
+        
+        # Verify node table exists and reload if needed
+        filtered_node_table = p4c.tables.get_table_columns(table='node', network=suid_filtered_network)
+        if filtered_node_table.empty:
+            # Reload node table from main network
+            filtered_node_table = node_table[node_table['name'].isin(
+                p4c.networks.get_node_names(network=suid_filtered_network)
+            )]
+            p4c.tables.load_table_data(
+                filtered_node_table,
+                data_key_column='name',
+                table_key_column='name',
+                network=suid_filtered_network
+            )
         
         # Apply the Cytoscape style
         p4c_import_and_apply_cytoscape_style(
