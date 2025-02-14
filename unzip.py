@@ -48,9 +48,9 @@ Move volcano plots to a single folder
 #                         except (IOError, OSError) as e:
 #                             print(f"Error copying {src_path}: {e}")
 
-# """
-# Unzip files in folder in Grouping_Analysis_Folders in GNPS_OUTPUT_FOLDER
-# """
+"""
+Unzip files in folder in Grouping_Analysis_Folders in GNPS_OUTPUT_FOLDER
+"""
 # grouping_analysis_folder = "Grouping_Analysis_Folders"
 # grouping_folders_path = pjoin(GNPS_OUTPUT_FOLDER, grouping_analysis_folder)
 # for job_folder in os.listdir(grouping_folders_path):
@@ -70,9 +70,9 @@ Move volcano plots to a single folder
 #         os.remove(zipped_folder)
 #     print(f"Unzipped files in {job_folder}")
 
-# """
-# Print folder names in TEMP_OVERALL_FOLDER
-# """
+"""
+Print folder names in TEMP_OVERALL_FOLDER
+"""
 # # Print all the folder names in TEMP_OVERALL_FOLDER
 # if os.path.exists(TEMP_OVERALL_FOLDER):
 #     for folder in os.listdir(TEMP_OVERALL_FOLDER):

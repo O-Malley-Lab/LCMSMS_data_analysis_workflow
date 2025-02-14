@@ -661,27 +661,43 @@ for job_index, job in enumerate(metadata['Job_Name']):
         # Wait briefly for network creation
         time.sleep(1)
         
-        # Verify node table exists and reload if needed
-        filtered_node_table = p4c.tables.get_table_columns(table='node', network=suid_filtered_network)
-        if filtered_node_table.empty:
-            # Reload node table from main network
-            filtered_node_table = node_table[node_table['name'].isin(
-                p4c.networks.get_node_names(network=suid_filtered_network)
-            )]
-            p4c.tables.load_table_data(
-                filtered_node_table,
-                data_key_column='name',
-                table_key_column='name',
-                network=suid_filtered_network
+        try:
+            # Get filtered node table
+            filtered_node_table = p4c.tables.get_table_columns(table='node', network=suid_filtered_network)
+            if filtered_node_table.empty:
+                # Reload node table from main network
+                filtered_node_table = node_table[node_table['name'].isin(
+                    p4c.get_node_ids(network=suid_filtered_network)
+                )]
+                
+                # If still no nodes after filtering, skip this network
+                if len(filtered_node_table) == 0:
+                    print(f"Skipping empty network for {all_combination_names[i]}")
+                    p4c.delete_network(network=suid_filtered_network)
+                    continue
+                    
+                # Load the filtered data back into network
+                p4c.tables.load_table_data(
+                    filtered_node_table,
+                    data_key_column='name',
+                    table_key_column='name',
+                    network=suid_filtered_network
+                )
+            
+            # Apply the Cytoscape style
+            p4c_import_and_apply_cytoscape_style(
+                pjoin(cytoscape_inputs_folder, cytoscape_style_filename_new),
+                cytoscape_style_filename_new, 
+                suid_filtered_network,
+                f"{job_name}_{all_combination_names[i]}"
             )
-        
-        # Apply the Cytoscape style
-        p4c_import_and_apply_cytoscape_style(
-            pjoin(cytoscape_inputs_folder, cytoscape_style_filename_new),
-            cytoscape_style_filename_new, 
-            suid_filtered_network,
-            f"{job_name}_{all_combination_names[i]}"
-        )
+
+        except Exception as e:
+            print(f"Error processing network {all_combination_names[i]}: {str(e)}")
+            # Clean up failed network
+            if suid_filtered_network in p4c.get_network_list():
+                p4c.delete_network(network=suid_filtered_network)
+            continue
 
 
     """""""""""""""""""""""""""""""""""""""""""""
