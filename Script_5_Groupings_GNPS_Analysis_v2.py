@@ -298,7 +298,7 @@ def create_exp_ctrl_mapping(data_cols_dict):
 def add_log10_columns(df):
     """
     Add log10 columns for any columns ending with _exp_avg or _ctrl_avg.
-    Values of 0 have already been replaced with 1/5th of the minimum non-zero value before taking log10.
+    For log10 calculation, values of 0 are temporarily replaced with 1/5th of the minimum non-zero value.
     Log10 values are rounded to 2 decimal places.
 
     Inputs
@@ -316,8 +316,20 @@ def add_log10_columns(df):
     for col in avg_cols:
         # Create new column name
         log_col = col + '_log10'
+        
+        # Create temporary series for log calculation
+        temp_series = df[col].copy()
+        
+        # Find minimum non-zero value
+        min_val = temp_series[temp_series > 0].min()
+        replace_val = min_val / 5
+        
+        # Temporarily replace zeros for log calculation
+        temp_series = temp_series.replace(0, replace_val)
+        
         # Calculate log10 values
-        df[log_col] = np.log10(df[col])
+        df[log_col] = np.log10(temp_series)
+        
         # Round to 2 decimal places
         df[log_col] = df[log_col].round(2)
     
@@ -432,12 +444,6 @@ for job_index, job in enumerate(metadata['Job_Name']):
 
     # Change column name "#OTU ID" to "shared name"
     bucket_table.rename(columns={'#OTU ID': 'shared name'}, inplace=True)
-
-    # Of all values in bucket_table data columns (not the shared name column) find the lowest non-zero value. 1/5th of this value will be used to replace all 0 values in the data columns.
-    min_val = bucket_table[bucket_table.columns[1:]].replace(0, np.nan).min().min()
-    replace_val = min_val / 5
-    # Replace all 0 values in the data columns with replace_val (do not replace any values in the shared name column)
-    bucket_table[bucket_table.columns[1:]] = bucket_table[bucket_table.columns[1:]].replace(0, replace_val)
 
     # bucket_table contains only columns shared name and the data column, each named as the exp_filenames and ctrl_filenames in data_cols_dict.
     # Organize the data columns as they appear in data_cols_dict. Start with the job_name for the first group in data_cols_dict, then move to the next group in data_cols_dict.
