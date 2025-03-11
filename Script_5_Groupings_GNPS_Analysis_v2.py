@@ -6,14 +6,17 @@ This script has the following features for analyzing GNPS output for comparing A
 
 In METADATA_FILENAME excel, describe the following:
 - Job_Name: Name of the job
-[to-do: fill in remaining]
+- Groups (G#)
+- Group temp folder names (names for job folders in temp folder, to access metadata .tsv describing .mzML files to compare)
+- Ionization
+- Cytoscape format template file
 
 """""""""""""""""""""""""""""""""""""""""""""
 
 """""""""""""""""""""""""""""""""""""""""""""
 !!! Prior to running, you need to manually open Cytoscape !!!
 Additionally, you must download GNPS job result files:
-- First, create in GNPS_OUTPUT_FOLDER --> {job folder for POS and NEG}. Folder name template: "Grouping_" + job_name + "_POS" OR "Grouping_" + job_name + "_NEG". These job folders are where you will place GNPS output files per job.
+- First, create in GNPS_OUTPUT_FOLDER --> Grouping_Analysis_Folders --> {job folder for POS and NEG}. Folder name template: "Grouping_" + job_name + "_POS" OR "Grouping_" + job_name + "_NEG". These job folders are where you will place GNPS output files per job.
 - Second, use "Download Bucket Table" to get raw abundance data values. The script will use these values to filter features for those detected in experimtnal samples and not controls. Only the .tsv bucket file will be used so all other unzipped files can be deleted. 
 - Third, use "Download Clustered Spectra as MGF" option. The .graphml file will be in the sub-folder containing "graphml" in its name. The .mgf file can be manually uploaded to SIRIUS after running the script. From this unzip, only the .graphml file will be used by the script.
 """""""""""""""""""""""""""""""""""""""""""""
@@ -477,6 +480,10 @@ for job_index, job in enumerate(metadata['Job_Name']):
     # For bucket table to export, make all data columns be in scientific notation. Additionally, use conditional formatting to color the cells based on the value of the cell. The color scale should be from red to green, with the lowest value in red and the highest value in green.
     bucket_table_to_export = bucket_table.copy()
     bucket_table_path = pjoin(OUTPUT_FOLDER, job_name, job_name + "_bucket_table.xlsx")
+
+    # Create output folder if it does not exist
+    if not os.path.exists(pjoin(OUTPUT_FOLDER, job_name)):
+        os.makedirs(pjoin(OUTPUT_FOLDER, job_name))
     
     # Create Excel writer object
     with pd.ExcelWriter(bucket_table_path, engine='xlsxwriter') as writer:
