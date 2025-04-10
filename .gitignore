@@ -157,8 +157,8 @@ temp/
 # .env files
 .env
 
-# Input files
-input/
+# Data files
+data/
 
 # logs from R
 logs/

@@ -22,7 +22,6 @@ While screening heterologous expression is a main use case for this workflow, ot
 - Python 3.8+
 - Required Python packages:
     - pandas
-    - os
     - xml.etree.ElementTree
     - subprocess
     - shutil

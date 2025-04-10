@@ -204,6 +204,7 @@ def delete_folder(ftp, folder_name):
 Values *** CHANGE THESE VALUES AS NEEDED ***
 """""""""""""""""""""""""""""""""""""""""""""
 INPUT_FOLDER = r'input' 
+DATA_FOLDER = r'data'
 TEMP_OVERALL_FOLDER = r'temp'
 
 # Use "Overall_Running_Metadata_for_All_LCMSMS_Jobs.xlsx" from INPUT_FOLDER to get relevant parameters for job to run. Use the excel tab "Job to Run"
@@ -216,7 +217,7 @@ MZMINE_EXE_DIR = 'D:\\MZmine\\MZmine.exe'
 # Note, for input mzML files, all control file should have 'CTRL' in filename, otherwise script will not know which file is EXP and which is CTRL for comparison. So far, this script only handles two classes in any given job, 'CTRL' and 'EXP'.
 
 # GNPS FTP server: massive.ucsd.edu (check GNPS documentation if this ever changes)
-HOSTNAME = 'massive.ucsd.edu'
+HOSTNAME = 'massive-ftp.ucsd.edu'
 ALL_UPLOADS_FOLDER_NAME = "GNPS_upload_from_MZmine3_script_1"
 # Load .env file
 config = dotenv_values(".env")
@@ -224,7 +225,7 @@ config = dotenv_values(".env")
 USERNAME = config['USERNAME']
 PASSWD = config['PASSWD']
 # Set RUN_FTP to True to run FTP, False to not run FTP (to save running time when FTP not necessary)
-RUN_FTP = True
+RUN_FTP = False
 
 # ABMBA internal standard feature m/z and RT
 ABMBA_MZ_POS  = 229.9811 #m/z 229.9811
@@ -290,13 +291,13 @@ for job_index, job in enumerate(metadata['Job Name']):
 
     # Get EXP and CTRL lists of filenames in job_name folder. Only get the list of files that end in .mzML
     # EXP .mzML filenames
-    job_name_folder_contents = os.listdir(pjoin(INPUT_FOLDER, job_name))
+    job_name_folder_contents = os.listdir(pjoin(DATA_FOLDER, job_name))
     exp_filenames = []
     for filename in job_name_folder_contents:
         if filename.endswith('.mzML'):
             exp_filenames.append(filename)
     # CTRL .mzML filenames
-    ctrl_folder_contents = os.listdir(pjoin(INPUT_FOLDER, control_folder_name))
+    ctrl_folder_contents = os.listdir(pjoin(DATA_FOLDER, control_folder_name))
     ctrl_filenames = []
     for filename in ctrl_folder_contents:
         if filename.endswith('.mzML'):
@@ -338,13 +339,13 @@ for job_index, job in enumerate(metadata['Job Name']):
     # for child in xml_root:
     #     print(child.attrib)
 
-    # Set xml_mzml_input_str_start to the start of the path for the mzml files in the input folder, and also sete xml_mzml_temp_str_start to the start of the path for the temp folder
-    xml_input_dir_pre_str = os.getcwd() + '\\input\\'
+    # Set xml_mzml_data_str_start to the start of the path for the mzml files in the data folder, and also sete xml_mzml_temp_str_start to the start of the path for the temp folder
+    xml_data_dir_pre_str = os.getcwd() + '\\data\\'
     xml_temp_dir_pre_str = os.getcwd() + '\\temp\\'
 
     # Update mzml filenames for MZmine3 to use
     # Set xml_method_filenames_child to the child of xml_root with the following: batchstep method="io.github.mzmine.modules.io.import_rawdata_all.AllSpectralDataImportModule" parameter_version="1"
-    change_node_parameters(xml_root, 'batchstep[@method="io.github.mzmine.modules.io.import_rawdata_all.AllSpectralDataImportModule"][@parameter_version="1"]', 'parameter[@name="File names"]', 'file', [xml_input_dir_pre_str + job_name + '\\' + filename for filename in exp_filenames] + [xml_input_dir_pre_str + control_folder_name + '\\' + filename for filename in ctrl_filenames])
+    change_node_parameters(xml_root, 'batchstep[@method="io.github.mzmine.modules.io.import_rawdata_all.AllSpectralDataImportModule"][@parameter_version="1"]', 'parameter[@name="File names"]', 'file', [xml_data_dir_pre_str + job_name + '\\' + filename for filename in exp_filenames] + [xml_data_dir_pre_str + control_folder_name + '\\' + filename for filename in ctrl_filenames])
 
 
     """
@@ -476,9 +477,9 @@ for job_index, job in enumerate(metadata['Job Name']):
 
         # For each .mzML filename (EXP and CTRL), upload the file to the FTP server (in the job_name folder)
         for filename in exp_filenames:
-            upload_file(ftp, pjoin(INPUT_FOLDER, job_name, filename))
+            upload_file(ftp, pjoin(DATA_FOLDER, job_name, filename))
         for filename in ctrl_filenames:
-            upload_file(ftp, pjoin(INPUT_FOLDER, control_folder_name, filename))
+            upload_file(ftp, pjoin(DATA_FOLDER, control_folder_name, filename))
 
         # Upload the quant peak area .csv file to the FTP server (in temp_job_folder)
         upload_file(ftp, pjoin(temp_job_folder, job_name + '_gnps_quant.csv'))
