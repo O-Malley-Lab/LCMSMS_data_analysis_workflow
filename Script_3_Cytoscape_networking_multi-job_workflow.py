@@ -222,12 +222,13 @@ TEMP_OVERALL_FOLDER = r'temp'
 GNPS_OUTPUT_FOLDER = r'GNPS_output'
 OUTPUT_FOLDER = r'output'
 
+# Overall Metadata
 # Use "Overall_Running_Metadata_for_All_LCMSMS_Jobs.xlsx" from INPUT_FOLDER to get relevant parameters for job to run. Use the excel tab "Job to Run"
 METADATA_OVERALL_FILENAME = 'Overall_Running_Metadata_for_All_LCMSMS_Jobs.xlsx'
 METADATA_JOB_TAB = 'Multi-jobs'
 
-# CYTOSCAPE_INPUTS_FOLDER_NAME = 'Cytoscape_inputs'
-
+# Cytoscape Style
+CYTOSCAPE_INPUTS_FOLDER_NAME = 'Cytoscape_inputs'
 # Cytoscape style .xml filenames (located in cytoscape_inputs_folder).
 # Note, you need to manually edit the 'visualStyle name' in the .xml file to match the filename (without the .xml)
 # CYTOSCAPE_STYLE_FILENAME = 'styles_7.xml'
@@ -253,14 +254,9 @@ EXP_LOG10_CUTOFF = 6 # Log10 of EXP must be greater than this value
 # MetaboAnalystR filters
 METABOANALYSTR_LOG2FC_CUTOFF = 2
 METABOANALYSTR_PVAL_CUTOFF = 0.05
-
 # Filters for upregulated likely host metabolites
 HOST_CTRL_LOG10_CUTOFF = 5 # Log10 of CTRL must be greater than this value
 HOST_RATIO_CUTOFF = 10 # Ratio of EXP to CTRL must be greater than this value
-
-# Set deviation amounts for RT and m/z (for identifying specific peaks, such as standards)
-MZ_DEV = 0.1
-RT_DEV = 0.5
 
 # Standard Peaks
 # ABMBA standard peak
@@ -268,6 +264,9 @@ ABMBA_MZ_POS  = 229.9811 #m/z 229.9811
 ABMBA_RT_POS = 4.685 #4.685 minutes
 ABMBA_MZ_NEG = 227.9655 #m/z 227.9655
 ABMBA_RT_NEG = 4.8 #4.8 min
+# Set deviation amounts for RT and m/z (for identifying specific peaks, such as standards)
+MZ_DEV = 0.1
+RT_DEV = 0.5
 
 # Compounds of Interest
 # Baumin
@@ -286,11 +285,11 @@ start = time.time()
 metadata = pd.read_excel(pjoin(INPUT_FOLDER, METADATA_OVERALL_FILENAME), sheet_name = METADATA_JOB_TAB)
 
 for job_index, job in enumerate(metadata['Job Name']):
-
     # Cytoscape column names to keep (and their order) in the exported node table (input for filtering script), with columns added through for-loop
     cytoscape_cols_to_keep = [
     'shared name', 'precursor mass', 'RTMean', 'GNPSGROUP:EXP', 'GNPSGROUP:CTRL', 'componentindex', 'sum(precursor intensity)', 'NODE_TYPE','number of spectra',  'MassDiff', 'GNPSLinkout_Network', 'GNPSLinkout_Cluster', 'Instrument', 'PI', 'GNPSLibraryURL', 'Analog:MQScore', 'SpectrumID', 'Analog:SharedPeaks','Compound_Name','log2.FC.', 'p.value',
     ]
+
     """""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""
     Main Part 1: Prepare Cytoscape Network and Format Node Table
     """""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""
@@ -312,11 +311,11 @@ for job_index, job in enumerate(metadata['Job Name']):
         raise ValueError(f'Invalid ionization mode for job {job_name}. Must be either "POS" or "NEG".')
 
     # Define cytoscape inputs folder 
-    cytoscape_inputs_folder = pjoin(INPUT_FOLDER, 'Cytoscape_inputs')
+    cytoscape_inputs_folder = pjoin(INPUT_FOLDER, CYTOSCAPE_INPUTS_FOLDER_NAME)
 
 
     """""""""""""""""""""""""""""""""""""""""""""
-    Open Cytoscape network from GNPS output .graphml
+    Open Cytoscape network from GNPS output .graphml and sete visual style
     """""""""""""""""""""""""""""""""""""""""""""
     # GNPS Output folder (later, change this to be just the job_name in TEMP_OVERALL_FOLDER, rather than a testing folder)
     gnps_output_job_folder = pjoin(GNPS_OUTPUT_FOLDER, job_name)
@@ -334,27 +333,25 @@ for job_index, job in enumerate(metadata['Job Name']):
     # Get the SUID of the current network
     suid_main_network = p4c.get_network_suid()
 
-
-    """""""""""""""""""""""""""""""""""""""""""""
-    Set Visual Style
-    """""""""""""""""""""""""""""""""""""""""""""
+    # Set the visual style based on CYTOSCAPE_STYLE_FILENAME
     p4c_import_and_apply_cytoscape_style(pjoin(cytoscape_inputs_folder, CYTOSCAPE_STYLE_FILENAME), CYTOSCAPE_STYLE_FILENAME, suid_main_network, job_name)
 
 
     """""""""""""""""""""""""""""""""""""""""""""
-    Import GNPS Quant Data (raw Peak Area values)
+    Import GNPS Quant Data (Raw Peak Area Values)
     """""""""""""""""""""""""""""""""""""""""""""
     # From temp folder, import the GNPS quant data (job_name + "_gnps_quant.csv")
     gnps_quant_filename = job_name + '_gnps_quant.csv'
     gnps_quant_data = pd.read_csv(pjoin(TEMP_OVERALL_FOLDER, job_name, gnps_quant_filename))
+
     # Sort by 'row ID'
     gnps_quant_data = gnps_quant_data.sort_values(by='row ID')
+
     # Identify peak area columns to keep (column name ends in Peak area)
     peak_area_cols_to_keep = ['row ID']
     peak_area_cols_raw_data = [col for col in gnps_quant_data.columns if col.endswith('Peak area')]
     peak_area_cols_to_keep.extend(peak_area_cols_raw_data)
-    # # Add peak_area_cols_to_keep to cytoscape_cols_to_keep <- comment out to not include raw peak area values in the simplified node table
-    # cytoscape_cols_to_keep.extend(peak_area_cols_to_keep)
+
     # Load peak area data into the node table
     node_table_add_columns(gnps_quant_data, peak_area_cols_to_keep, suid_main_network, 'row ID')
 
@@ -365,18 +362,20 @@ for job_index, job in enumerate(metadata['Job Name']):
     # Import and load log2fc data. Values >0 are upregulated in EXP.
     log2fc_filename = job_name + METABOANALYST_LOG2FC_FILENAME_POST_STR
     log2fc_data = pd.read_csv(pjoin(TEMP_OVERALL_FOLDER, job_name, METABOANALYST_OUTPUT_FOLDER_NAME, log2fc_filename))
+
     # Convert MetaboAnalyst_ID name to a column "shared name", where the value in the column prior to the first '/' is the shared name value
     log2fc_data['shared_name'] = log2fc_data['MetaboAnalyst_ID'].apply(lambda x: x.split('/')[0])
+
     # Rename "Log2_FoldChange" column to "log2.FC."
     log2fc_data = log2fc_data.rename(columns={'Log2_FoldChange': 'log2.FC.'})
     node_table_add_columns(log2fc_data, LOG2FC_COLS_TO_KEEP, suid_main_network, 'shared_name')
 
-    # Import and load t-test data. Values <0.05 are significant.
-    # t_test_filename = job_name + METABOANALYST_TTEST_FILENAME_POST_STR
-    # t_test_data = pd.read_csv(pjoin(TEMP_OVERALL_FOLDER, job_name, METABOANALYST_OUTPUT_FOLDER_NAME, t_test_filename))
+    # Import and load t-test data.
     t_test_data = pd.read_csv(pjoin(TEMP_OVERALL_FOLDER, job_name, METABOANALYST_OUTPUT_FOLDER_NAME, METABOANALYST_TTEST_ALL_RESULTS_FILENAME))
+
     # Rename the first column (unnamed) to 'MetaboAnalyst_ID'
     t_test_data = t_test_data.rename(columns={t_test_data.columns[0]: 'MetaboAnalyst_ID'})
+
     # Convert MetaboAnalyst_ID name to a column "shared name", where the value in the column prior to the first '/' is the shared name value
     t_test_data['shared_name'] = t_test_data['MetaboAnalyst_ID'].apply(lambda x: x.split('/')[0])
     node_table_add_columns(t_test_data, T_TEST_COLS_TO_KEEP, suid_main_network, 'shared_name')
@@ -384,13 +383,14 @@ for job_index, job in enumerate(metadata['Job Name']):
     # Import normalized peak area data
     norm_peak_area_filename = job_name + METABOANALYST_NORM_PEAK_AREA_FILENAME_POST_STR
     norm_peak_area_data = pd.read_csv(pjoin(TEMP_OVERALL_FOLDER, job_name, METABOANALYST_OUTPUT_FOLDER_NAME, norm_peak_area_filename))
+
     # Keep all normalized peak area columns except for MetaboAnalyst_ID
     norm_peak_area_data = norm_peak_area_data.drop(columns=['MetaboAnalyst_ID'])
+
     # Rename normalized data columns (not shared_name) to end with '_normalized'
     norm_peak_area_data.columns = [col + '_normalized' if col != 'shared_name' else col for col in norm_peak_area_data.columns]
     norm_data_cols_to_keep = norm_peak_area_data.columns
-    # # Add norm_data_cols_to_keep to cytoscape_cols_to_keep <- comment out to not include normalized peak area values in the simplified node table
-    # cytoscape_cols_to_keep.extend(norm_data_cols_to_keep)
+
     # Load normalized peak area data into the node table
     node_table_add_columns(norm_peak_area_data, norm_data_cols_to_keep, suid_main_network, 'shared_name')
 
@@ -404,9 +404,6 @@ for job_index, job in enumerate(metadata['Job Name']):
     for col in peak_area_cols_raw_data:
         gnps_quant_data[col + '_log10'] = gnps_quant_data[col].apply(lambda x: None if x == 0 else np.log10(x))
 
-    # # Add log10_peak_area_cols to cytoscape_cols_to_keep <- comment out to not include log10 peak area values in the simplified node table
-    # cytoscape_cols_to_keep.extend(log10_peak_area_cols)
-
     # Add the key column (row ID) to the log10 peak area columns
     log10_peak_area_cols.insert(0, 'row ID')
 
@@ -416,8 +413,10 @@ for job_index, job in enumerate(metadata['Job Name']):
     # Average peak area columns: GNPSGROUP:CTRL and GNPSGROUP:EXP
     # Generate log10 values for average peak area columns (GNPSGROUP:CTRL and GNPSGROUP:EXP). Label as the original column name with '_log10'
     avg_peak_area_cols = ['GNPSGROUP:CTRL', 'GNPSGROUP:EXP']
+
     # Get the node table as a dataframe
     node_table_temp = p4c.tables.get_table_columns(network=suid_main_network, table='node')
+
     # Add data for log10 average peak area columns. GNPSGROUP:CTRL and GNPSGROUP:EXP are from the node table, not the gnps_quant_data
     avg_peak_area_cols_log10 = []
     for col in avg_peak_area_cols:
@@ -433,7 +432,7 @@ for job_index, job in enumerate(metadata['Job Name']):
     # Load log10 average peak area data into the node table
     node_table_add_columns(node_table_temp, avg_peak_area_cols_log10, suid_main_network, 'name')
 
-    # Generate a EXP:CTRL_ratio column
+    # Generate an EXP:CTRL_ratio column
     node_table_temp['EXP:CTRL_ratio'] = node_table_temp['GNPSGROUP:EXP'] / node_table_temp['GNPSGROUP:CTRL']
     # Replace inf values with a large number [np.inf, -np.inf], 10000000000 (E10) and -10000000000 (-E10), respectively
     node_table_temp['EXP:CTRL_ratio'] = node_table_temp['EXP:CTRL_ratio'].replace([np.inf, -np.inf], [10000000000, -10000000000])
@@ -464,6 +463,7 @@ for job_index, job in enumerate(metadata['Job Name']):
             compound_name_df.at[index, 'Compound_Name'] = None
         else:
             suspect_compound_match_col_values.append(None)
+            
     # Add the new values suspect_compound_match_col_values to column 'Suspect_Compound_Match' in the compound_name_df dataframe. Use .loc to avoid SettingWithCopyWarning
     for index, value in enumerate(suspect_compound_match_col_values):
         compound_name_df.loc[index, 'Suspect_Compound_Match'] = value
@@ -523,24 +523,17 @@ for job_index, job in enumerate(metadata['Job Name']):
     # Second, filter for peaks that have a p.value less than PVAL_CUTOFF
     table_filtered = table_filtered[table_filtered['p.value'] < METABOANALYSTR_PVAL_CUTOFF]
 
-    # Third, filter for peaks that have a GNPSGROUP:CTRL_log10 less than the cutoff. Set table_filtered['GNPSGROUP:CTRL_log10'] to float type (not str) to avoid error in filtering. You should include rows that have a value of 'None' in the column, as these are peaks that were not detected in the control samples. Note that NaN is float type.
-    # For each value in table_filtered['GNPSGROUP:CTRL_log10'], print if not a float
-    # for value in table_filtered['GNPSGROUP:CTRL_log10']:
-    #     if not isinstance(value, float):
-    #         print(value)
-    # Ensure that the column is float type. Then filter.
+    # Third, filter for peaks that have a GNPSGROUP:CTRL_log10 less than the cutoff. Set table_filtered['GNPSGROUP:CTRL_log10'] to float type (not str) to avoid error in filtering. You should include rows that have a value of 'None' in the column, as these are peaks that were not detected in the control samples. Note that NaN is float type. Ensure that the column is float type. Then filter.
     table_filtered['GNPSGROUP:CTRL_log10'] = table_filtered['GNPSGROUP:CTRL_log10'].astype(float)
     table_filtered = table_filtered[(table_filtered['GNPSGROUP:CTRL_log10'] < CTRL_LOG10_CUTOFF) | (table_filtered['GNPSGROUP:CTRL_log10'].isnull())]
 
     # Fourth, filter for peaks that have a GNPSGROUP:EXP_log10 greater than the cutoff. Set table_filtered['GNPSGROUP:EXP_log10'] to float type (not str) to avoid error in filtering
-    # for value in table_filtered['GNPSGROUP:EXP_log10']:
-    #     if not isinstance(value, float):
-    #         print(value)
     table_filtered['GNPSGROUP:EXP_log10'] = table_filtered['GNPSGROUP:EXP_log10'].astype(float)
     table_filtered = table_filtered[table_filtered['GNPSGROUP:EXP_log10'] > EXP_LOG10_CUTOFF]
 
     # Sort table_filtered in descending order by GNPSGROUP:EXP_log10
     table_filtered = table_filtered.sort_values(by = 'GNPSGROUP:EXP_log10', ascending = False)
+    
     # Reset index
     table_filtered = table_filtered.reset_index(drop = True)
 
@@ -628,12 +621,6 @@ for job_index, job in enumerate(metadata['Job Name']):
         table_formatted[col] = pd.to_numeric(table_formatted[col], errors='coerce')
         table_formatted[col] = table_formatted[col].round(2)
 
-    # table_formatted[columns_to_round] = table_formatted[columns_to_round].applymap(lambda x: round(x, 2) if pd.notnull(x) else x)
-    # print row for each row in table_formatted with NoneType in log2.FC. column
-    # for index, row in table_formatted.iterrows():
-    #     if pd.isnull(row['log2.FC.']):
-    #         print(row)
-
 
     """""""""""""""""""""""""""""""""""""""""""""
     Make a table of the parameters used in this script
@@ -649,12 +636,14 @@ for job_index, job in enumerate(metadata['Job Name']):
     """""""""""""""""""""""""""""""""""""""""""""
     nodes_to_keep_metaboanalystr = node_table_temp['log2.FC.'] > METABOANALYSTR_LOG2FC_CUTOFF
     nodes_to_keep_metaboanalystr = nodes_to_keep_metaboanalystr & (node_table_temp['p.value'] < METABOANALYSTR_PVAL_CUTOFF)
-    # include rows that have a value of 'None' in the column, as these are peaks that were not detected in the control samples
+
+    # Include rows that have a value of 'None' in the column, as these are peaks that were not detected in the control samples
     nodes_to_keep_metaboanalystr = nodes_to_keep_metaboanalystr & ((node_table_temp['GNPSGROUP:CTRL_log10'] < CTRL_LOG10_CUTOFF) | (node_table_temp['GNPSGROUP:CTRL_log10'].isnull()))
     nodes_to_keep_metaboanalystr = nodes_to_keep_metaboanalystr & (node_table_temp['GNPSGROUP:EXP_log10'] > EXP_LOG10_CUTOFF)
 
     suid_target = p4c_network_add_filter_columns("MetaboAnalystR_Filter", node_table_temp, nodes_to_keep_metaboanalystr, suid_main_network, key_col='shared name', componentindex_colname='componentindex')
     p4c_import_and_apply_cytoscape_style(pjoin(cytoscape_inputs_folder, CYTOSCAPE_STYLE_FILTERED_FILENAME), CYTOSCAPE_STYLE_FILTERED_FILENAME, suid_target, job_name + '_MetaboAnalystR_Filter')
+
 
     """""""""""""""""""""""""""""""""""""""""""""
     Save Cytoscape Session in Output Folder, Job Name folder
