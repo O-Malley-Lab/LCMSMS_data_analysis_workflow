@@ -599,6 +599,7 @@ for job_index, job in enumerate(metadata['Job Name']):
         print('Finished preparing files for MetaboAnalyst for ' + job_name + ', took %.2f seconds' % (time.time() - start))
         start = time.time()
 
+
         """""""""""""""""""""""""""""""""""""""""""""
         Record the ABMBA feature in the Overall Metadata Table (perform for each job individually so that if error occurs, all previous jobs still have their recorded ABMBA feature)
         """""""""""""""""""""""""""""""""""""""""""""
@@ -614,7 +615,6 @@ for job_index, job in enumerate(metadata['Job Name']):
 
         # Write the value also in the excel METADATA_OVERALL_FILENAME without changing any other sheets or values (use sheet name METADATA_JOB_TAB)
         all_sheets[METADATA_JOB_TAB] = metadata
-
 
         # Save the updated excel file
         with pd.ExcelWriter(pjoin(INPUT_FOLDER, METADATA_OVERALL_FILENAME), engine='openpyxl') as writer:
