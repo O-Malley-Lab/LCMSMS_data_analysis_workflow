@@ -1,9 +1,7 @@
 """""""""""""""""""""""""""""""""""""""""""""
-LCMSMS Data Analysis Workflow, Script 3: Cytoscape Networking, Multi-job Workflow v2
+LCMSMS Data Analysis Workflow, Script 3: Cytoscape Networking, Multi-job Workflow
 
 @author: Lazarina Butkovich
-
-Compared to v1, this v2 script applies only 1 filter to the Cytoscape network, to simplify analysis (instead of looking at ~3 different sets of filtering parameters).
 
 """""""""""""""""""""""""""""""""""""""""""""
 
@@ -251,16 +249,10 @@ T_TEST_COLS_TO_KEEP = ['shared_name', 'p.value']
 
 # Filtering Parameters
 CTRL_LOG10_CUTOFF = 5 # Log10 of CTRL must be less than this value
-EXP_LOG10_CUTOFF = 5 # Log10 of EXP must be greater than this value
+EXP_LOG10_CUTOFF = 6 # Log10 of EXP must be greater than this value
 # MetaboAnalystR filters
 METABOANALYSTR_LOG2FC_CUTOFF = 2
 METABOANALYSTR_PVAL_CUTOFF = 0.05
-# More stringent cutoffs for filtering
-CTRL_LOG10_CUTOFF_STRINGENT = 5
-EXP_LOG10_CUTOFF_STRINGENT = 6
-METABOANALYSTR_LOG2FC_CUTOFF_STRINGENT = 2
-METABOANALYSTR_PVAL_CUTOFF_STRINGENT = 0.05
-NODES_TO_KEEP_CUTOFF_FOR_STRINGENT_FILTER = 20
 
 # Filters for upregulated likely host metabolites
 HOST_CTRL_LOG10_CUTOFF = 5 # Log10 of CTRL must be greater than this value
@@ -667,31 +659,6 @@ for job_index, job in enumerate(metadata['Job Name']):
     p4c_import_and_apply_cytoscape_style(pjoin(cytoscape_inputs_folder, CYTOSCAPE_STYLE_FILTERED_FILENAME), CYTOSCAPE_STYLE_FILTERED_FILENAME, suid_target, job_name + '_MetaboAnalystR_Filter')
 
     """""""""""""""""""""""""""""""""""""""""""""
-    Create filtered network for with only stringent abundance filters (no MetaboAnalyst R stat filters)
-    """""""""""""""""""""""""""""""""""""""""""""
-    nodes_to_keep_abundance = (node_table_temp['GNPSGROUP:CTRL_log10'] < CTRL_LOG10_CUTOFF) | (node_table_temp['GNPSGROUP:CTRL_log10'].isnull())
-    nodes_to_keep_abundance = nodes_to_keep_abundance & (node_table_temp['GNPSGROUP:EXP_log10'] > EXP_LOG10_CUTOFF)
-
-    suid_target = p4c_network_add_filter_columns("Stringent_Abundance_Filter", node_table_temp, nodes_to_keep_abundance, suid_main_network, key_col='shared name', componentindex_colname='componentindex')
-    p4c_import_and_apply_cytoscape_style(pjoin(cytoscape_inputs_folder, CYTOSCAPE_STYLE_FILTERED_FILENAME), CYTOSCAPE_STYLE_FILTERED_FILENAME, suid_target, job_name + '_Stringent_Abundance_Filter')
-
-    """""""""""""""""""""""""""""""""""""""""""""
-    Create more stringent filtered network for MetaboAnalystR filters, for sample groups with many nodes_to_keep
-    """""""""""""""""""""""""""""""""""""""""""""
-    # If the number of rows in nodes_to_keep_metaboanalystr has more than the value of NODES_TO_KEEP_CUTOFF_FOR_STRINGENT_FILTER, create a more stringently filtered network
-    len_nodes_to_keep_metaboanalystr = len(node_table_temp[nodes_to_keep_metaboanalystr])
-    run_stringent_filter = len_nodes_to_keep_metaboanalystr > NODES_TO_KEEP_CUTOFF_FOR_STRINGENT_FILTER
-    if run_stringent_filter:
-        nodes_to_keep_metaboanalystr_stringent = node_table_temp['log2.FC.'] > METABOANALYSTR_LOG2FC_CUTOFF_STRINGENT
-        nodes_to_keep_metaboanalystr_stringent = nodes_to_keep_metaboanalystr_stringent & (node_table_temp['p.value'] < METABOANALYSTR_PVAL_CUTOFF_STRINGENT)
-        nodes_to_keep_metaboanalystr_stringent = nodes_to_keep_metaboanalystr_stringent & ((node_table_temp['GNPSGROUP:CTRL_log10'] < CTRL_LOG10_CUTOFF_STRINGENT) | (node_table_temp['GNPSGROUP:CTRL_log10'].isnull()))
-        nodes_to_keep_metaboanalystr_stringent = nodes_to_keep_metaboanalystr_stringent & (node_table_temp['GNPSGROUP:EXP_log10'] > EXP_LOG10_CUTOFF_STRINGENT)
-
-        suid_target = p4c_network_add_filter_columns("MetaboAnalystR_Filter_Stringent", node_table_temp, nodes_to_keep_metaboanalystr_stringent, suid_main_network, key_col='shared name', componentindex_colname='componentindex')
-        p4c_import_and_apply_cytoscape_style(pjoin(cytoscape_inputs_folder, CYTOSCAPE_STYLE_FILTERED_FILENAME), CYTOSCAPE_STYLE_FILTERED_FILENAME, suid_target, job_name + '_MetaboAnalystR_Filter_Stringent')
-
-
-    """""""""""""""""""""""""""""""""""""""""""""
     Save Cytoscape Session in Output Folder, Job Name folder
     """""""""""""""""""""""""""""""""""""""""""""
     # If the job_name folder does not exist yet in OUTPUT_FOLDER, create it
@@ -703,18 +670,6 @@ for job_index, job in enumerate(metadata['Job Name']):
 
     print('Session saved and finished filtered Cytoscape networks for ' + job_name + ', took %.2f seconds' % (time.time() - start))
     start = time.time()
-
-    """""""""""""""""""""""""""""""""""""""""""""
-    Write a table for the stringently filtered peaks of interest, if it exists
-    """""""""""""""""""""""""""""""""""""""""""""
-    if run_stringent_filter:
-        table_stringent = node_table[COLUMNS_OF_INTEREST].copy()
-
-        # For rows kept in nodes_to_keep_metaboanalystr_stringent, keep in table_stringent. Determine this based on the shared name
-        table_stringent = table_stringent[table_stringent['shared name'].isin(node_table_temp[nodes_to_keep_metaboanalystr_stringent]['shared name'])]
-
-        # Order rows from highest to lowest 'GNPSGROUP:EXP_log10'
-        table_stringent = table_stringent.sort_values(by = 'GNPSGROUP:EXP_log10', ascending = False)
 
 
     """""""""""""""""""""""""""""""""""""""""""""
@@ -735,9 +690,6 @@ for job_index, job in enumerate(metadata['Job Name']):
     if ionization == 'POS':
         dataframes['table_baumin'] = table_baumin
 
-    if run_stringent_filter:
-        dataframes['table_stringent'] = table_stringent
-
     for name, df in dataframes.items():
         # Get columns that are in both COLUMNS_OF_INTEREST and df.columns
         valid_cols = [col for col in COLUMNS_OF_INTEREST if col in df.columns]
@@ -757,9 +709,6 @@ for job_index, job in enumerate(metadata['Job Name']):
 
     if ionization == 'POS':
         table_baumin = dataframes['table_baumin']
-
-    if run_stringent_filter:
-        table_stringent = dataframes['table_stringent']
     
 
     """""""""""""""""""""""""""""""""""""""""""""
@@ -776,10 +725,7 @@ for job_index, job in enumerate(metadata['Job Name']):
     # Write each dataframe to a different sheet (with no index column)
     table_formatted.to_excel(writer, sheet_name = 'All Peaks Simple', index = False)
     node_table.to_excel(writer, sheet_name = 'All', index = False)
-    if len_nodes_to_keep_metaboanalystr > NODES_TO_KEEP_CUTOFF_FOR_STRINGENT_FILTER:
-        table_stringent.to_excel(writer, sheet_name = 'Stringent hits ordered', index = False)
     table_filtered.to_excel(writer, sheet_name = 'Filtered Peaks of Interest', index = False)
-    # table_filtered_stringent.to_excel(writer, sheet_name = 'Filtered Stringent', index = False)
     table_host_upreg.to_excel(writer, sheet_name = 'Upreg Likely Host Metabolites', index = False)
     table_all_matched_cmpds.to_excel(writer, sheet_name = 'All Cmpd Matches', index = False)
     table_matched_cmpds_no_suspect.to_excel(writer, sheet_name = 'Cmpd Matches No Sus', index = False)
@@ -796,9 +742,7 @@ for job_index, job in enumerate(metadata['Job Name']):
         if sheet_name == 'All Peaks Simple':
             format_column(worksheet, table_formatted)
         elif sheet_name == 'All':
-            format_column(worksheet, node_table)
-        elif sheet_name == 'Stringent hits ordered':
-            format_column(worksheet, table_stringent)  
+            format_column(worksheet, node_table) 
         elif sheet_name == 'Filtered Peaks of Interest':
             format_column(worksheet, table_filtered)
         elif sheet_name == 'Upreg Likely Host Metabolites':

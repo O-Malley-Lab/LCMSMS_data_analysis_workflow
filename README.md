@@ -1,11 +1,11 @@
 # Heterologous Expression of Anaerobic Gut Fungal Polyketides and Nonribosomal Peptides in Model Fungal Hosts
 
 ## Background
-*In silico* genome mining tools predict biosynthetic gene clusters for secondary metabolites from anaerobic gut fungi (phylum Neocallimastigomycota). In this research project, we sought to learn more about the products of these gene clusters via the technique of heterologous expression, wherein you insert predicted biosynthetic genes into vectors, transform the vectors into model hosts, culture the transformed host microbe under expression conditions, and harvest samples for data analysis.
+*In silico* genome mining tools predict many biosynthetic gene clusters for secondary metabolites from anaerobic gut fungi (phylum Neocallimastigomycota). In this research project, we sought to learn more about the products of these gene clusters via the technique of heterologous expression, wherein you insert predicted biosynthetic genes into vectors, transform the vectors into model host microbes, culture the transformed host microbes under expression conditions, and harvest samples for data analysis and screening.
 
-For this project, we mainly use an untargeted metabolomics screen with LC-MS/MS (liquid chromatography with tandem mass spectrometry) to determine which expression groups possess standout metabolites (by abundance and t-test statistics) relative to the negative control, model host microbe expressing empty vector (transformed vector with no inserted gene to express). We implement multiple existing tools to perform data processing and analysis: MZmine3, MetaboAnalyst, GNPS, and SIRIUS.
+For this project, we mainly used an untargeted metabolomics screen with LC-MS/MS (liquid chromatography with tandem mass spectrometry) to determine which expression groups possessed standout metabolites (by abundance and t-test statistics) relative to the negative control: the model host microbe expressing the corresponding empty vector (transformed vector with no inserted gene to express). We implemented multiple existing tools to perform data processing and analysis: MZmine3, MetaboAnalyst, GNPS, and SIRIUS.
 
-While screening heterologous expression is a main use case for this workflow, other untargeted LC-MS/MS data sources with 2 sample groups can be similarly processed and analyzed. Overall, datasets run through this workflow include the following experimental-control pairings:
+While screening heterologous expression is a main use case for this workflow, other untargeted LC-MS/MS data sources with 2 sample groups (Experimental vs. Control) can be similarly processed and analyzed. Overall, datasets run through this workflow include the following experimental-control pairings:
 | Experimental Group                                    | Control for Comparison                               |
 | ------------------------------------------------- | ----------------------------------------- |
 | Heterologous Expression | Empty Vector Negative Control |
@@ -16,7 +16,7 @@ While screening heterologous expression is a main use case for this workflow, ot
 [to be filled in]
 
 ## Installation
-### Dependencies [to do: check all]
+### Dependencies
 
 #### Script 1: MZmine3 Multi-job Workflow
 - Python 3.8+
