@@ -348,7 +348,7 @@ OUTPUT_FOLDER = r'output'
 # Within the GNPS_OUTPUT_FOLDER is a folder with job folders for grouping analysis. These job folders contain the GNPS output files (need to manually place downloaded GNPS results).
 GROUPING_INPUT_FOLDER_NAME = "Grouping_Analysis_Folders"
 
-METADATA_FILENAME = 'Anid_vs_Yeast_HE_Groupings_Metadata.xlsx'
+METADATA_FILENAME = 'Script_5_Groupings_Metadata.xlsx'
 METADATA_JOB_TAB = 'Multi-jobs'
 EXP_VS_CTRL_TEMP_FOLDER_COL_NAMES = ['G1_temp_folder', 'G2_temp_folder', 'G3_temp_folder', 'G4_temp_folder', 'G5_temp_folder', 'G6_temp_folder']
 

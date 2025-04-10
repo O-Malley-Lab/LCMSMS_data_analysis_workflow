@@ -301,8 +301,6 @@ for job_index, job in enumerate(metadata['Job Name']):
     job_name = metadata['Job Name'][job_index]
     control_folder_name = metadata['Control Folder'][job_index]
     ionization = metadata['Ionization'][job_index]
-    exp_rep_num = metadata['EXP num replicates'][job_index]
-    ctrl_rep_num = metadata['CTRL num replicates'][job_index]
 
     if ionization == 'POS':
         abmba_mz = ABMBA_MZ_POS

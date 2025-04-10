@@ -24,9 +24,7 @@ import ftplib
 from dotenv import dotenv_values
 import time
 start = time.time()
-# import stats
 import numpy as np
-import scipy.stats as stats
 
 """""""""""""""""""""""""""""""""""""""""""""
 Functions
@@ -49,9 +47,8 @@ def change_node_parameters(root, node_str, param_str, tag_str, dir_param):
         List of new values for the parameter (can be a single value).
 
     Output
-    - None
+    None
     XML root is modified without returning anything.
-    -------
     """
     child = root.find(node_str)
     child_param = child.find(param_str)
@@ -78,7 +75,6 @@ def prettify(element, level=0):
     Output
     element : xml.etree.ElementTree.Element
         Prettified element.
-    -------
     """
     indent = "    "  # 4 spaces
     if len(element):
@@ -108,7 +104,6 @@ def commandline_MZmine3(mzmine_exe_dir, xml_temp_dir_pre_str, job_name, mzmine3_
     Output
     exit_code : int
         Exit code of the MZmine3 process, to keep track of whether the process finished successfully.
-    -------
     """
     # Command line arguments for MZmine3 in list format. '-memory' and 'all' enable use of all available memory to decrease processing time.
     command_args = [mzmine_exe_dir, '-batch', pjoin(xml_temp_dir_pre_str, job_name, mzmine3_xml_filename_new), '-memory', 'all']
@@ -200,6 +195,7 @@ def delete_folder(ftp, folder_name):
     # Delete folder
     ftp.rmd(folder_name)
 
+
 """""""""""""""""""""""""""""""""""""""""""""
 Values *** CHANGE THESE VALUES AS NEEDED ***
 """""""""""""""""""""""""""""""""""""""""""""
@@ -214,8 +210,6 @@ METADATA_JOB_TAB = 'Multi-jobs'
 # String directory location of your local MZmine3 executable (need to install MZmine3 to enable commandline use)
 MZMINE_EXE_DIR = 'D:\\MZmine\\MZmine.exe'
 
-# Note, for input mzML files, all control file should have 'CTRL' in filename, otherwise script will not know which file is EXP and which is CTRL for comparison. So far, this script only handles two classes in any given job, 'CTRL' and 'EXP'.
-
 # GNPS FTP server: massive.ucsd.edu (check GNPS documentation if this ever changes)
 HOSTNAME = 'massive-ftp.ucsd.edu'
 ALL_UPLOADS_FOLDER_NAME = "GNPS_upload_from_MZmine3_script_1"
@@ -227,7 +221,8 @@ PASSWD = config['PASSWD']
 # Set RUN_FTP to True to run FTP, False to not run FTP (to save running time when FTP not necessary)
 RUN_FTP = False
 
-# ABMBA internal standard feature m/z and RT
+# ABMBA internal standard feature m/z and RT information. Set ABMBA_SEARCH to True to search for ABMBA in the data, otherwise seet to False.
+ABMBA_SEARCH = True
 ABMBA_MZ_POS  = 229.9811 #m/z 229.9811
 ABMBA_RT_POS = 4.685 #4.685 minutes
 ABMBA_MZ_NEG = 227.9655 #m/z 227.9655
@@ -235,7 +230,7 @@ ABMBA_RT_NEG = 4.8 #4.8 min
 MZ_TOL = 0.1 #m/z tolerance for matching ABMBA
 RT_TOL = 1 #RT tolerance for matching ABMBA
 
-# PRIOR to running script, you need to manually create/generate the batch parameters .xml file for your jobs (filename specified in METADATA_OVERALL_FILENAME column 'MZmine3 batch template'). You should manually look at the parameters settings in the MZmine3 GUI to ensure they are correct for your job. This script will edit the .xml file to input the correct filenames and metadata for the job. Parameters to particularly consider:
+# PRIOR to running script, you need to manually create/generate the batch parameters .xml file for your jobs (filename specified in METADATA_OVERALL_FILENAME column 'MZmine3 batch template'). You should manually look at the parameters settings in the MZmine3 GUI to ensure they are correct for your job. This script will edit the .xml file to input the correct filenames and metadata for the job. Parameters of particular interest to consider:
 # - Instrument-specific parameters (MZmine3 allows you to specify a setup, and you will get some default paramets)
 # - Mass detection cutoffs for MS1 and MS2: in the mass detection steps, use the 'Show preview' option under setup to visually see examples of noise levels in your data. You can adjust the mass detection cutoffs to minimize noise peaks.
 # - ADAP Chromatogram builder parameters: minimum instensity for consecutive scans, minimum absolute height
@@ -248,18 +243,13 @@ Create GNPS and MetaboAnalyst Metadata .tsv files
 # Import metadata table for job
 metadata = pd.read_excel(pjoin(INPUT_FOLDER, METADATA_OVERALL_FILENAME), sheet_name = METADATA_JOB_TAB)
 
-# Create ABMBA dictionary to record the ABMBA feature ID for each job
-abmba_dict = {}
-
 for job_index, job in enumerate(metadata['Job Name']):
-    # Run the entirety of below code for each job
-    # Extract relevant information
+    # Extract relevant information from metadata table for the job
     job_name = metadata['Job Name'][job_index]
     control_folder_name = metadata['Control Folder'][job_index]
     ionization = metadata['Ionization'][job_index]
-    exp_rep_num = metadata['EXP num replicates'][job_index]
-    ctrl_rep_num = metadata['CTRL num replicates'][job_index]
-    # if RT minimum cutoff column value is empty, use 0 as the default value
+
+    # If RT minimum cutoff column value is empty, use 0 as the default value
     if pd.isnull(metadata['RT minimum cutoff'][job_index]):
         rt_minimum_cutoff = 0
     else:
@@ -270,7 +260,7 @@ for job_index, job in enumerate(metadata['Job Name']):
         os.makedirs(pjoin(TEMP_OVERALL_FOLDER, job_name))
     temp_job_folder = pjoin(TEMP_OVERALL_FOLDER, job_name)
 
-    # Empty the temp_job_folder of any files and folders
+    # Empty the temp_job_folder of any files and folders (specific to the current job name being iterated over)
     for filename in os.listdir(temp_job_folder):
         file_path = pjoin(temp_job_folder, filename)
         try:
@@ -280,7 +270,6 @@ for job_index, job in enumerate(metadata['Job Name']):
                 shutil.rmtree(file_path)
         except Exception as e:
             print('Failed to delete %s. Reason: %s' % (file_path, e))
-
 
     # Format of metadata .tsv: two columns, Filename and Class. List the filenames from folder Job Name, where filenames with 'CTRL' in them are in the 'CTRL' class and filenames without 'CTRL' in them are in the 'EXP' class.
     # Create metadata .tsv file in temp folder
@@ -327,24 +316,22 @@ for job_index, job in enumerate(metadata['Job Name']):
     """
     Edit basic .xml parameters file: input filenames
     """
-    # Import basic .xml parameters file using ElementTree https://docs.python.org/3/library/xml.etree.elementtree.html
-
-    # Import and parse .xml file from INPUT_FOLDER. Get mzmine3_xml_filename from the metadata table, string value in column "MZmine3 batch template"
+    # Import basic .xml parameters file from INPUT_FOLDER using ElementTree https://docs.python.org/3/library/xml.etree. Get mzmine3_xml_filename from the metadata table, string value in column "MZmine3 batch template"
     mzmine3_xml_filename = metadata['MZmine3 batch template'][0]
     xml_tree = ET.parse(pjoin(INPUT_FOLDER, mzmine3_xml_filename))
 
     # Get root (batch mzmine_version="3.6.0"
     xml_root = xml_tree.getroot()
-    # Can look at children of root (batchstep method="...") and print attrib text for all xml_children
+    # Note: you can look at children of root (batchstep method="...") and print attrib text for all xml_children, for example:
     # for child in xml_root:
     #     print(child.attrib)
 
-    # Set xml_mzml_data_str_start to the start of the path for the mzml files in the data folder, and also sete xml_mzml_temp_str_start to the start of the path for the temp folder
+    # Set xml_mzml_data_str_start to the start of the path for the mzml files in the data folder, and also set xml_mzml_temp_str_start to the start of the path for the temp folder
     xml_data_dir_pre_str = os.getcwd() + '\\data\\'
     xml_temp_dir_pre_str = os.getcwd() + '\\temp\\'
 
     # Update mzml filenames for MZmine3 to use
-    # Set xml_method_filenames_child to the child of xml_root with the following: batchstep method="io.github.mzmine.modules.io.import_rawdata_all.AllSpectralDataImportModule" parameter_version="1"
+    # Set xml_method_filenames_child to the child of xml_root
     change_node_parameters(xml_root, 'batchstep[@method="io.github.mzmine.modules.io.import_rawdata_all.AllSpectralDataImportModule"][@parameter_version="1"]', 'parameter[@name="File names"]', 'file', [xml_data_dir_pre_str + job_name + '\\' + filename for filename in exp_filenames] + [xml_data_dir_pre_str + control_folder_name + '\\' + filename for filename in ctrl_filenames])
 
 
@@ -353,6 +340,7 @@ for job_index, job in enumerate(metadata['Job Name']):
     """
     # Update current_file for metadata section
     change_node_parameters(xml_root, 'batchstep[@method="io.github.mzmine.modules.visualization.projectmetadata.io.ProjectMetadataImportModule"][@parameter_version="1"]', 'parameter[@name="File names"]', 'current_file', [xml_temp_dir_pre_str + job_name + '\\' + metadata_filename])
+
     # Update last_file for metadata section
     change_node_parameters(xml_root, 'batchstep[@method="io.github.mzmine.modules.visualization.projectmetadata.io.ProjectMetadataImportModule"][@parameter_version="1"]', 'parameter[@name="File names"]', 'last_file', [xml_temp_dir_pre_str + job_name + '\\' + metadata_filename])
 
@@ -370,8 +358,8 @@ for job_index, job in enumerate(metadata['Job Name']):
     """
     Edit GNPS auto-run parameters
     """
-    # Within the xml_method_gnps_child, the node <parameter name="Submit to GNPS" selected="false">, there are nodes to edit: Meta data file, Job title, Email, Username, Password
-    # If you are another user, you will want to change the Email, Username, and Password
+    # Within the xml_method_gnps_child - the node <parameter name="Submit to GNPS" selected="false"> - there are nodes to edit: Meta data file, Job title, Email, Username, Password
+    # If you are another user, you will want to change the Email, Username, and Password and consider creating a .env file in your working directory to hold these values and keep them private.
 
     # Make edits
     xml_gnps_child = xml_root.find('batchstep[@method="io.github.mzmine.modules.io.export_features_gnps.fbmn.GnpsFbmnExportAndSubmitModule"][@parameter_version="2"]')
@@ -573,76 +561,77 @@ for job_index, job in enumerate(metadata['Job Name']):
             if pd.isnull(metaboanalyst_input_df.loc[metaboanalyst_row.index[0], filename_gnps]):
                 metaboanalyst_input_df.loc[metaboanalyst_row.index[0], filename_gnps] = ''
 
-    # Find the metaboanalyst_id that best matches the internal standard ABMBA
-    # If ionization is POS, use ABMBA_MZ_POS and ABMBA_RT_POS, and if it is NEG, use ABMBA_MZ_NEG and ABMBA_RT_NEG
-    if ionization == 'POS':
-        abmba_mz = ABMBA_MZ_POS
-        abmba_rt = ABMBA_RT_POS
-    elif ionization == 'NEG':
-        abmba_mz = ABMBA_MZ_NEG
-        abmba_rt = ABMBA_RT_NEG
+    if ABMBA_SEARCH:
+        # Find the metaboanalyst_id that best matches the internal standard ABMBA
+        # If ionization is POS, use ABMBA_MZ_POS and ABMBA_RT_POS, and if it is NEG, use ABMBA_MZ_NEG and ABMBA_RT_NEG
+        if ionization == 'POS':
+            abmba_mz = ABMBA_MZ_POS
+            abmba_rt = ABMBA_RT_POS
+        elif ionization == 'NEG':
+            abmba_mz = ABMBA_MZ_NEG
+            abmba_rt = ABMBA_RT_NEG
+        
+        # Find the metaboanalyst_id that best matches the internal standard ABMBA, within tolerances
+        abmba_ids = []
+        for id in metaboanalyst_ids:
+            mz = float(id.split('/')[1][:-2])
+            rt = float(id.split('/')[2][:-3])
+            if abs(mz - abmba_mz) <= MZ_TOL and abs(rt - abmba_rt) <= RT_TOL:
+                abmba_ids.append(id)
+        
+        # If there are multiple abmba_ids, use the one with closest mz value
+        if len(abmba_ids) > 1:
+            mz_diffs = [abs(float(id.split('/')[1][:-2]) - abmba_mz) for id in abmba_ids]
+            abmba_id = abmba_ids[np.argmin(mz_diffs)]
+        elif len(abmba_ids) == 1:
+            abmba_id = abmba_ids[0]
+        else:
+            abmba_id = None
+            # Print statement and stop script if no ABMBA ID is found
+            raise ValueError('No ABMBA ID found in MetaboAnalyst IDs for job ' + job_name)
 
-    # Find the metaboanalyst_id that best matches the internal standard ABMBA, within tolerances
-    abmba_ids = []
-    for id in metaboanalyst_ids:
-        mz = float(id.split('/')[1][:-2])
-        rt = float(id.split('/')[2][:-3])
-        if abs(mz - abmba_mz) <= MZ_TOL and abs(rt - abmba_rt) <= RT_TOL:
-            abmba_ids.append(id)
-    
-    # If there are multiple abmba_ids, use the one with closest mz value
-    if len(abmba_ids) > 1:
-        mz_diffs = [abs(float(id.split('/')[1][:-2]) - abmba_mz) for id in abmba_ids]
-        abmba_id = abmba_ids[np.argmin(mz_diffs)]
-    elif len(abmba_ids) == 1:
-        abmba_id = abmba_ids[0]
-    else:
-        abmba_id = None
-        # Print statement and stop script if no ABMBA ID is found
-        raise ValueError('No ABMBA ID found in MetaboAnalyst IDs for job ' + job_name)
+        # Export the MetaboAnalyst input file to temp folder
+        metaboanalyst_input_filename = job_name + '_MetaboAnalyst_input.csv'
+        metaboanalyst_input_filepath = pjoin(temp_job_folder, metaboanalyst_input_filename)
+        metaboanalyst_input_df.to_csv(metaboanalyst_input_filepath, index = False)
 
-    # Export the MetaboAnalyst input file to temp folder
-    metaboanalyst_input_filename = job_name + '_MetaboAnalyst_input.csv'
-    metaboanalyst_input_filepath = pjoin(temp_job_folder, metaboanalyst_input_filename)
-    metaboanalyst_input_df.to_csv(metaboanalyst_input_filepath, index = False)
+        # Print time taken to prepare files for MetaboAnalyst
+        print('Finished preparing files for MetaboAnalyst for ' + job_name + ', took %.2f seconds' % (time.time() - start))
+        start = time.time()
 
-    # Print time taken to prepare files for MetaboAnalyst
-    print('Finished preparing files for MetaboAnalyst for ' + job_name + ', took %.2f seconds' % (time.time() - start))
-    start = time.time()
+        """""""""""""""""""""""""""""""""""""""""""""
+        Record the ABMBA feature in the Overall Metadata Table (perform for each job individually so that if error occurs, all previous jobs still have their recorded ABMBA feature)
+        """""""""""""""""""""""""""""""""""""""""""""
+        # Record the ABMBA feature in the Overall Metadata Table for the job row
+        metadata['ABMBA_Feature_Name_from_Script_1'] = metadata['ABMBA_Feature_Name_from_Script_1'].astype(object)
+        metadata.loc[job_index, 'ABMBA_Feature_Name_from_Script_1'] = abmba_id
 
-    """""""""""""""""""""""""""""""""""""""""""""
-    Record the ABMBA feature in the Overall Metadata Table (perform for each job individually so that if error occurs, all previous jobs still have their recorded ABMBA feature)
-    """""""""""""""""""""""""""""""""""""""""""""
-    # Record the ABMBA feature in the Overall Metadata Table for the job row
-    metadata['ABMBA_Feature_Name_from_Script_1'] = metadata['ABMBA_Feature_Name_from_Script_1'].astype(object)
-    metadata.loc[job_index, 'ABMBA_Feature_Name_from_Script_1'] = abmba_id
+        # Load the excel file
+        excel_file = pd.ExcelFile(pjoin(INPUT_FOLDER, METADATA_OVERALL_FILENAME))
 
-    # Load the excel file
-    excel_file = pd.ExcelFile(pjoin(INPUT_FOLDER, METADATA_OVERALL_FILENAME))
+        # Read all sheets into a dictionary 
+        all_sheets = {sheet: pd.read_excel(excel_file, sheet_name=sheet) for sheet in excel_file.sheet_names}
 
-    # Read all sheets into a dictionary 
-    all_sheets = {sheet: pd.read_excel(excel_file, sheet_name=sheet) for sheet in excel_file.sheet_names}
-
-    # Write the value also in the excel METADATA_OVERALL_FILENAME without changing any other sheets or values (use sheet name METADATA_JOB_TAB)
-    all_sheets[METADATA_JOB_TAB] = metadata
+        # Write the value also in the excel METADATA_OVERALL_FILENAME without changing any other sheets or values (use sheet name METADATA_JOB_TAB)
+        all_sheets[METADATA_JOB_TAB] = metadata
 
 
-    # Save the updated excel file
-    with pd.ExcelWriter(pjoin(INPUT_FOLDER, METADATA_OVERALL_FILENAME), engine='openpyxl') as writer:
-        # Write each sheet back
-        for sheet_name, df in all_sheets.items():
-            df.to_excel(writer, sheet_name=sheet_name, index=False)
-            
-            # Auto-adjust column widths based on content
-            worksheet = writer.sheets[sheet_name]
-            for idx, col in enumerate(df.columns):
-                max_length = max(
-                    df[col].astype(str).apply(len).max(),  # Length of longest entry
-                    len(str(col))  # Length of column name
-                )
-                # Add a little extra width
-                adjusted_width = (max_length + 2)
-                worksheet.column_dimensions[chr(65 + idx)].width = adjusted_width
+        # Save the updated excel file
+        with pd.ExcelWriter(pjoin(INPUT_FOLDER, METADATA_OVERALL_FILENAME), engine='openpyxl') as writer:
+            # Write each sheet back
+            for sheet_name, df in all_sheets.items():
+                df.to_excel(writer, sheet_name=sheet_name, index=False)
+                
+                # Auto-adjust column widths based on content
+                worksheet = writer.sheets[sheet_name]
+                for idx, col in enumerate(df.columns):
+                    max_length = max(
+                        df[col].astype(str).apply(len).max(),  # Length of longest entry
+                        len(str(col))  # Length of column name
+                    )
+                    # Add a little extra width
+                    adjusted_width = (max_length + 2)
+                    worksheet.column_dimensions[chr(65 + idx)].width = adjusted_width
 
-    # Print time taken to record ABMBA feature in metadata excel
-    print('Finished recording ABMBA feature in metadata excel for ' + job_name + ', took %.2f seconds' % (time.time() - start))
+        # Print time taken to record ABMBA feature in metadata excel
+        print('Finished recording ABMBA feature in metadata excel for ' + job_name + ', took %.2f seconds' % (time.time() - start))

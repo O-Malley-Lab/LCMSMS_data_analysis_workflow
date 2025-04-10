@@ -3,9 +3,12 @@
 ## Background
 *In silico* genome mining tools predict many biosynthetic gene clusters for secondary metabolites from anaerobic gut fungi (phylum Neocallimastigomycota). In this research project, we sought to learn more about the products of these gene clusters via the technique of heterologous expression, wherein you insert predicted biosynthetic genes into vectors, transform the vectors into model host microbes, culture the transformed host microbes under expression conditions, and harvest samples for data analysis and screening.
 
-For this project, we mainly used an untargeted metabolomics screen with LC-MS/MS (liquid chromatography with tandem mass spectrometry) to determine which expression groups possessed standout metabolites (by abundance and t-test statistics) relative to the negative control: the model host microbe expressing the corresponding empty vector (transformed vector with no inserted gene to express). We implemented multiple existing tools to perform data processing and analysis: MZmine3, MetaboAnalyst, GNPS, and SIRIUS.
+For this project, we mainly used an untargeted metabolomics screen with LC-MS/MS (liquid chromatography with tandem mass spectrometry) to determine which expression groups possessed standout metabolites (by abundance and t-test statistics) relative to the negative control: the model host microbe expressing the corresponding empty vector (transformed vector with no inserted gene to express). 
+
+Two approaches were used to analyze the untargeted LC-MS/MS datasets: (1) Feature-based molecular networking (FBMN) (Scripts 1 - 4) and (2) Classical Molecular Networking (CMN) (Script 5). Please refer to documentation on the GNPS (Global Natural Product Social Molecular Networking) web platform for a description of the FBMN vs. CMN approaches. Broadly, FBMN and CMN use different methods to distinguish metabolite signals in the data, with FBMN determining distinct peaks (features) for metabolites and CMN only considering MS/MS spectra. For this project and set of scripts, the CMN approach is more lenient for determining if a metabolite signal is real. For the FBMN approach, we implemented multiple existing tools to perform data processing and analysis: MZmine3, MetaboAnalyst, GNPS, and SIRIUS. For the CMN approach, we used GNPS and SIRIUS.
 
 While screening heterologous expression is a main use case for this workflow, other untargeted LC-MS/MS data sources with 2 sample groups (Experimental vs. Control) can be similarly processed and analyzed. Overall, datasets run through this workflow include the following experimental-control pairings:
+
 | Experimental Group                                    | Control for Comparison                               |
 | ------------------------------------------------- | ----------------------------------------- |
 | Heterologous Expression | Empty Vector Negative Control |
@@ -20,7 +23,7 @@ While screening heterologous expression is a main use case for this workflow, ot
 
 #### Script 1: MZmine3 Multi-job Workflow
 - Python 3.8+
-- Required Python packages:
+- Required Python modules/packages:
     - pandas
     - xml.etree.ElementTree
     - subprocess
@@ -32,7 +35,7 @@ While screening heterologous expression is a main use case for this workflow, ot
 
 #### Script 2: MetaboAnalyst Multi-job Workflow  
 - R 4.0+
-- Required R packages:
+- Required R modules/packages:
     - MetaboAnalystR
     - impute
     - pcaMethods
@@ -62,14 +65,18 @@ While screening heterologous expression is a main use case for this workflow, ot
 
 #### Script 3: Cytoscape Networking Multi-job Workflow
 - Python 3.8+
-- Required Python packages:
+- Required Python modules/packages:
     - pandas
     - py4cytoscape
     - numpy
 - Cytoscape 3.9+ installation
 - Running Cytoscape instance required during script execution
 
-## Script Summaries
+#### Script 4 (to-do: add)
+
+#### Script 5 (to-do: add)
+
+## FBMN Script Summaries
 ### Script_1_MZmine3_multi-job_workflow.py
 Script 1 is a Python script that automates MZmine3 preprocessing of LC-MS/MS data. It creates metadata files, modifies XML parameters (based on your manually curated parameters template file), executes MZmine3 via command line, and prepares inputs to MetaboAnalyst, GNPS, and SIRIUS analysis. The script also handles FTP upload of processed data to GNPS servers.
 
@@ -79,6 +86,15 @@ Script 2 is an R script that performs statistical analysis of metabolomics data 
 ### Script_3_Cytoscape_networking_multi-job_workflow.py
 Script 3 is a Python script for creating and formatting molecular networks in Cytoscape. It processes GNPS networking results, integrates MetaboAnalyst statistical data, and applies custom visual styles. The script includes filtering options to highlight metabolites of interest and generates detailed node attribute tables.
 
+### Script_4_Volcano_Plots.py
+to-do: fill in
+
+## CMN Script Summary
+### Script_5_Groupings_GNPS_Analysis.py
+to-do: fill in
+
+## Data Availability
+Raw .mzML data files will be made publicly available on the MASSIVE data repository once the corresponding publication is published. (to-do: update once published)
 
 ## Script Details
 
@@ -89,17 +105,18 @@ Before running Script 1:
 ORGANIZE INPUT DATA FILES
 - Manual (one-time): convert data files to .mzML format
 
-- Manual: organize .mzML data files into job input folders
-Example: "C:\Users\lazab\Desktop\python_scripts\workspace\LCMSMS_analysis_pipeline\{job input folder}\{data files folder}\{data files}"
+- Manual: create "data" folder and population with .mzML data files
+Example: "C:\Users\lazab\Desktop\python_scripts\workspace\LCMSMS_analysis_pipeline\data\{data files folder}\{data files}"
 NEED: .mzML files
-Notes: create separate data file folder for EXP with base job name and CTRL samples
+Note: create separate data file folder for EXP with base job name and CTRL samples
+Note: to run the workflow with the data from the heterologous expression of gut fungal secondary metabolites, see the MASSIVE data repository once the data is public (to-do: update once published)
 
-- Manual: (one-time) create GNPS account and WinSCP connect to massive.ucsd.edu FTP (see GNPS documentation, use same username and password as GNPS account)
+- Manual: (one-time) create GNPS account and WinSCP connect to massive.ucsd.edu FTP (see GNPS documentation, use same username and password as GNPS account). Condier creating a .env file in the working directory to hold the email, username, and password information (see Script 1 code for context)
 
 - Manual (one-time): write custom code to rename filenames from long original names to shorter, descriptive names
 
 FILL OUT METADATA EXCEL FOR JOBS TO RUN
-- Manual: fill out a main metadata excel sheet with running account of job information for all jobs, as well as info for all changeable values
+- Manual: fill out a main metadata excel sheet with running account of job information for all jobs, as well as info for all changeable values (see format of "Overall_Running_Metadata_for_All_LCMSMS_Jobs.xlsx" in the input folder)
 Excel Columns: base job name, CTRL sample name, ionization mode, EXP replicate number, CTRL replicate number, MZmine3 batch template, RT minimum cutoff
 Note: the RT minimum cutoff can be determine by viewing the TIC for the .mzML files in MZmine and qualitatively approximating the metabolites that quickly come off the column. Removing these difficult-to- improves downstream data handling and statistical analysis.
 
@@ -149,7 +166,15 @@ Import node table with additional data, create pie charts, adjust style, label c
 
 
 **************Part 4:**************
+
 Manual: (optional) separately run SIRIUS tool using MZmine3 output for SIRIUS
+
+Script 4 features:
+to-do: fill in
+
+
+**************Part 4:**************
+
 
 ## Support
 For support with using these scripts, please contact lbutkovich@ucsb.edu.

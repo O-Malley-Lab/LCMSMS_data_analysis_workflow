@@ -679,9 +679,9 @@
             <parameter name="Export ion identity networks">true</parameter>
             <parameter name="Presets">HIGHRES</parameter>
             <parameter name="Job title">Anid_HE_TJGIp11_pos_2018_MZmine3_autorun_GNPS</parameter>
-            <parameter name="Email">lbutkovich@ucsb.edu</parameter>
-            <parameter name="Username">lbutkovich</parameter>
-            <parameter name="Password">5Kk0usA0kPqrYF+PjR4o0w==</parameter>
+            <parameter name="Email">email</parameter>
+            <parameter name="Username">username</parameter>
+            <parameter name="Password">password</parameter>
             <parameter name="Open website">true</parameter>
         </parameter>
         <parameter name="Open folder">false</parameter>
