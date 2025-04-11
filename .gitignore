@@ -163,9 +163,6 @@ logs/
 # folders
 temp/
 
-# folders
-temp_for_comparison/
-
 # GNPS_output
 GNPS_output/
 
