@@ -50,28 +50,27 @@ Script 5 is a Python script that formats and filters classical molecular network
 
 
 ## Script Details: Feature-based Molecular Networking (FBMN) Workflow
-
-### Part 1:
+### FBMN Part 1:
 #### Before running Script 1:
 
-Organize data files:
-- (1) Manual: convert data files to .mzML format
-- (2) Manual (optional): if necessary, consider writing custom code to rename filenames from long original names to shorter, descriptive names
-- (3) Manual: create "data" folder and populate with .mzML data files
-- Example: "C:\Users\lazab\Desktop\python_scripts\workspace\LCMSMS_analysis_pipeline\data\{data files folder}\{data files}"
-- Note: create a separate {data files folder} sub-folder for EXP with base job name and CTRL samples
-- Note: to run the workflow with the data from the heterologous expression of gut fungal secondary metabolites, see the MASSIVE data repository once the data is public (to-do: update once published)
+- Organize data files:
+    - (1) Manual: convert data files to .mzML format
+    - (2) Manual (optional): if necessary, consider writing custom code to rename filenames from long original names to shorter, descriptive names
+    - (3) Manual: create "data" folder and populate with .mzML data files
+        - Example: "C:\Users\lazab\Desktop\python_scripts\workspace\LCMSMS_analysis_pipeline\data\{data files folder}\{data files}"
+        - Note: create a separate {data files folder} sub-folder for EXP with base job name and CTRL samples
+        - Note: to run the workflow with the data from the heterologous expression of gut fungal secondary metabolites, see the MASSIVE data repository once the data is public (to-do: update once published)
 
-Setup GNPS and WinSCP accounts to run jobs on GNPS
-- (4) Manual (one-time): create GNPS account and WinSCP connect to massive.ucsd.edu FTP (see GNPS documentation, use same username and password as GNPS account). Consider creating a .env file in the working directory to hold the email, username, and password information (see Script 1 code for context)
+- Setup GNPS and WinSCP accounts to run jobs on GNPS
+    - (4) Manual (one-time): create GNPS account and WinSCP connect to massive.ucsd.edu FTP (see GNPS documentation, use same username and password as GNPS account). Consider creating a .env file in the working directory to hold the email, username, and password information (see Script 1 code for context)
 
-Setup metadata excel sheet with job information
-- (5) Manual: fill out a main metadata excel sheet with running account of job information for all jobs, as well as info for all changeable values (see format of "Overall_Running_Metadata_for_All_LCMSMS_Jobs.xlsx" in the input folder)
-- Excel Columns: Job Name, Control Folder, Ionization, RT minimum cutoff, ABMBA_Feature_Name_from_Script_1, MZmine3 batch template
-- Note: determine the RT minimum cutoff by viewing the chromatograms in MZmine and qualitatively approximate the metabolites that quickly come off the column. Remove these poorly separated metabolites to improve downstream data handling and statistical analysis.
+- Setup metadata excel sheet with job information
+    - (5) Manual: fill out a main metadata excel sheet with running account of job information for all jobs, as well as info for all changeable values (see format of "Overall_Running_Metadata_for_All_LCMSMS_Jobs.xlsx" in the input folder)
+    - Excel Columns: Job Name, Control Folder, Ionization, RT minimum cutoff, ABMBA_Feature_Name_from_Script_1, MZmine3 batch template
+    - Note: determine the RT minimum cutoff by viewing the chromatograms in MZmine and qualitatively approximate the metabolites that quickly come off the column. Remove these poorly separated metabolites to improve downstream data handling and statistical analysis.
 
-Determine MZmine3 parameters
-- (6) Manual: determine parameters for MZmine3 tool to run jobs and prepare a .xml parameters file template. If necessary, manually create an MZmine3 job for the data files to determine pre-processing parameters. Alternatively, use previously determined parameters.
+- Determine MZmine3 parameters
+    - (6) Manual: determine parameters for MZmine3 tool to run jobs and prepare a .xml parameters file template. If necessary, manually create an MZmine3 job for the data files to determine pre-processing parameters. Alternatively, use previously determined parameters.
 
 #### &rarr; Run Script 1
 
@@ -83,7 +82,7 @@ Determine MZmine3 parameters
 - Uploads GNPS_input_for_job_name folder to GNPS via FTP
 - Uses the MZmine3 output for GNPS input to generate the MetaboAnalyst input
 
-### Part 2:
+### FBMN Part 2:
 
 Suggested: use RStudio to run Script 2.
 
@@ -96,7 +95,7 @@ Suggested: use RStudio to run Script 2.
 #### After running Script 2:
 - (1) Manual: check correctness of statistical treatments. For example, ensure appropriate feature and sample normalization (Gaussian curve) by going to temp folder --> job folder --> MetaboAnalystR Output --> normalization .png outputs.
 
-### Part 3:
+### FBMN Part 3:
 #### Before running Script 3:
 - (1) Manual: run the [FBMN GNPS job](https://ccms-ucsd.github.io/GNPSDocumentation/featurebasedmolecularnetworking/). Once the job is complete, use the "Download Cytoscape Data" link to download GNPS outputs (zipped). Organize these outputs in job_name sub-folders (created in Script 2) in a folder "GNPS_output". Manually unzip folders contents for GNPS outputs. These files will include the .graphml molecular networking file.
 - (2) Manual (one-time): determine style .xml settings for Cytoscape networks
@@ -111,47 +110,45 @@ Suggested: use RStudio to run Script 2.
 - Filters metabolite features in the Cytoscape network based on possible metabolites of interest (ie: highly detected in EXP samples and not in CTRL samples)
 - If desired, searches data for specific compounds based on m/z and RT (with set +/- cutoffs), such as the standard ABMBA and the possible anaerobic gut fungal metabolite baumin (Swift et al. 2021).
 - Generates filtered Cytoscape networks and formatted excels of features.
+    - Output Excel Tabs: 
+        - "All Peaks Simple": unfiltered list of all peaks, with column selection simplified
+        - "All Peaks": unfiltered list of all peaks
+        - "Filtered Peaks of Interest": filtered peaks, using MetaboAnalyst statistics
+        - "Upreg Likely Host Metabolites": filtered peaks for metabolites likely present in the control samples but detected more in the experimental samples
+        - "All Cmpd Matches": all detected metabolites with MS/MS match to GNPS reference databases
+        - "Cmpd Matches No Sus": all detected metabolites with MS/MS match to GNPS reference databases, with "Suspect related to..." compound annotations removed.
+        - "ABMBA Standard": specifies which feature likely corresponds with the ABMBA standard added to samples
+        - "Putative Baumin": specifies which feature likely corresponds to the possible anaerobic gut fungal metabolite baumin (Swift et al. 2021).
+        - "Filter Parameters": a record of the specific filtering parameters used in Script 3 to generate the output excel
 
-Output Excel Tabs: 
-- "All Peaks Simple": unfiltered list of all peaks, with column selection simplified
-- "All Peaks": unfiltered list of all peaks
-- "Filtered Peaks of Interest": filtered peaks, using MetaboAnalyst statistics
-- "Upreg Likely Host Metabolites": filtered peaks for metabolites likely present in the control samples but detected more in the experimental samples
-- "All Cmpd Matches": all detected metabolites with MS/MS match to GNPS reference databases
-- "Cmpd Matches No Sus": all detected metabolites with MS/MS match to GNPS reference databases, with "Suspect related to..." compound annotations removed.
-- "ABMBA Standard": specifies which feature likely corresponds with the ABMBA standard added to samples
-- "Putative Baumin": specifies which feature likely corresponds to the possible anaerobic gut fungal metabolite baumin (Swift et al. 2021).
-- "Filter Parameters": a record of the specific filtering parameters used in Script 3 to generate the output excel
-
-### Part 4:
+### FBMN Part 4:
 
 ####  &rarr; Run Script 4
 
 #### Script 4 features:
 - Generates formatted volcano plots to visualize metabolite features that are more detected in EXP or CTRL. Features that are more significantly detected in EXP are potential expression products for heterologous expression studies, and ideally these features are not detected in any CTRL samples (assuming the host cannot naturally produce the metabolite).
 
-### Part 5:
+### FBMN Part 5:
 - Consider running the [SIRIUS](https://bio.informatik.uni-jena.de/software/sirius/) suite of tools using the MZmine3 .mgf file output for SIRIUS (file located in in temp folder, job sub-folder).
 - SIRIUS predicts chemical formula, class, and structure from the MS/MS data.
 - The MZmine3 feature IDs are consistent with feature IDs in the input for SIRIUS. In this way, you can generate and align SIRIUS predictions to filtered features of interest from Script 3.
 
+
 ## Script Details: Classical Molecular Networking (CMN) Workflow
 
-### Part 1:
+### CMN Part 1:
 #### Before running GNPS CMN Job:
 - Note, these steps are the same as FBMN part 1 (organize data files before running Script 1)
-Organize data files
-- (1) Manual: convert data files to .mzML format
-- (2) Manual (optional): if necessary, consider writing custom code to rename filenames from long original names to shorter, descriptive names
-- (3) Manual: create "data" folder and populate with .mzML data files
-Example: 
-- "C:\Users\lazab\Desktop\python_scripts\workspace\LCMSMS_analysis_pipeline\data\{data files folder}\{data files}"
-- Note: create a separate {data files folder} sub-folder for EXP with base job name and CTRL samples
-- Note: to run the workflow with the data from the heterologous expression of gut fungal secondary metabolites, see the MASSIVE data repository once the data is public (to-do: update once published)
-- (4) Either (i) run Script 1 for each EXP vs. CTRL in the grouping or (ii) generate job sub-folders in the temp folder and create a metadata file {job_name + "_metadata.tsv} (columns "Filename" and "Class"). This setup is required for running Script 5, because it informs the script which CTRL set of .mzML files correspond to which EXP set of .mzML files.
-
-Example metadata .tsv file: 
-- "temp" folder in directory -> sub-folder of G1 name, where G1 is an experimental group (ie: "Yeast_HE_p9_pos_20240910") -> job_name + "_metadata.tsv":
+- Organize data files
+    - (1) Manual: convert data files to .mzML format
+    - (2) Manual (optional): if necessary, consider writing custom code to rename filenames from long original names to shorter, descriptive names
+    - (3) Manual: create "data" folder and populate with .mzML data files
+        - Example: 
+        - "C:\Users\lazab\Desktop\python_scripts\workspace\LCMSMS_analysis_pipeline\data\{data files folder}\{data files}"
+        - Note: create a separate {data files folder} sub-folder for EXP with base job name and CTRL samples
+        - Note: to run the workflow with the data from the heterologous expression of gut fungal secondary metabolites, see the MASSIVE data repository once the data is public (to-do: update once published)
+    - (4) Either (i) run Script 1 for each EXP vs. CTRL in the grouping or (ii) generate job sub-folders in the temp folder and create a metadata file {job_name + "_metadata.tsv} (columns "Filename" and "Class"). This setup is required for running Script 5, because it informs the script which CTRL set of .mzML files correspond to which EXP set of .mzML files.
+        - Example metadata .tsv file: "temp" folder in directory -> sub-folder of G1 name, where G1 is an experimental group (ie: "Yeast_HE_p9_pos_20240910") -> job_name + "_metadata.tsv":
 
 | Filename                                   | Class                            |
 | ------------------------------------------------- | ----------------------------------------- |
@@ -162,22 +159,22 @@ Example metadata .tsv file:
 | 2024_POS_Y-p9_2_Run120.mzML | EXP |
 | 2024_POS_Y-p9_3_Run155.mzML | EXP |
 
-### Part 2:
+### CMN Part 2:
 #### Run GNPS CMN Job
 - (1) Manual: run the [GNPS CMN job](https://ccms-ucsd.github.io/GNPSDocumentation/networking/) ("METABOLOMICS-SNETS-V2" workflow). Follow the GNPS documentation to upload the .mzML files and perform CMN.
 - (2) Manual (one-time): first, ensure there is a "GNPS_output" folder in the directory. Then, create a "Groupings_Analysis_Folders" folder within the "GNPS_output" folder.
 - (3) Manual: For each job, create a job sub-folder in the "Groupings_Analysis_Folders" folder (naming convention: "Grouping_" + job_name + "_POS" OR "Grouping_" + job_name + "_NEG"). 
 - (4) Manual: Once the GNPS CMN job is complete, populate the corresponding job folders (in the "Groupings_Analysis_Folders" folder) with output files. There are two job links to use: (i) "Download Bucket Table" to get raw spectral count data values (.tsv file) and (ii) "Download Clustered Spectra as MGF" to acquire the .mgf file that can be import to SIRIUS for compound predictions. From the downloaded outputs, there will also be a folder with the .graphml molecular networking file.
 
-### Part 3:
+### CMN Part 3:
 #### Before running Script 5:
 
-Setup metadata excel sheet with job information
-- (5) Manual: fill out a main metadata excel sheet with running account of job information for all jobs, as well as info for all changeable values (see format of "Script_5_Groupings_Metadata.xlsx" in the input folder, note this is a different metadata excel from the FBMN workflow).
-Excel Columns: Job Name, G1, G2, G3, G4, G5, G6, G1_temp_folder, G2_temp_folder, G3_temp_folder, G4_temp_folder, G5_temp_folder, G6_temp_folder, Ionization, Cytoscape_Format_Template_File
-- G# = Group # (can be EXP or CTRL)
-- G#_temp_folder = indicate the name of the job sub-folder in the temp folder. 
-- Note: I created different Cytoscape style files to format networks differently depending on the EXP vs. CTRL comparisons of interest. This information is relevant for how the script formats filtered molecular networks and visualize pie charts for relative spectral counts.
+- Setup metadata excel sheet with job information
+    - (5) Manual: fill out a main metadata excel sheet with running account of job information for all jobs, as well as info for all changeable values (see format of "Script_5_Groupings_Metadata.xlsx" in the input folder, note this is a different metadata excel from the FBMN workflow).
+    Excel Columns: Job Name, G1, G2, G3, G4, G5, G6, G1_temp_folder, G2_temp_folder, G3_temp_folder, G4_temp_folder, G5_temp_folder, G6_temp_folder, Ionization, Cytoscape_Format_Template_File
+        - G# = Group # (can be EXP or CTRL)
+        - G#_temp_folder = indicate the name of the job sub-folder in the temp folder. 
+    - Note: I created different Cytoscape style files to format networks differently depending on the EXP vs. CTRL comparisons of interest. This information is relevant for how the script formats filtered molecular networks and visualize pie charts for relative spectral counts.
 
 For example:
 
@@ -228,11 +225,11 @@ ie: G1 and G2 have the same control, but G3 has a different control.
 - Filters metabolite features based on detection in EXP(s) and lack of detection in CTRL(s). The default cutoff is > 10^6^ average sum precursor abundance in EXP and < 10^6^ average sum precursor abundance in the corresponding CTRL.
 - To generate filtered molecular networks, the script combinatorially compares EXP vs CTRL filter criteria. For example, for 3 EXP vs. CTRL pairings, the script will generate 7 networks based on features that pass the 3 criteria (EXP1-EXP2-EXP3, EXP1-EXP2, EXP1-EXP3, EXP2-EXP3, EXP1, EXP2, EXP3).
 
-### Part 3:
+### CMN Part 4:
 - Consider running the [SIRIUS](https://bio.informatik.uni-jena.de/software/sirius/) suite of tools using the GNPS output .mgf file, in order to further inspect filtered metabolites of interest.
 
-## Installation: Dependencies
 
+## Installation: Dependencies
 ### Script 1: MZmine3 Multi-job Workflow
 - Python 3.8+
 - Required Python modules/packages:
