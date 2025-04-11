@@ -17,10 +17,9 @@ In METADATA_FILENAME excel, describe the following:
 !!! Prior to running, you need to manually open Cytoscape !!!
 Additionally, you must download GNPS job result files:
 - First, create in GNPS_OUTPUT_FOLDER --> Grouping_Analysis_Folders --> {job folder for POS and NEG}. Folder name template: "Grouping_" + job_name + "_POS" OR "Grouping_" + job_name + "_NEG". These job folders are where you will place GNPS output files per job.
-- Second, use "Download Bucket Table" to get raw abundance data values. The script will use these values to filter features for those detected in experimtnal samples and not controls. Only the .tsv bucket file will be used so all other unzipped files can be deleted. 
+- Second, use "Download Bucket Table" to get raw abundance data values. The script will use these values to filter features for those detected in experimental samples and not controls. Only the .tsv bucket file will be used so all other unzipped files can be deleted. 
 - Third, use "Download Clustered Spectra as MGF" option. The .graphml file will be in the sub-folder containing "graphml" in its name. The .mgf file can be manually uploaded to SIRIUS after running the script. From this unzip, only the .graphml file will be used by the script.
 """""""""""""""""""""""""""""""""""""""""""""
-
 
 import os
 from os.path import join as pjoin
@@ -32,7 +31,6 @@ from collections import namedtuple
 import itertools
 import time
 start = time.time()
-
 
 """""""""""""""""""""""""""""""""""""""""""""
 Functions
@@ -384,7 +382,7 @@ for job_index, job in enumerate(metadata['Job_Name']):
     job_group_names = []
     for group_column in GROUP_NAME_COLUMNS:
         job_group_names.append(GroupToValue(group_name = group_column, value = metadata[group_column][job_index]))
-    # Remove tuples where value is 'nan'. These represent empty spaces in the metadata excel input. For example, only 2 groups are being compared instead of 3.
+    # Remove tuples where value is 'nan'. These represent empty spaces in the metadata excel input. For example, if only 2 groups are being compared instead of 3.
     job_group_names = [group for group in job_group_names if group.value != 'nan']
         
     # Get temp folder names for each experimental vs. control group
@@ -432,6 +430,7 @@ for job_index, job in enumerate(metadata['Job_Name']):
                         exp_filenames=exp_files,
                         ctrl_filenames=ctrl_files
                     )
+
 
     """""""""""""""""""""""""""""""""""""""""""""
     Import Abundance Data from Bucket Table and Organize Data Columns.
@@ -507,6 +506,7 @@ for job_index, job in enumerate(metadata['Job_Name']):
         
         # Freeze panes
         worksheet.freeze_panes(1, 1)
+
 
     """""""""""""""""""""""""""""""""""""""""""""
     Open Cytoscape network from GNPS output .graphml
@@ -637,6 +637,7 @@ for job_index, job in enumerate(metadata['Job_Name']):
     # Apply the Cytoscape style
     p4c_import_and_apply_cytoscape_style(pjoin(cytoscape_inputs_folder, cytoscape_style_filename_new), cytoscape_style_filename_new, suid_main_network, job_name)
 
+
     """""""""""""""""""""""""""""""""""""""""""""
     Create Filtered Networks
     """""""""""""""""""""""""""""""""""""""""""""
@@ -743,4 +744,3 @@ for job_index, job in enumerate(metadata['Job_Name']):
 
     print('Session saved and finished filtered Cytoscape networks for ' + job_name + ', took %.2f seconds' % (time.time() - start))
     start = time.time()
-
