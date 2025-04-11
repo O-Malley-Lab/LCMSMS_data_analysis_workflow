@@ -1,22 +1,22 @@
 # Heterologous Expression of Anaerobic Gut Fungal Polyketides and Nonribosomal Peptides in Model Fungal Hosts
 
 ## Background
-*In silico* genome mining tools predict many biosynthetic gene clusters for secondary metabolites from anaerobic gut fungi (phylum Neocallimastigomycota). In this research project, we sought to learn more about the products of these gene clusters via the technique of heterologous expression, wherein we did the following:
+*In silico* genome mining tools predict many biosynthetic gene clusters for secondary metabolites from anaerobic gut fungi (phylum Neocallimastigomycota). In this research project, we sought to learn more about the products of these gene clusters via the technique of heterologous expression, wherein we performed the following:
 1. We inserted predicted biosynthetic genes into vectors
 2. We transformed the vectors into model host microbes - in this project, *Saccharomyces cerevisiae* and *Aspergillus nidulans*
 3. We cultured the transformed host microbes under expression conditions
 4. We harvested culture samples (cell pellets) for data analysis and screening.
 
-For this project, we implemented an untargeted metabolomics screen with LC-MS/MS (liquid chromatography with tandem mass spectrometry) to determine which expression groups possessed standout metabolites (by abundance and t-test statistics) relative to the negative control: the model host microbe expressing the corresponding empty vector - the transformed vector with no inserted gene to express. 
+For this project, we implemented an **untargeted metabolomics screen with LC-MS/MS** (liquid chromatography with tandem mass spectrometry) to determine which expression groups possessed standout metabolites (by abundance and t-test statistics) relative to the negative control: the model host microbe expressing the corresponding empty vector (the transformed vector with no inserted gene to express). 
 
-We used two approaches to analyze the untargeted LC-MS/MS datasets: (1) Feature-based molecular networking (FBMN) (Scripts 1 - 4) (see Figure 1 below) and (2) Classical Molecular Networking (CMN) (Script 5). Please refer to documentation on the GNPS ([Global Natural Product Social Molecular Networking](https://gnps.ucsd.edu/)) web platform for a description of the FBMN vs. CMN approaches. Broadly, FBMN and CMN use different methods to distinguish metabolite signals in the data, with FBMN determining distinct peaks (features) for metabolites and CMN only considering MS/MS spectra. For this project and set of scripts, the CMN approach is more lenient for determining if a metabolite signal is real. For the FBMN approach, we implemented multiple existing tools to perform data processing and analysis: MZmine3, MetaboAnalyst, GNPS, and SIRIUS. For the CMN approach, we used GNPS and SIRIUS.
+We used two approaches to analyze the untargeted LC-MS/MS datasets: (1) **Feature-based molecular networking (FBMN)** (Scripts 1 - 4) (see Figure 1 below) and (2) **Classical Molecular Networking (CMN)** (Script 5). Please refer to documentation on the GNPS ([Global Natural Product Social Molecular Networking](https://gnps.ucsd.edu/)) web platform for a description of the FBMN vs. CMN approaches. Broadly, FBMN and CMN use different methods to distinguish metabolite signals in the data, with FBMN determining distinct peaks (features) for metabolites and CMN only considering MS/MS spectra. For this project and set of scripts, the CMN approach is more lenient for determining if a metabolite signal is real. For the FBMN approach, we utilized multiple existing tools to perform data processing and analysis: MZmine3, MetaboAnalyst, GNPS, and SIRIUS. For the CMN approach, we utilized GNPS and SIRIUS.
 
 ![Figure 1](Fig1.png)
 Figure 1. Heterologous expression was implemented to study anaerobic gut fungal secondary metabolite potential. (A) Predicted NRPS and PKS core biosynthetic genes were mined from anaerobic gut fungi, inserted into expression plasmids, transformed into S. cerevisiae and A. nidulans, expressed, and screened for expected expression products (RNA/protein/metabolites). (B) The LC-MS/MS data analysis workflow with feature-based molecular networking (FBMN) systematically processed the data and compared expression groups against their corresponding empty vector control. Follow-up data analysis was performed with a classical molecular networking workflow with relatively more lenient filtering cutoffs. Figure was created with BioRender.com
 
 While screening heterologous expression is a main use case for this workflow, other untargeted LC-MS/MS data sources with 2 sample groups (Experimental vs. Control) can be similarly processed and analyzed. Overall, datasets run through this workflow include the following experimental-control pairings:
 
-| Experimental Group                                    | Control for Comparison                               |
+| Experimental (EXP) Group                                    | Control (CTRL) Group for Comparison                               |
 | ------------------------------------------------- | ----------------------------------------- |
 | Heterologous Expression | Empty Vector Negative Control |
 | Cultured Anaerobic Gut Fungi | Media Negative Control |
@@ -46,7 +46,7 @@ Script 4 is a Python script that generates stylized volcano plots using MetaboAn
 
 ## Script Summary: Classical Molecular Networking
 ### Script_5_Groupings_GNPS_Analysis.py
-to-do: fill in
+Script 5 is a Python script that formats and filters classical molecular networks from GNPS. This script enables comparison of multiple experimental (EXP) vs. control (CTRL) pairs to define metabolite features of interest for further investigation (ie: SIRIUS chemical predictions).
 
 
 ## Script Details: Feature-based Molecular Networking (FBMN) Workflow
