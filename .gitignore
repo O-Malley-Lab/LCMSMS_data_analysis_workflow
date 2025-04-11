@@ -151,9 +151,6 @@ cython_debug/
 #  option (not recommended) you can uncomment the following to ignore the entire idea folder.
 #.idea/
 
-# folders
-temp/
-
 # .env files
 .env
 
@@ -163,11 +160,23 @@ data/
 # logs from R
 logs/
 
+# folders
+temp/
+
+# folders
+temp_for_comparison/
+
 # GNPS_output
 GNPS_output/
 
+# GNPS_output
+GNPS_output_for_comparison/
+
 # output folder
 output/
+
+# output folder
+output_for_comparison/
 
 # obsolete scripts folder
 obsolete_scripts/
