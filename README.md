@@ -73,7 +73,7 @@ Setup metadata excel sheet with job information
 Determine MZmine3 parameters
 - (6) Manual: determine parameters for MZmine3 tool to run jobs and prepare a .xml parameters file template. If necessary, manually create an MZmine3 job for the data files to determine pre-processing parameters. Alternatively, use previously determined parameters.
 
-**Run Script 1**
+**&rarr;Run Script 1**
 
 **Script 1 features:**
 - Creates GNPS and MetaboAnalyst Metadata .tsv files
