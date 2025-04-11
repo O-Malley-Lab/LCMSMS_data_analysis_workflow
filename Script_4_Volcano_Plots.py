@@ -18,7 +18,72 @@ start = time.time()
 """""""""""""""""""""""""""""""""""""""""""""
 Functions
 """""""""""""""""""""""""""""""""""""""""""""
+def build_metaboanalystid_col(volcano_df, feature_id_colname, mz_col_name = 'precursor mass', rt_col_name = 'RTMean', metaboanalystid_col_name = 'MetaboAnalyst_ID'):
+    """
+    Build the MetaboAnalystID column, using the format of #/#mz/#min (ie: 4867/504.3237mz/7.463min) and the existing Feature ID #, RT and m/z columns.
 
+    Inputs
+    volcano_df: pandas DataFrame containing the data
+    feature_id_colname: str, name of the column containing the Feature ID
+    mz_col_name: str, name of the column containing the m/z values (default: 'precursor mass')
+    rt_col_name: str, name of the column containing the RT values (default: 'RTMean')
+    metaboanalystid_col_name: str, name of the column to be created for MetaboAnalyst ID (default: 'MetaboAnalyst_ID')
+    
+    Outputs
+    return: None
+    """
+    new_col = volcano_df[feature_id_colname] + '/' + volcano_df[mz_col_name].astype(str) + 'mz/' + volcano_df[rt_col_name].astype(str) + 'min'
+    volcano_df[metaboanalystid_col_name] = new_col
+    return
+
+def plot_cutoff_lines(ax, pval_cutoff, log2fc_cutoff, line_width, line_color='black'):
+    """
+    Plot significance cutoff lines on a volcano plot.
+    
+    Inputs
+    ax: matplotlib Axes object to plot on
+    pval_cutoff: float, p-value cutoff for significance
+    log2fc_cutoff: float, log2 fold change cutoff for significance
+    line_width: float, width of the cutoff lines
+    pval_colname: str, name of the p-value column (default: 'p-value')
+    log2fc_colname: str, name of the log2 fold change column (default: 'log2FC')
+
+    Outputs
+    return: None
+    """
+    ax.axhline(y=-np.log10(pval_cutoff), color=line_color, linestyle='--', alpha=0.5, linewidth=line_width)
+    ax.axvline(x=-log2fc_cutoff, color=line_color, linestyle='--', alpha=0.5, linewidth=line_width)
+    ax.axvline(x=log2fc_cutoff, color=line_color, linestyle='--', alpha=0.5, linewidth=line_width)
+    return
+
+def format_volcano_plot(ax, lfc_range, neg_log10_p_range, line_width=2, font_size=12):
+    """
+    Format the volcano plot using specific parameters.
+    
+    Inputs
+    ax: matplotlib Axes object to format
+    lfc_range: tuple, range for the x-axis (log2 fold change)
+    neg_log10_p_range: tuple, range for the y-axis (-log10 p-value)
+    line_width: float, width of the axes lines and ticks
+    font_size: int, size of the tick labels
+
+    Outputs
+    return: None
+    """
+    # Set axes limits
+    ax.set_xlim(lfc_range)
+    ax.set_ylim(neg_log10_p_range)
+    # Set linewidth for axes and ticks and increase tick length
+    ax.spines['top'].set_linewidth(line_width)
+    ax.spines['right'].set_linewidth(line_width)
+    ax.spines['bottom'].set_linewidth(line_width)
+    ax.spines['left'].set_linewidth(line_width)
+    # Set tick marks at 5-unit intervals
+    ax.xaxis.set_major_locator(plt.MultipleLocator(5))
+    ax.yaxis.set_major_locator(plt.MultipleLocator(2))
+    ax.tick_params(width=line_width, length=8, labelsize=font_size, direction='in')
+    ax.legend(fontsize=font_size)
+    return
 """""""""""""""""""""""""""""""""""""""""""""
 Values
 """""""""""""""""""""""""""""""""""""""""""""
@@ -66,12 +131,8 @@ metadata = pd.read_excel(pjoin(INPUT_FOLDER, METADATA_OVERALL_FILENAME), sheet_n
 all_volcano_plots_dir = pjoin(OUTPUT_FOLDER, 'all_volcano_plots')
 os.makedirs(all_volcano_plots_dir, exist_ok=True)
 
-# Before the job loop, add:
+# Start the overall timer
 total_start = time.time()
-
-# # keep track of largest and smallest p-value and log2FC for all jobs
-# all_pvals = []
-# all_log2FCs = []
 
 for job_index, job in enumerate(metadata[JOB_COLNAME]):
     # Inside the job loop, before processing each job:
@@ -91,7 +152,7 @@ for job_index, job in enumerate(metadata[JOB_COLNAME]):
     volcano_df[FEATURE_ID_COLNAME] = volcano_df[FEATURE_ID_COLNAME].astype(str)  # Ensure string type
 
     # Build MetaboAnalystID column name (ie: 4867/504.3237mz/7.463min)
-    volcano_df['MetaboAnalyst_ID'] = volcano_df[FEATURE_ID_COLNAME] + '/' + volcano_df['precursor mass'].astype(str) + 'mz/' + volcano_df['RTMean'].astype(str) + 'min'
+    build_metaboanalystid_col(volcano_df, FEATURE_ID_COLNAME)
 
     # Filter only for rows with non-NaN values in LFC_COLNAME and PVAL_COLNAME
     volcano_df = volcano_df.dropna(subset=[LFC_COLNAME, PVAL_COLNAME])
@@ -100,9 +161,7 @@ for job_index, job in enumerate(metadata[JOB_COLNAME]):
     fig, ax = plt.subplots(figsize=(12, 8))
 
     # Add dotted lines for cutoffs
-    ax.axhline(y=-np.log10(METABOANALYSTR_PVAL_CUTOFF), color='black', linestyle='--', alpha=0.5, linewidth=LINE_WIDTH)
-    ax.axvline(x=-METABOANALYSTR_LOG2FC_CUTOFF, color='black', linestyle='--', alpha=0.5, linewidth=LINE_WIDTH)
-    ax.axvline(x=METABOANALYSTR_LOG2FC_CUTOFF, color='black', linestyle='--', alpha=0.5, linewidth=LINE_WIDTH)
+    plot_cutoff_lines(ax, METABOANALYSTR_PVAL_CUTOFF, METABOANALYSTR_LOG2FC_CUTOFF, line_width=LINE_WIDTH)
 
     # Calculate -log10(p-value)
     volcano_df['-log10(p-value)'] = -np.log10(volcano_df[PVAL_COLNAME])
@@ -140,19 +199,9 @@ for job_index, job in enumerate(metadata[JOB_COLNAME]):
               linewidth=1,
               s=DATA_POINT_SIZE,
               label='Significant Down')
-    # Set axes limits
-    ax.set_xlim(LOG2_FC_RANGE)
-    ax.set_ylim(NEG_LOG10_P_RANGE)
-
-    # Set linewidth for axes and ticks and increase tick length
-    ax.spines['top'].set_linewidth(LINE_WIDTH)
-    ax.spines['right'].set_linewidth(LINE_WIDTH)
-    ax.spines['bottom'].set_linewidth(LINE_WIDTH)
-    ax.spines['left'].set_linewidth(LINE_WIDTH)
-    # Set tick marks at 5-unit intervals
-    ax.xaxis.set_major_locator(plt.MultipleLocator(5))
-    ax.yaxis.set_major_locator(plt.MultipleLocator(2))
-    ax.tick_params(width=LINE_WIDTH, length=8, labelsize=FONT_SIZE, direction='in')
+    
+    # Set axes limits, add legend, linewidths for axes and ticks, and tick intervals
+    format_volcano_plot(ax, LOG2_FC_RANGE, NEG_LOG10_P_RANGE, line_width=LINE_WIDTH, font_size=FONT_SIZE)
 
     # Add labels
     ax.set_xlabel('log2(FC)', fontsize=FONT_SIZE)
@@ -170,7 +219,7 @@ for job_index, job in enumerate(metadata[JOB_COLNAME]):
     # Add legend and adjust font size
     ax.legend(fontsize=FONT_SIZE)
 
-    # Save plot once and reuse the figure
+    # Save plot once and reuse the figure for additional formats of the figure
     volcano_plot_filename = job + '_volcano_plot_legend.png'
     plt.savefig(pjoin(all_volcano_plots_dir, volcano_plot_filename))
     plt.savefig(pjoin(OUTPUT_FOLDER, job, volcano_plot_filename))
@@ -194,22 +243,9 @@ for job_index, job in enumerate(metadata[JOB_COLNAME]):
     plt.savefig(pjoin(all_volcano_plots_dir, volcano_plot_filename))
     plt.savefig(pjoin(OUTPUT_FOLDER, job, volcano_plot_filename))
 
-
     plt.close()
 
-    # # Keep track of largest and smallest p-value and log2FC for all jobs
-    # all_pvals.extend(volcano_df[PVAL_COLNAME])
-    # all_log2FCs.extend(volcano_df[LFC_COLNAME])
-
-    # At the end of the job loop, after plt.close():
+    # Print job time completion message
     job_end = time.time()
     job_runtime = job_end - job_start
     print(f"Job {job} completed in {job_runtime:.2f} seconds")
-
-# # Print largest and smallest p-value and log2FC for all jobs
-# all_pvals = np.array(all_pvals)
-# all_log2FCs = np.array(all_log2FCs)
-# print(f"Largest p-value: {all_pvals.max()}")
-# print(f"Smallest p-value: {all_pvals.min()}")
-# print(f"Largest log2FC: {all_log2FCs.max()}")
-# print(f"Smallest log2FC: {all_log2FCs.min()}")

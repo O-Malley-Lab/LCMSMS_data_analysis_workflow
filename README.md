@@ -48,9 +48,8 @@ to-do: fill in
 
 ## Script Details: Feature-based Molecular Networking Workflow
 
-**************Part 1:**************
-Before running Script 1:
-
+###**Part 1:**
+**Before running Script 1:**
 Organize data files
 - (1) Manual: convert data files to .mzML format
 - (2) Manual (optional): if necessary, consider writing custom code to rename filenames from long original names to shorter, descriptive names
@@ -71,7 +70,7 @@ Note: determine the RT minimum cutoff by viewing the chromatograms in MZmine and
 Determine MZmine3 parameters
 - (6) Manual: determine parameters for MZmine3 tool to run jobs and prepare a .xml parameters file template. If necessary, manually create an MZmine3 job for the data files to determine pre-processing parameters. Alternatively, use previously determined parameters.
 
-Script 1 features:
+**Script 1 features:**
 - Creates GNPS and MetaboAnalyst Metadata .tsv files
 - Edits the template .xml parameters file for MZmine3, using information in the overall metadata excel
 - Runs MZmine3 in commandline using the edited .xml parameters file
@@ -80,30 +79,30 @@ Script 1 features:
 - Uses the MZmine3 output for GNPS input to generate the MetaboAnalyst input
 
 
-**************Part 2:**************
+###**Part 2:**
 Suggested: use RStudio to run Script 2.
 
-Script 2 features:
+**Script 2 features:**
 - Runs the MetaboAnalyst tool to generate statistics, including log2 fold-change and raw p-values. See the [MetaboAnalyst GitHub repository](https://github.com/xia-lab/MetaboAnalystR) and [tutorial](https://www.metaboanalyst.ca/resources/vignettes/Introductions.html) for more information.
 - Creates empty GNPS_output job sub-folders for you to later manually populate with GNPS output files (see next Part).
 
-After running Script 2:
+**After running Script 2:**
 - (1) Manual: check correctness of statistical treatments. For example, ensure appropriate feature and sample normalization (Gaussian curve) by going to temp folder --> job folder --> MetaboAnalystR Output --> normalization .png outputs.
 
 
-**************Part 3:**************
-Before running Script 3:
-- (1) Manual: run the [FBMN GNPS job](https://ccms-ucsd.github.io/GNPSDocumentation/featurebasedmolecularnetworking/). Once the job is complete, use the "Download Cytoscape Data" link to download GNPS outputs (zipped). Organize these outputs in job_name sub-folders (created in Script 2) in a folder "GNPS_output". Manually unzip folders contents for GNPS outputs.
+###**Part 3:**
+**Before running Script 3:**
+- (1) Manual: run the [FBMN GNPS job](https://ccms-ucsd.github.io/GNPSDocumentation/featurebasedmolecularnetworking/). Once the job is complete, use the "Download Cytoscape Data" link to download GNPS outputs (zipped). Organize these outputs in job_name sub-folders (created in Script 2) in a folder "GNPS_output". Manually unzip folders contents for GNPS outputs. These files will include the .graphml molecular networking file.
 - (2) Manual (one-time): determine style .xml settings for Cytoscape networks
 - (3) Manual: have the Cytoscape program open in order to run Script 3
 
-Script 3 features:
+**Script 3 features:**
 - Adjusts GNPS-generated molecular networks in Cytoscape using Python (py4cytoscape)
 - Imports node table with additional data, create pie charts, adjust style, label compound names
 - Aligns data analysis results from MZmine3, MetaboAnalyst, and GNPS
 - Filters metabolite features in the Cytoscape network based on possible metabolites of interest (ie: highly detected in EXP samples and not in CTRL samples)
 - If desired, searches data for specific compounds based on m/z and RT (with set +/- cutoffs), such as the standard ABMBA and the possible anaerobic gut fungal metabolite baumin (Swift et al. 2021).
-- Outputs filtered results in Cytoscape networks and formatted excels of features.
+- Generates filtered Cytoscape networks and formatted excels of features.
 Output Excel Tabs: 
 "All Peaks Simple": unfiltered list of all peaks, with column selection simplified
 "All Peaks": unfiltered list of all peaks
@@ -115,25 +114,27 @@ Output Excel Tabs:
 "Putative Baumin": specifies which feature likely corresponds to the possible anaerobic gut fungal metabolite baumin (Swift et al. 2021).
 "Filter Parameters": a record of the specific filtering parameters used in Script 3 to generate the output excel
 
+###**Part 4:**
+**Script 4 features:**
+- Generates formatted volcano plots to visualize metabolite features that are more detected in EXP or CTRL. Features more significantly detected in EXP are potential expression products for heterologous expression studies, and ideally these features would not be detected in any CTRL samples (assuming the host cannot naturally produce the metabolite).
 
-**************Part 4:**************
+###**Part 5:**
+- Consider running the [SIRIUS](https://bio.informatik.uni-jena.de/software/sirius/) suite of tools using the MZmine3 .mgf file output for SIRIUS (file located in in temp folder, job sub-folder).
+- SIRIUS predicts chemical formula, class, and structure from the MS/MS data.
+- The MZmine3 feature IDs are consistent with feature IDs in the input for SIRIUS. In this way, you can generate and align SIRIUS predictions to filtered features of interest from Script 3.
 
-Manual: (optional) separately run SIRIUS tool using MZmine3 output for SIRIUS
 
-Script 4 features:
-to-do: fill in
 
 ## Script Details: Classical Molecular Networking Workflow
 
-**************Part 1:**************
-Script 5 features:
+###**Part 1:**
+**Script 5 features:**
 to-do: fill in
 
 
-## Installation
-### Dependencies
+## Installation: Dependencies
 
-#### Script 1: MZmine3 Multi-job Workflow
+### Script 1: MZmine3 Multi-job Workflow
 - Python 3.8+
 - Required Python modules/packages:
     - pandas
@@ -145,7 +146,7 @@ to-do: fill in
 - MZmine3 installation (https://github.com/mzmine/mzmine3)
 - GNPS account with FTP access
 
-#### Script 2: MetaboAnalyst Multi-job Workflow  
+### Script 2: MetaboAnalyst Multi-job Workflow  
 - R 4.0+
 - Required R modules/packages:
     - MetaboAnalystR
@@ -175,7 +176,7 @@ to-do: fill in
     - ellipse (for PCA plots)
     - vegan (for statistical analysis)
 
-#### Script 3: Cytoscape Networking Multi-job Workflow
+### Script 3: Cytoscape Networking Multi-job Workflow
 - Python 3.8+
 - Required Python modules/packages:
     - pandas
@@ -184,9 +185,9 @@ to-do: fill in
 - Cytoscape 3.9+ installation
 - Running Cytoscape instance required during script execution
 
-#### Script 4 (to-do: add)
+### Script 4 (to-do: add)
 
-#### Script 5 (to-do: add)
+### Script 5 (to-do: add)
 
 
 ## Tutorial
