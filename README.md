@@ -73,7 +73,7 @@ Setup metadata excel sheet with job information
 Determine MZmine3 parameters
 - (6) Manual: determine parameters for MZmine3 tool to run jobs and prepare a .xml parameters file template. If necessary, manually create an MZmine3 job for the data files to determine pre-processing parameters. Alternatively, use previously determined parameters.
 
-#### &rarr;Run Script 1
+#### &rarr; Run Script 1
 
 #### Script 1 features:
 - Creates GNPS and MetaboAnalyst Metadata .tsv files
@@ -87,7 +87,7 @@ Determine MZmine3 parameters
 
 Suggested: use RStudio to run Script 2.
 
-#### Run Script 2
+#### &rarr; Run Script 2
 
 #### Script 2 features:
 - Runs the MetaboAnalyst tool to generate statistics, including log2 fold-change and raw p-values. See the [MetaboAnalyst GitHub repository](https://github.com/xia-lab/MetaboAnalystR) and [tutorial](https://www.metaboanalyst.ca/resources/vignettes/Introductions.html) for more information.
@@ -102,7 +102,7 @@ Suggested: use RStudio to run Script 2.
 - (2) Manual (one-time): determine style .xml settings for Cytoscape networks
 - (3) Manual: have the Cytoscape program open in order to run Script 3
 
-#### Run Script 3
+####  &rarr; Run Script 3
 
 #### Script 3 features:
 - Adjusts GNPS-generated molecular networks in Cytoscape using Python (py4cytoscape)
@@ -125,7 +125,7 @@ Output Excel Tabs:
 
 ### Part 4:
 
-#### Run Script 4
+####  &rarr; Run Script 4
 
 #### Script 4 features:
 - Generates formatted volcano plots to visualize metabolite features that are more detected in EXP or CTRL. Features that are more significantly detected in EXP are potential expression products for heterologous expression studies, and ideally these features are not detected in any CTRL samples (assuming the host cannot naturally produce the metabolite).
@@ -170,7 +170,7 @@ Example metadata .tsv file:
 - (4) Manual: Once the GNPS CMN job is complete, populate the corresponding job folders (in the "Groupings_Analysis_Folders" folder) with output files. There are two job links to use: (i) "Download Bucket Table" to get raw spectral count data values (.tsv file) and (ii) "Download Clustered Spectra as MGF" to acquire the .mgf file that can be import to SIRIUS for compound predictions. From the downloaded outputs, there will also be a folder with the .graphml molecular networking file.
 
 ### Part 3:
-#### Before running GNPS CMN Job:
+#### Before running Script 5:
 
 Setup metadata excel sheet with job information
 - (5) Manual: fill out a main metadata excel sheet with running account of job information for all jobs, as well as info for all changeable values (see format of "Script_5_Groupings_Metadata.xlsx" in the input folder, note this is a different metadata excel from the FBMN workflow).
@@ -196,27 +196,39 @@ G5 = EXP3
 G6 = CTRL 3
 
 "styles_7_groupings_v2.xml":
+
 G1 = EXP1
+
 G2 = EXP2
+
 G3 = EXP3
+
 G4 = CTRL (same control fro EXP1-3)
+
 ie: to compare 3 gut fungal strain samples against 1 media sample
+
 "styles_7_groupings_v3.xml":
+
 G1 = EXP1
+
 G2 = EXP2
+
 G3 = EXP3
+
 G4 = CTRL for G1 and G2
+
 G5 = CTRL for G3
+
 ie: G1 and G2 have the same control, but G3 has a different control.
 
-**Run Script 5**
-**Script 5 features:**
+####  &rarr; Run Script 5
+#### Script 5 features:
 - Takes GNPS CMN outputs to format and filter molecular networks in Cytoscape, based on EXP and CTRL groups of interest to compare (termed "groupings").
 - Create node pie charts to visualize relative spectral abundances (sum precursor abundances from bucket tables) for EXP and CTRL groups to compare.
 - Filters metabolite features based on detection in EXP(s) and lack of detection in CTRL(s). The default cutoff is > 10^6^ average sum precursor abundance in EXP and < 10^6^ average sum precursor abundance in the corresponding CTRL.
 - To generate filtered molecular networks, the script combinatorially compares EXP vs CTRL filter criteria. For example, for 3 EXP vs. CTRL pairings, the script will generate 7 networks based on features that pass the 3 criteria (EXP1-EXP2-EXP3, EXP1-EXP2, EXP1-EXP3, EXP2-EXP3, EXP1, EXP2, EXP3).
 
-###**Part 3:**
+### Part 3:
 - Consider running the [SIRIUS](https://bio.informatik.uni-jena.de/software/sirius/) suite of tools using the GNPS output .mgf file, in order to further inspect filtered metabolites of interest.
 
 ## Installation: Dependencies
@@ -272,9 +284,23 @@ ie: G1 and G2 have the same control, but G3 has a different control.
 - [Cytoscape](https://cytoscape.org/) 3.9+ installation
 - Running Cytoscape instance required during script execution
 
-### Script 4 (to-do: add)
+### Script 4
+- Python 3.8+
+- Required Python modules/packages:
+    - pandas
+    - numpy
+    - matplotlib
+    - adjustText
 
-### Script 5 (to-do: add)
+### Script 5
+- Python 3.8+
+- Required Python modules/packages:
+    - pandas
+    - numpy
+    - matplotlib
+    - py4cytoscape
+- Cytoscape 3.9+ installation
+- Running Cytoscape instance required during script execution
 
 
 ## Tutorial
@@ -295,6 +321,7 @@ For support with using these scripts, please contact butkovichlaza@gmail.com.
 Primary author: Lazarina Butkovich (University of California, Santa Barbara)
 
 Thank you to Fred Krauss for feedback and assistance in writing and formatting these scripts. 
+
 
 ## References
 Djoumbou Feunang, Y.; Eisner, R.; Knox, C.; Chepelev, L.; Hastings, J.; Owen, G.; Fahy, E.; Steinbeck, C.; Subramanian, S.; Bolton, E.; Greiner, R.; Wishart, D. S. ClassyFire: Automated Chemical Classification with a Comprehensive, Computable Taxonomy. J Cheminform 2016, 8 (1), 1–20. https://doi.org/10.1186/s13321-016-0174-y.
