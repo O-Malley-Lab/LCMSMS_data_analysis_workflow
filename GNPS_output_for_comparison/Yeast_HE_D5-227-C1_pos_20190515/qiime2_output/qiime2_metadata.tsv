@@ -1,0 +1,7 @@
+sample_name	filename	ATTRIBUTE_GROUP
+Yeast_HE_D5-Ctrl_a_pos_20190515_Run37.mzML	Yeast_HE_D5-Ctrl_a_pos_20190515_Run37.mzML	CTRL
+Yeast_HE_D5-Ctrl_b_pos_20190515_Run40.mzML	Yeast_HE_D5-Ctrl_b_pos_20190515_Run40.mzML	CTRL
+Yeast_HE_D5-Ctrl_c_pos_20190515_Run43.mzML	Yeast_HE_D5-Ctrl_c_pos_20190515_Run43.mzML	CTRL
+POS_D5-227-C1-a_Run220.mzML	POS_D5-227-C1-a_Run220.mzML	EXP
+POS_D5-227-C1-b_Run223.mzML	POS_D5-227-C1-b_Run223.mzML	EXP
+POS_D5-227-C1-c_Run226.mzML	POS_D5-227-C1-c_Run226.mzML	EXP

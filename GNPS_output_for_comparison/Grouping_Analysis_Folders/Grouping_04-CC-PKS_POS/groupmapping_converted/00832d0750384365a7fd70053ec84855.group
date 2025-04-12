@@ -1,0 +1,6 @@
+GROUP_G1=inputspectra/spec-00001.mzML;inputspectra/spec-00000.mzML;inputspectra/spec-00002.mzML
+GROUP_G6=
+GROUP_G5=
+GROUP_G4=inputspectra/specfour-00002.mzML;inputspectra/specfour-00001.mzML;inputspectra/specfour-00000.mzML
+GROUP_G2=inputspectra/spectwo-00002.mzML;inputspectra/spectwo-00000.mzML;inputspectra/spectwo-00001.mzML
+GROUP_G3=inputspectra/specthree-00002.mzML;inputspectra/specthree-00001.mzML;inputspectra/specthree-00000.mzML
