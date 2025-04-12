@@ -301,6 +301,7 @@ ie: G1 and G2 have the same control, but G3 has a different control.
 
 
 ## Tutorial
+
 For initial testing and troubleshooting of the scripts and installed dependencies:
 - Consider using the "data_tutorial" folder and "Tutorial" tabs in the metadata Excel files
 - Tutorial sample comparisons:
@@ -308,6 +309,14 @@ For initial testing and troubleshooting of the scripts and installed dependencie
     - For FBMN, *A. nidulans* with TJGIp11 plasmid vs. empty vector control
     - For CMN (Script 5), comparison of yeast with p9 vs yeast empty vector vs. *A. nidulans* with TJGIp11 vs *A. nidulans* empty vector. p9 and TJGIp11 are vectors containing a predicted non-ribosomal peptide synthetase gene from the anaerobic gut fungal strain *Anaeromyces robustus* S4.
 Note: The metadata Excel files support multi-job analysis, with each row representing a separate experimental-control pairing to process.
+
+
+## Files for Comparison
+- The described workflows were run for the corresponding publication, and the results are shared in the following folders:
+    - "temp_for_comparison" = temp folder
+    - "GNPS_output_for_comparison" = GNPS_output folder
+    - "output_for_comparison" = output folder
+- See a description of previous jobs run in the input folder &rarr; "Overall_Running_Metadata_for_All_LCMSMS_Jobs.xlsx" excel tab "All" and "Script_5_Groupings_Metadata.xlsx" excel tab "All"
 
 
 ## Support
