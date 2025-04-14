@@ -57,7 +57,7 @@ Script 5 is a Python script that formats and filters classical molecular network
     - (1) Manual: convert data files to .mzML format
     - (2) Manual (optional): if necessary, consider writing custom code to rename filenames from long, original names to shorter, descriptive names
     - (3) Manual: create "data" folder and populate with .mzML data files
-        - Example: "C:\Users\lazab\Desktop\python_scripts\workspace\LCMSMS_analysis_pipeline\data\{data files folder}\{data files}"
+        - Example: {directory}"LCMSMS_analysis_pipeline\data\{data files folder}\{data files}"
         - Note: create a separate {data files folder} sub-folder for EXP with base job name and CTRL samples
         - Note: to run the workflow with the data from the heterologous expression of gut fungal secondary metabolites, see the MASSIVE data repository once the data is public (to-do: update once published)
 
@@ -97,9 +97,11 @@ Suggested: use RStudio to run Script 2.
 
 ### FBMN Part 3:
 #### Before running Script 3:
-- (1) Manual: run the [FBMN GNPS job](https://ccms-ucsd.github.io/GNPSDocumentation/featurebasedmolecularnetworking/). Once the job is complete, use the "Download Cytoscape Data" link to download GNPS outputs (zipped). Organize these outputs in job_name sub-folders (created in Script 2) in a folder "GNPS_output". Manually unzip folders contents for GNPS outputs. These files will include the .graphml molecular networking file.
+- (1) Manual: run the [FBMN GNPS job](https://ccms-ucsd.github.io/GNPSDocumentation/featurebasedmolecularnetworking/). Once the job is complete, use the "Download Cytoscape Data" link to download the zipped GNPS outputs (see the image below). Organize these outputs in job_name sub-folders (created in Script 2) in a folder "GNPS_output". Manually unzip folders contents for GNPS outputs. These files will include the .graphml molecular networking file.
 - (2) Manual (one-time): determine style .xml settings for Cytoscape networks
 - (3) Manual: have the Cytoscape program open in order to run Script 3
+
+![Figure 2](Fig2.png)
 
 ####  &rarr; Run Script 3
 
