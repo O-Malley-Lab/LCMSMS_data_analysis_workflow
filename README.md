@@ -108,6 +108,12 @@ Suggested: use RStudio to run Script 2.
 - Imports node table with additional data, creates pie charts, adjusts style, and labels compound names
 - Aligns data analysis results from MZmine3, MetaboAnalyst, and GNPS
 - Filters metabolite features in the Cytoscape network based on possible metabolites of interest (ie: highly detected in EXP samples and not in CTRL samples)
+- The following filter cutoffs are implemented for each feature, and cutoffs can be adjusted in the script:
+    - (i) MetaboAnalyst-generated log2 fold-change for EXP vs. CTRL > 2.
+    - (ii) MetaboAnalyst-generated raw p-value < 0.05.
+    - (iii) CTRL average raw peak area < 10<sup>5</sup>
+    - (iv) EXP average raw peak area > 10<sup>6</sup>
+    - Note that these filtering cutoffs are suggestions for narrowing down standout metabolites and are not quantitative. For follow-up analysis, titers for metabolites of interest can be determined.
 - If desired, searches data for specific compounds based on m/z and RT (with set +/- cutoffs), such as the standard ABMBA and the possible anaerobic gut fungal metabolite baumin (Swift et al. 2021).
 - Generates filtered Cytoscape networks and formatted excels of features.
     - Output Excel Tabs: 

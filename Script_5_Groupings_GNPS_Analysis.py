@@ -1,5 +1,5 @@
 """""""""""""""""""""""""""""""""""""""""""""
-LCMSMS Data Analysis Workflow, Script 5: A. nidulans vs. Yeast Heterologous Expression GNPS Analysis
+LCMSMS Data Analysis Workflow, Script 5: A. nidulans vs. Yeast Heterologous Expression Groupings GNPS Analysis
 @author: Lazarina Butkovich
 
 This script has the following features for analyzing GNPS output for comparing A. nidulans and Yeast heterologous expression of the same gut fungal proteinID. This script takes GNPS output from the "METABOLOMICS-SNETS-V2" workflow, also known as the "Molecular Networking" data analysis workflow.
