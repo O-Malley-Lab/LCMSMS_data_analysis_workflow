@@ -101,13 +101,13 @@ Suggested: use RStudio to run Script 2.
 - (2) Manual (one-time): determine style .xml settings for Cytoscape networks
 - (3) Manual: have the Cytoscape program open in order to run Script 3
 
-![Figure 2](Fig2.png)
+![Figure 2](/figures_README/Fig2.png)
 
 ####  &rarr; Run Script 3
 
 #### Script 3 features:
 - Adjusts GNPS-generated molecular networks in Cytoscape using Python (py4cytoscape)
-- Imports node table with additional data, creates pie charts, adjusts style, and labels compound names
+- Imports node table with additional data, creates pie charts (Cyan=EXP, Crimson=CTRL), adjusts style (ie: node borders are log-scale color-coded based on EXP average raw peak area), and labels compound names (see images below)
 - Aligns data analysis results from MZmine3, MetaboAnalyst, and GNPS
 - Filters metabolite features in the Cytoscape network based on possible metabolites of interest (ie: highly detected in EXP samples and not in CTRL samples)
 - The following filter cutoffs are implemented for each feature, and cutoffs can be adjusted in the script:
@@ -129,6 +129,11 @@ Suggested: use RStudio to run Script 2.
         - "Putative Baumin": specifies which feature likely corresponds to the possible anaerobic gut fungal metabolite baumin (Swift et al. 2021).
         - "Filter Parameters": a record of the specific filtering parameters used in Script 3 to generate the output excel
 
+![Figure 8](/figures_README/Fig8.png)
+
+![Figure 9](/figures_README/Fig9.png)
+
+
 ### FBMN Part 4:
 
 ####  &rarr; Run Script 4
@@ -136,7 +141,7 @@ Suggested: use RStudio to run Script 2.
 #### Script 4 features:
 - Generates formatted volcano plots to visualize metabolite features that are more detected in EXP or CTRL (see example below for Y-p9 positive ionization). Features that are more significantly detected in EXP are potential expression products for heterologous expression studies, and ideally these features are not detected in any CTRL samples (assuming the host cannot naturally produce the metabolite).
 
-![Figure 3](Fig3.png)
+![Figure 3](/figures_README/Fig3.png)
 
 ### FBMN Part 5:
 - Consider running the [SIRIUS](https://bio.informatik.uni-jena.de/software/sirius/) suite of tools using the MZmine3 .mgf file output for SIRIUS (.mgf file located in in temp folder, job sub-folder).
@@ -176,7 +181,7 @@ Suggested: use RStudio to run Script 2.
 - (3) Manual: For each job, create a job sub-folder in the "Groupings_Analysis_Folders" folder (naming convention: "Grouping_" + job_name + "_POS" OR "Grouping_" + job_name + "_NEG"). 
 - (4) Manual: Once the GNPS CMN job is complete, populate the corresponding job folders (in the "Groupings_Analysis_Folders" folder) with output files. There are two job links (see below) to use: (i) "Download Bucket Table" to get raw spectral count data values (.tsv file) and (ii) "Download Clustered Spectra as MGF" to acquire the .mgf file that can be import to SIRIUS for compound predictions. From the downloaded outputs, there will also be a folder with the .graphml molecular networking file.
 
-![Figure 4](Fig4.png)
+![Figure 4](/figures_README/Fig4.png)
 
 ### CMN Part 3:
 #### Before running Script 5:
@@ -220,11 +225,11 @@ Suggested: use RStudio to run Script 2.
 - Filters metabolite features based on detection in EXP(s) and lack of detection in CTRL(s). The default cutoff is > 10<sup>6</sup> average sum precursor abundance in EXP and < 10<sup>6</sup> average sum precursor abundance in the corresponding CTRL.
 - To generate filtered molecular networks, the script combinatorially compares EXP vs CTRL filter criteria. For example, for 3 EXP vs. CTRL pairings, the script will generate 7 networks based on features that pass the 3 criteria (EXP1-EXP2-EXP3, EXP1-EXP2, EXP1-EXP3, EXP2-EXP3, EXP1, EXP2, EXP3).
 
-![Figure 5](Fig5.png)
+![Figure 5](/figures_README/Fig5.png)
 
-![Figure 6](Fig6.png)
+![Figure 6](/figures_README/Fig6.png)
 
-![Figure 7](Fig7.png)
+![Figure 7](/figures_README/Fig7.png)
 
 ### CMN Part 4:
 - Consider running the [SIRIUS](https://bio.informatik.uni-jena.de/software/sirius/) suite of tools using the GNPS output .mgf file, in order to further inspect filtered metabolites of interest.
