@@ -315,7 +315,7 @@ Note: The metadata Excel files support multi-job analysis, with each row represe
 - The described workflows were run for the corresponding publication, and the results are shared in the following folders:
     - "temp_for_comparison" = temp folder
     - "GNPS_output_for_comparison" = GNPS_output folder
-    - "output_for_comparison" = output folder
+    - "output_for_comparison_tutorial" = output folder for only the tutorial datasets (Y-p9 and TJGIp11) - for additional output files to compare to, please contact the primary author (butkovichlaza@gmail.com). 
 - See a description of previous jobs run in the input folder &rarr; "Overall_Running_Metadata_for_All_LCMSMS_Jobs.xlsx" excel tab "All" and "Script_5_Groupings_Metadata.xlsx" excel tab "All"
 
 
