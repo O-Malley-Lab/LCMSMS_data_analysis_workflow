@@ -176,7 +176,7 @@ Suggested: use RStudio to run Script 2.
         - G#_temp_folder = indicate the name of the job sub-folder in the temp folder. 
     - Note: I created different Cytoscape style files to format networks differently depending on the EXP vs. CTRL comparisons of interest. This information is relevant for how the script formats filtered molecular networks and visualize pie charts for relative spectral counts.
 
-- Example 1:
+- Example 1 for Cytoscape .xml Style File:
     - "styles_7_groupings_emphasis.xml": 
         - G1 = EXP1
         - G2 = CTRL1
@@ -185,14 +185,14 @@ Suggested: use RStudio to run Script 2.
         - G5 = EXP3
         - G6 = CTRL 3
     - ie: to compare 3 different heterologous expression samples to 3 different corresponding empty vector controls
-- Example 2:
+- Example 2 for Cytoscape .xml Style File:
     - "styles_7_groupings_v2.xml":
         - G1 = EXP1
         - G2 = EXP2
         - G3 = EXP3
         - G4 = CTRL (same control fro EXP1-3)
     - ie: to compare 3 gut fungal strain samples against 1 media sample
-- Example 3:
+- Example 3 for Cytoscape .xml Style File:
     - "styles_7_groupings_v3.xml":
         - G1 = EXP1
         - G2 = EXP2
@@ -205,7 +205,7 @@ Suggested: use RStudio to run Script 2.
 #### Script 5 features:
 - Takes GNPS CMN outputs to format and filter molecular networks in Cytoscape, based on EXP and CTRL groups of interest to compare (termed "groupings").
 - Create node pie charts to visualize relative spectral abundances (sum precursor abundances from bucket tables) for EXP and CTRL groups to compare.
-- Filters metabolite features based on detection in EXP(s) and lack of detection in CTRL(s). The default cutoff is > <10></6> average sum precursor abundance in EXP and < <10></6> average sum precursor abundance in the corresponding CTRL.
+- Filters metabolite features based on detection in EXP(s) and lack of detection in CTRL(s). The default cutoff is > 10<sup>6</sup> average sum precursor abundance in EXP and < 10<sup>6</sup> average sum precursor abundance in the corresponding CTRL.
 - To generate filtered molecular networks, the script combinatorially compares EXP vs CTRL filter criteria. For example, for 3 EXP vs. CTRL pairings, the script will generate 7 networks based on features that pass the 3 criteria (EXP1-EXP2-EXP3, EXP1-EXP2, EXP1-EXP3, EXP2-EXP3, EXP1, EXP2, EXP3).
 
 ### CMN Part 4:
