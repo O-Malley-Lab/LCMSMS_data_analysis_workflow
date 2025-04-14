@@ -180,3 +180,6 @@ obsolete_scripts/
 
 # output_for_comparison folder
 output_for_comparison/
+
+# unzip.py
+unzip.py
