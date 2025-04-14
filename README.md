@@ -2,7 +2,7 @@
 
 ## Background
 *In silico* genome mining tools predict many biosynthetic gene clusters for secondary metabolites from anaerobic gut fungi (phylum Neocallimastigomycota) (Swift et al. 2021). In this research project, we sought to learn more about the products of these gene clusters via the technique of heterologous expression, wherein we performed the following:
-1. We inserted predicted biosynthetic genes into vectors
+1. We inserted predicted biosynthetic genes into vectors. The predicted secondary metabolite classes were **non-ribosomal peptide synthetases (NRPSs)** and **polyketide synthases (PKSs)**.
 2. We transformed the vectors into model host microbes - in this project, *Saccharomyces cerevisiae* and *Aspergillus nidulans*
 3. We cultured the transformed host microbes under expression conditions
 4. We harvested culture samples (cell pellets) for data analysis and screening.
@@ -36,7 +36,7 @@ Raw .mzML data files will be made publicly available on the MASSIVE data reposit
 Script 1 is a Python script that automates MZmine3 preprocessing of LC-MS/MS data. It creates metadata files, modifies XML parameters (based on your manually curated parameters template file), executes MZmine3 via command line, and prepares inputs to MetaboAnalyst, GNPS, and SIRIUS analysis. The script also handles FTP upload of processed data to GNPS servers.
 
 ### Script_2_MetaboAnalyst_multi-job_workflow.r 
-Script 2 is an R script that performs statistical analysis of metabolomics data using MetaboAnalystR. Features include data normalization, fold-change analysis, t-tests, and principal component analysis (PCA). The script generates visualizations and statistical outputs for metabolite abundance comparisons.
+Script 2 is an R script that performs statistical analysis of metabolomics data using MetaboAnalystR. The script performs data normalization, fold-change analysis, t-tests, and principal component analysis (PCA). The script generates visualizations and statistical outputs for metabolite abundance comparisons.
 
 ### Script_3_Cytoscape_networking_multi-job_workflow.py
 Script 3 is a Python script that formats and filters molecular networks in Cytoscape (Shannon et al. 2003). It processes GNPS networking results, incorporates MetaboAnalyst statistical data, and applies custom visual styles. The script includes filtering options to highlight metabolites of interest and generates detailed node attribute tables.
@@ -55,21 +55,21 @@ Script 5 is a Python script that formats and filters classical molecular network
 
 - Organize data files:
     - (1) Manual: convert data files to .mzML format
-    - (2) Manual (optional): if necessary, consider writing custom code to rename filenames from long original names to shorter, descriptive names
+    - (2) Manual (optional): if necessary, consider writing custom code to rename filenames from long, original names to shorter, descriptive names
     - (3) Manual: create "data" folder and populate with .mzML data files
         - Example: "C:\Users\lazab\Desktop\python_scripts\workspace\LCMSMS_analysis_pipeline\data\{data files folder}\{data files}"
         - Note: create a separate {data files folder} sub-folder for EXP with base job name and CTRL samples
         - Note: to run the workflow with the data from the heterologous expression of gut fungal secondary metabolites, see the MASSIVE data repository once the data is public (to-do: update once published)
 
-- Setup GNPS and WinSCP accounts to run jobs on GNPS
+- Setup GNPS and WinSCP accounts to run jobs on GNPS:
     - (4) Manual (one-time): create GNPS account and WinSCP connect to massive.ucsd.edu FTP (see GNPS documentation, use same username and password as GNPS account). Consider creating a .env file in the working directory to hold the email, username, and password information (see Script 1 code for context)
 
-- Setup metadata excel sheet with job information
+- Setup metadata excel sheet with job information:
     - (5) Manual: fill out a main metadata excel sheet with running account of job information for all jobs, as well as info for all changeable values (see format of "Overall_Running_Metadata_for_All_LCMSMS_Jobs.xlsx" in the input folder)
     - Excel Columns: Job Name, Control Folder, Ionization, RT minimum cutoff, ABMBA_Feature_Name_from_Script_1, MZmine3 batch template
     - Note: determine the RT minimum cutoff by viewing the chromatograms in MZmine and qualitatively approximate the metabolites that quickly come off the column. Remove these poorly separated metabolites to improve downstream data handling and statistical analysis.
 
-- Determine MZmine3 parameters
+- Determine MZmine3 parameters:
     - (6) Manual: determine parameters for MZmine3 tool to run jobs and prepare a .xml parameters file template. If necessary, manually create an MZmine3 job for the data files to determine pre-processing parameters. Alternatively, use previously determined parameters.
 
 #### &rarr; Run Script 1
@@ -89,11 +89,11 @@ Suggested: use RStudio to run Script 2.
 #### &rarr; Run Script 2
 
 #### Script 2 features:
-- Runs the MetaboAnalyst tool to generate statistics, including log2 fold-change and raw p-values. See the [MetaboAnalyst GitHub repository](https://github.com/xia-lab/MetaboAnalystR) and [tutorial](https://www.metaboanalyst.ca/resources/vignettes/Introductions.html) for more information.
+- Runs the MetaboAnalyst tool to generate statistics, including log2 fold-change and raw p-values. See the [MetaboAnalyst GitHub repository](https://github.com/xia-lab/MetaboAnalystR) and [MetaboAnalyst tutorial](https://www.metaboanalyst.ca/resources/vignettes/Introductions.html) for more information.
 - Creates empty GNPS_output job sub-folders for you to later manually populate with GNPS output files (see next Part).
 
 #### After running Script 2:
-- (1) Manual: check correctness of statistical treatments. For example, ensure appropriate feature and sample normalization (Gaussian curve) by going to temp folder --> job folder --> MetaboAnalystR Output --> normalization .png outputs.
+- (1) Manual: check correctness of statistical treatments. For example, ensure appropriate feature and sample normalization (expect Gaussian curve) by going to temp folder --> job folder --> MetaboAnalystR Output --> normalization .png outputs.
 
 ### FBMN Part 3:
 #### Before running Script 3:
@@ -105,7 +105,7 @@ Suggested: use RStudio to run Script 2.
 
 #### Script 3 features:
 - Adjusts GNPS-generated molecular networks in Cytoscape using Python (py4cytoscape)
-- Imports node table with additional data, create pie charts, adjust style, label compound names
+- Imports node table with additional data, creates pie charts, adjusts style, and labels compound names
 - Aligns data analysis results from MZmine3, MetaboAnalyst, and GNPS
 - Filters metabolite features in the Cytoscape network based on possible metabolites of interest (ie: highly detected in EXP samples and not in CTRL samples)
 - If desired, searches data for specific compounds based on m/z and RT (with set +/- cutoffs), such as the standard ABMBA and the possible anaerobic gut fungal metabolite baumin (Swift et al. 2021).
@@ -129,7 +129,7 @@ Suggested: use RStudio to run Script 2.
 - Generates formatted volcano plots to visualize metabolite features that are more detected in EXP or CTRL. Features that are more significantly detected in EXP are potential expression products for heterologous expression studies, and ideally these features are not detected in any CTRL samples (assuming the host cannot naturally produce the metabolite).
 
 ### FBMN Part 5:
-- Consider running the [SIRIUS](https://bio.informatik.uni-jena.de/software/sirius/) suite of tools using the MZmine3 .mgf file output for SIRIUS (file located in in temp folder, job sub-folder).
+- Consider running the [SIRIUS](https://bio.informatik.uni-jena.de/software/sirius/) suite of tools using the MZmine3 .mgf file output for SIRIUS (.mgf file located in in temp folder, job sub-folder).
 - SIRIUS predicts chemical formula, class, and structure from the MS/MS data.
 - The MZmine3 feature IDs are consistent with feature IDs in the input for SIRIUS. In this way, you can generate and align SIRIUS predictions to filtered features of interest from Script 3.
 
@@ -139,9 +139,9 @@ Suggested: use RStudio to run Script 2.
 ### CMN Part 1:
 #### Before running GNPS CMN Job:
 - Note, these steps are the same as FBMN part 1 (organize data files before running Script 1)
-- Organize data files
+- Organize data files:
     - (1) Manual: convert data files to .mzML format
-    - (2) Manual (optional): if necessary, consider writing custom code to rename filenames from long original names to shorter, descriptive names
+    - (2) Manual (optional): if necessary, consider writing custom code to rename filenames from long, original names to shorter, descriptive names
     - (3) Manual: create "data" folder and populate with .mzML data files
         - Example: 
         - "C:\Users\lazab\Desktop\python_scripts\workspace\LCMSMS_analysis_pipeline\data\{data files folder}\{data files}"
@@ -169,60 +169,43 @@ Suggested: use RStudio to run Script 2.
 ### CMN Part 3:
 #### Before running Script 5:
 
-- Setup metadata excel sheet with job information
+- Setup metadata excel sheet with job information:
     - (5) Manual: fill out a main metadata excel sheet with running account of job information for all jobs, as well as info for all changeable values (see format of "Script_5_Groupings_Metadata.xlsx" in the input folder, note this is a different metadata excel from the FBMN workflow).
     Excel Columns: Job Name, G1, G2, G3, G4, G5, G6, G1_temp_folder, G2_temp_folder, G3_temp_folder, G4_temp_folder, G5_temp_folder, G6_temp_folder, Ionization, Cytoscape_Format_Template_File
         - G# = Group # (can be EXP or CTRL)
         - G#_temp_folder = indicate the name of the job sub-folder in the temp folder. 
     - Note: I created different Cytoscape style files to format networks differently depending on the EXP vs. CTRL comparisons of interest. This information is relevant for how the script formats filtered molecular networks and visualize pie charts for relative spectral counts.
 
-For example:
-
-"styles_7_groupings_emphasis.xml": 
-
-G1 = EXP1
-
-G2 = CTRL1
-
-G3 = EXP2
-
-G4 = CTRL2
-
-G5 = EXP3
-
-G6 = CTRL 3
-
-"styles_7_groupings_v2.xml":
-
-G1 = EXP1
-
-G2 = EXP2
-
-G3 = EXP3
-
-G4 = CTRL (same control fro EXP1-3)
-
-ie: to compare 3 gut fungal strain samples against 1 media sample
-
-"styles_7_groupings_v3.xml":
-
-G1 = EXP1
-
-G2 = EXP2
-
-G3 = EXP3
-
-G4 = CTRL for G1 and G2
-
-G5 = CTRL for G3
-
-ie: G1 and G2 have the same control, but G3 has a different control.
+- Example 1:
+    - "styles_7_groupings_emphasis.xml": 
+        - G1 = EXP1
+        - G2 = CTRL1
+        - G3 = EXP2
+        - G4 = CTRL2
+        - G5 = EXP3
+        - G6 = CTRL 3
+    - ie: to compare 3 different heterologous expression samples to 3 different corresponding empty vector controls
+- Example 2:
+    - "styles_7_groupings_v2.xml":
+        - G1 = EXP1
+        - G2 = EXP2
+        - G3 = EXP3
+        - G4 = CTRL (same control fro EXP1-3)
+    - ie: to compare 3 gut fungal strain samples against 1 media sample
+- Example 3:
+    - "styles_7_groupings_v3.xml":
+        - G1 = EXP1
+        - G2 = EXP2
+        - G3 = EXP3
+        - G4 = CTRL for G1 and G2
+        - G5 = CTRL for G3
+    - ie: G1 and G2 have the same control, but G3 has a different control.
 
 ####  &rarr; Run Script 5
 #### Script 5 features:
 - Takes GNPS CMN outputs to format and filter molecular networks in Cytoscape, based on EXP and CTRL groups of interest to compare (termed "groupings").
 - Create node pie charts to visualize relative spectral abundances (sum precursor abundances from bucket tables) for EXP and CTRL groups to compare.
-- Filters metabolite features based on detection in EXP(s) and lack of detection in CTRL(s). The default cutoff is > 10^6^ average sum precursor abundance in EXP and < 10^6^ average sum precursor abundance in the corresponding CTRL.
+- Filters metabolite features based on detection in EXP(s) and lack of detection in CTRL(s). The default cutoff is > <10></6> average sum precursor abundance in EXP and < <10></6> average sum precursor abundance in the corresponding CTRL.
 - To generate filtered molecular networks, the script combinatorially compares EXP vs CTRL filter criteria. For example, for 3 EXP vs. CTRL pairings, the script will generate 7 networks based on features that pass the 3 criteria (EXP1-EXP2-EXP3, EXP1-EXP2, EXP1-EXP3, EXP2-EXP3, EXP1, EXP2, EXP3).
 
 ### CMN Part 4:
