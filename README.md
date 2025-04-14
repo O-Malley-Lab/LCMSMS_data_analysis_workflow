@@ -134,7 +134,9 @@ Suggested: use RStudio to run Script 2.
 ####  &rarr; Run Script 4
 
 #### Script 4 features:
-- Generates formatted volcano plots to visualize metabolite features that are more detected in EXP or CTRL. Features that are more significantly detected in EXP are potential expression products for heterologous expression studies, and ideally these features are not detected in any CTRL samples (assuming the host cannot naturally produce the metabolite).
+- Generates formatted volcano plots to visualize metabolite features that are more detected in EXP or CTRL (see example below for Y-p9 positive ionization). Features that are more significantly detected in EXP are potential expression products for heterologous expression studies, and ideally these features are not detected in any CTRL samples (assuming the host cannot naturally produce the metabolite).
+
+![Figure 3](Fig3.png)
 
 ### FBMN Part 5:
 - Consider running the [SIRIUS](https://bio.informatik.uni-jena.de/software/sirius/) suite of tools using the MZmine3 .mgf file output for SIRIUS (.mgf file located in in temp folder, job sub-folder).
@@ -172,7 +174,9 @@ Suggested: use RStudio to run Script 2.
 - (1) Manual: run the [GNPS CMN job](https://ccms-ucsd.github.io/GNPSDocumentation/networking/) ("METABOLOMICS-SNETS-V2" workflow). Follow the GNPS documentation to upload the .mzML files and perform CMN.
 - (2) Manual (one-time): first, ensure there is a "GNPS_output" folder in the directory. Then, create a "Groupings_Analysis_Folders" folder within the "GNPS_output" folder.
 - (3) Manual: For each job, create a job sub-folder in the "Groupings_Analysis_Folders" folder (naming convention: "Grouping_" + job_name + "_POS" OR "Grouping_" + job_name + "_NEG"). 
-- (4) Manual: Once the GNPS CMN job is complete, populate the corresponding job folders (in the "Groupings_Analysis_Folders" folder) with output files. There are two job links to use: (i) "Download Bucket Table" to get raw spectral count data values (.tsv file) and (ii) "Download Clustered Spectra as MGF" to acquire the .mgf file that can be import to SIRIUS for compound predictions. From the downloaded outputs, there will also be a folder with the .graphml molecular networking file.
+- (4) Manual: Once the GNPS CMN job is complete, populate the corresponding job folders (in the "Groupings_Analysis_Folders" folder) with output files. There are two job links (see below) to use: (i) "Download Bucket Table" to get raw spectral count data values (.tsv file) and (ii) "Download Clustered Spectra as MGF" to acquire the .mgf file that can be import to SIRIUS for compound predictions. From the downloaded outputs, there will also be a folder with the .graphml molecular networking file.
+
+![Figure 4](Fig4.png)
 
 ### CMN Part 3:
 #### Before running Script 5:
@@ -212,9 +216,15 @@ Suggested: use RStudio to run Script 2.
 ####  &rarr; Run Script 5
 #### Script 5 features:
 - Takes GNPS CMN outputs to format and filter molecular networks in Cytoscape, based on EXP and CTRL groups of interest to compare (termed "groupings").
-- Create node pie charts to visualize relative spectral abundances (sum precursor abundances from bucket tables) for EXP and CTRL groups to compare.
+- Create node pie charts (see below) to visualize relative spectral abundances (sum precursor abundances from bucket tables) for EXP and CTRL groups to compare. Color-group pairings can be viewed in Cytoscape &rarr; select the pie chart symbol of "Image/Chart1" in the left "Node" style panel &rarr; see the "Selected Columns" which correspond to the numbered colors under "> Customize"
 - Filters metabolite features based on detection in EXP(s) and lack of detection in CTRL(s). The default cutoff is > 10<sup>6</sup> average sum precursor abundance in EXP and < 10<sup>6</sup> average sum precursor abundance in the corresponding CTRL.
 - To generate filtered molecular networks, the script combinatorially compares EXP vs CTRL filter criteria. For example, for 3 EXP vs. CTRL pairings, the script will generate 7 networks based on features that pass the 3 criteria (EXP1-EXP2-EXP3, EXP1-EXP2, EXP1-EXP3, EXP2-EXP3, EXP1, EXP2, EXP3).
+
+![Figure 5](Fig5.png)
+
+![Figure 6](Fig6.png)
+
+![Figure 7](Fig7.png)
 
 ### CMN Part 4:
 - Consider running the [SIRIUS](https://bio.informatik.uni-jena.de/software/sirius/) suite of tools using the GNPS output .mgf file, in order to further inspect filtered metabolites of interest.
